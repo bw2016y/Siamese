@@ -173,13 +173,12 @@ statement
     | SET ROLE .*?                                                     #failNativeCommand
     | SET .*?                                                          #setConfiguration
     | RESET                                                            #resetConfiguration
-    | createIndex                                                      #createIndexCommand       //SPACIAL
+    | CREATE INDEX identifier ON relation USE indexType                #createIndexCommand       //SPACIAL CREATE INDEX
+    | SHOW INDEX FROM relation                                         #showIndexOnRelation      //SPACIAL SHOW   INDEX
+    | DROP INDEX identifier ON relation                                #dropIndexOnRelation      //SPACIAL DROP   INDEX
     | unsupportedHiveNativeCommands .*?                                #failNativeCommand
     ;
 
-createIndex     //SPACIAL
-    : CREATE INDEX identifier ON relation USE treeType     //SPACIAL
-    ;           //SPACIAL
 
 unsupportedHiveNativeCommands
     : kw1=CREATE kw2=ROLE
@@ -196,11 +195,11 @@ unsupportedHiveNativeCommands
     | kw1=SHOW kw2=COMPACTIONS
     | kw1=SHOW kw2=CREATE kw3=TABLE
     | kw1=SHOW kw2=TRANSACTIONS
-    | kw1=SHOW kw2=INDEXES
+//    | kw1=SHOW kw2=INDEXES        mark
     | kw1=SHOW kw2=LOCKS
-    | kw1=CREATE kw2=INDEX
-    | kw1=DROP kw2=INDEX
-    | kw1=ALTER kw2=INDEX
+//    | kw1=CREATE kw2=INDEX        mark
+//    | kw1=DROP kw2=INDEX          mark
+    | kw1=ALTER kw2=INDEX       //  mark
     | kw1=LOCK kw2=TABLE
     | kw1=LOCK kw2=DATABASE
     | kw1=UNLOCK kw2=TABLE
@@ -343,7 +342,7 @@ resource
     ;
 
 queryNoWith
-    : insertInto? queryTerm queryOrganization                                              #singleInsertQuery
+    : insertInto? queryTerm queryOrganization aqp?                                         #singleInsertQuery
     | fromClause multiInsertQueryBody+                                                     #multiInsertQuery
     ;
 
@@ -402,11 +401,12 @@ querySpecification
        aggregation?
        (HAVING having=booleanExpression)?
        windows?
-       error?       //AQP
-       confidence?  //AQP
+ //      error?       //AQP
+ //      confidence?  //AQP
        )
     ;
-
+aqp:                            //AQP
+    error confidence ;
 error                           //AQP
     : ERROR WITHIN PERCENTAGE   //AQP
     ;                           //AQP
@@ -735,9 +735,11 @@ qualifiedName
     : identifier ('.' identifier)*
     ;
 
-treeType            //SPACIAL
-    : RTREE         //SPACIAL
-    ;               //SPACIAL
+indexType            // SPACIAL INDEX TYPE
+    : RTREE
+    | HASHMAP
+    | TREEMAP
+    ;
 
 identifier
     : strictIdentifier
@@ -818,7 +820,7 @@ ROLLUP: 'ROLLUP';
 ORDER: 'ORDER';
 HAVING: 'HAVING';
 LIMIT: 'LIMIT';
-AT: 'AT';
+AT: 'AT';               // MARK
 OR: 'OR';
 AND: 'AND';
 IN: 'IN';
@@ -857,7 +859,6 @@ LATERAL: 'LATERAL';
 WINDOW: 'WINDOW';
 OVER: 'OVER';
 PARTITION: 'PARTITION';
-RANGE: 'RANGE';
 ROWS: 'ROWS';
 UNBOUNDED: 'UNBOUNDED';
 PRECEDING: 'PRECEDING';
@@ -872,8 +873,10 @@ ERROR: 'ERROR';     //AQP
 WITHIN: 'WITHIN';   //AQP
 CONFIDENCE: 'CONFIDENCE';   //AQP
 DISTANCE: 'DISTANCE';   //SPACIAL
-RTREE: 'RTREE';     //SPACIAL
+RTREE: 'RTREE';     //SPACIAL  RTREE INDEX
 KNN: 'KNN';     //SPACIAL
+HASHMAP: 'HASHMAP'; //SPACIAL HASHMAP INDEX
+TREEMAP: 'TREEMAP';  //SPACIAL TREEMAP INDEX
 VALUES: 'VALUES';
 CREATE: 'CREATE';
 TABLE: 'TABLE';
