@@ -1,9 +1,21 @@
 package org.daslab.sqlengine.types
 
-import scala.collection.{Map, mutable}
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import org.json4s.JsonDSL._
+
+
+import org.apache.spark.SparkException
+import org.apache.spark.annotation.InterfaceStability
+
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, InterpretedOrdering}
+import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, LegacyTypeStringParser}
+import org.apache.spark.sql.catalyst.util.{escapeSingleQuotedString, quoteIdentifier}
+
+//todo Spark core
+import org.apache.spark.util.Utils
 
 /**
  * A [[StructType]] object can be constructed by
@@ -32,7 +44,7 @@ import scala.util.control.NonFatal
  *
  * // If this struct does not have a field called "d", it throws an exception.
  * struct("d")
- * // java.lang.IllegalArgumentException: d does not exist.
+ * // java.lang.IllegalArgumentException: Field "d" does not exist.
  * //   ...
  *
  * // Extract multiple StructFields. Field names are provided in a set.
@@ -44,7 +56,7 @@ import scala.util.control.NonFatal
  * // Any names without matching fields will throw an exception.
  * // For the case shown below, an exception is thrown due to "d".
  * struct(Set("b", "c", "d"))
- * // java.lang.IllegalArgumentException: d does not exist.
+ * // java.lang.IllegalArgumentException: Field "d" does not exist.
  * //    ...
  * }}}
  *
@@ -70,7 +82,7 @@ import scala.util.control.NonFatal
  *
  * @since 1.3.0
  */
-@Stable
+@InterfaceStability.Stable
 case class StructType(fields: Array[StructField]) extends DataType with Seq[StructField] {
 
   /** No-arg constructor for kryo. */
@@ -247,21 +259,22 @@ case class StructType(fields: Array[StructField]) extends DataType with Seq[Stru
   def apply(name: String): StructField = {
     nameToField.getOrElse(name,
       throw new IllegalArgumentException(
-        s"$name does not exist. Available: ${fieldNames.mkString(", ")}"))
+        s"""Field "$name" does not exist.
+           |Available fields: ${fieldNames.mkString(", ")}""".stripMargin))
   }
 
   /**
    * Returns a [[StructType]] containing [[StructField]]s of the given names, preserving the
    * original order of fields.
    *
-   * @throws IllegalArgumentException if at least one given field name does not exist
+   * @throws IllegalArgumentException if a field cannot be found for any of the given names
    */
   def apply(names: Set[String]): StructType = {
     val nonExistFields = names -- fieldNamesSet
     if (nonExistFields.nonEmpty) {
       throw new IllegalArgumentException(
-        s"${nonExistFields.mkString(", ")} do(es) not exist. " +
-          s"Available: ${fieldNames.mkString(", ")}")
+        s"""Nonexistent field(s): ${nonExistFields.mkString(", ")}.
+           |Available fields: ${fieldNames.mkString(", ")}""".stripMargin)
     }
     // Preserve the original order of fields.
     StructType(fields.filter(f => names.contains(f.name)))
@@ -275,78 +288,24 @@ case class StructType(fields: Array[StructField]) extends DataType with Seq[Stru
   def fieldIndex(name: String): Int = {
     nameToIndex.getOrElse(name,
       throw new IllegalArgumentException(
-        s"$name does not exist. Available: ${fieldNames.mkString(", ")}"))
+        s"""Field "$name" does not exist.
+           |Available fields: ${fieldNames.mkString(", ")}""".stripMargin))
   }
 
   private[sql] def getFieldIndex(name: String): Option[Int] = {
     nameToIndex.get(name)
   }
 
-  /**
-   * Returns a field in this struct and its child structs.
-   *
-   * If includeCollections is true, this will return fields that are nested in maps and arrays.
-   */
-  private[sql] def findNestedField(
-                                    fieldNames: Seq[String],
-                                    includeCollections: Boolean = false): Option[StructField] = {
-    fieldNames.headOption.flatMap(nameToField.get) match {
-      case Some(field) =>
-        (fieldNames.tail, field.dataType, includeCollections) match {
-          case (Seq(), _, _) =>
-            Some(field)
-
-          case (names, struct: StructType, _) =>
-            struct.findNestedField(names, includeCollections)
-
-          case (_, _, false) =>
-            None // types nested in maps and arrays are not used
-
-          case (Seq("key"), MapType(keyType, _, _), true) =>
-            // return the key type as a struct field to include nullability
-            Some(StructField("key", keyType, nullable = false))
-
-          case (Seq("key", names @ _*), MapType(struct: StructType, _, _), true) =>
-            struct.findNestedField(names, includeCollections)
-
-          case (Seq("value"), MapType(_, valueType, isNullable), true) =>
-            // return the value type as a struct field to include nullability
-            Some(StructField("value", valueType, nullable = isNullable))
-
-          case (Seq("value", names @ _*), MapType(_, struct: StructType, _), true) =>
-            struct.findNestedField(names, includeCollections)
-
-          case (Seq("element"), ArrayType(elementType, isNullable), true) =>
-            // return the element type as a struct field to include nullability
-            Some(StructField("element", elementType, nullable = isNullable))
-
-          case (Seq("element", names @ _*), ArrayType(struct: StructType, _), true) =>
-            struct.findNestedField(names, includeCollections)
-
-          case _ =>
-            None
-        }
-      case _ =>
-        None
-    }
-  }
-
   protected[sql] def toAttributes: Seq[AttributeReference] =
     map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
 
-  def treeString: String = treeString(Int.MaxValue)
-
-  def treeString(level: Int): String = {
+  def treeString: String = {
     val builder = new StringBuilder
     builder.append("root\n")
     val prefix = " |"
     fields.foreach(field => field.buildFormattedString(prefix, builder))
 
-    if (level <= 0 || level == Int.MaxValue) {
-      builder.toString()
-    } else {
-      builder.toString().split("\n").filter(_.lastIndexOf("|--") < level * 5 + 1).mkString("\n")
-    }
+    builder.toString()
   }
 
   // scalastyle:off println
@@ -374,10 +333,7 @@ case class StructType(fields: Array[StructField]) extends DataType with Seq[Stru
 
   override def simpleString: String = {
     val fieldTypes = fields.view.map(field => s"${field.name}:${field.dataType.simpleString}")
-    truncatedString(
-      fieldTypes,
-      "struct<", ",", ">",
-      SQLConf.get.maxToStringFields)
+    Utils.truncatedString(fieldTypes, "struct<", ",", ">")
   }
 
   override def catalogString: String = {
@@ -453,7 +409,7 @@ case class StructType(fields: Array[StructField]) extends DataType with Seq[Stru
 /**
  * @since 1.3.0
  */
-@Stable
+@InterfaceStability.Stable
 object StructType extends AbstractDataType {
 
   override private[sql] def defaultConcreteType: DataType = new StructType
@@ -465,7 +421,7 @@ object StructType extends AbstractDataType {
   override private[sql] def simpleString: String = "struct"
 
   private[sql] def fromString(raw: String): StructType = {
-    Try(DataType.fromJson(raw)).getOrElse(LegacyTypeStringParser.parseString(raw)) match {
+    Try(DataType.fromJson(raw)).getOrElse(LegacyTypeStringParser.parse(raw)) match {
       case t: StructType => t
       case _ => throw new RuntimeException(s"Failed parsing ${StructType.simpleString}: $raw")
     }
@@ -517,7 +473,7 @@ object StructType extends AbstractDataType {
           leftContainsNull || rightContainsNull)
 
       case (StructType(leftFields), StructType(rightFields)) =>
-        val newFields = mutable.ArrayBuffer.empty[StructField]
+        val newFields = ArrayBuffer.empty[StructField]
 
         val rightMapped = fieldsMap(rightFields)
         leftFields.foreach {
@@ -576,10 +532,7 @@ object StructType extends AbstractDataType {
     }
 
   private[sql] def fieldsMap(fields: Array[StructField]): Map[String, StructField] = {
-    // Mimics the optimization of breakOut, not present in Scala 2.13, while working in 2.12
-    val map = mutable.Map[String, StructField]()
-    map.sizeHint(fields.length)
-    fields.foreach(s => map.put(s.name, s))
-    map
+    import scala.collection.breakOut
+    fields.map(s => (s.name, s))(breakOut)
   }
 }

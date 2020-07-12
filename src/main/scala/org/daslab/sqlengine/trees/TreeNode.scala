@@ -2,11 +2,22 @@ package org.daslab.sqlengine.trees
 
 import java.util.UUID
 
-import org.daslab.sqlengine.types.{DataType, StructType}
+import org.apache.commons.lang3.ClassUtils
+import org.apache.spark.storage.StorageLevel
+import org.daslab.sqlengine.catalog.{BucketSpec, CatalogStorageFormat, CatalogTable, CatalogTableType, FunctionResource}
+import org.daslab.sqlengine.errors._
+import org.daslab.sqlengine.plans.JoinType
+import org.daslab.sqlengine.plans.physical.{BroadcastMode, Partitioning}
+import org.daslab.sqlengine.types.{DataType, Metadata, StructField, StructType}
+//TODO spark core
+import org.daslab.sqlengine.util.Utils
+import org.daslab.sqlengine.ScalaReflection._
 
 import scala.collection.{Map, mutable}
 import scala.reflect.ClassTag
-
+import org.json4s.JsonAST._
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
 
 /**
  *    在TreeNode类中遍历树时被使用
@@ -62,6 +73,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
 
   /**
    *  保存TreeNode节点的辅助信息，当该节点通过makeCopy拷贝或者通过transformUp/Down方法遍历时会被复制
+   *  TODO　tags参考3.0.0实现
    */
   private val tags: mutable.Map[TreeNodeTag[_], Any] = mutable.Map.empty
 
@@ -135,8 +147,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   *
-   *
+   *　返回对树中节点应用规则后的的结果的序列
+   *　
    * @param f
    */
   def map[A](f: BaseType => A): Seq[A] = {
@@ -146,8 +158,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq by applying a function to all nodes in this tree and using the elements of the
-   * resulting collections.
+   * 　同map，但是可以将返回的结果扁平化为一个序列
+   * 　
    */
   def flatMap[A](f: BaseType => TraversableOnce[A]): Seq[A] = {
     val ret = new collection.mutable.ArrayBuffer[A]()
@@ -156,8 +168,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq containing the result of applying a partial function to all elements in this
-   * tree on which the function is defined.
+   *   返回对这个树所有节点应用偏函数的结果序列
+   *
    */
   def collect[B](pf: PartialFunction[BaseType, B]): Seq[B] = {
     val ret = new collection.mutable.ArrayBuffer[B]()
@@ -167,15 +179,15 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a Seq containing the leaves in this tree.
+   * 返回所有叶节点
    */
   def collectLeaves(): Seq[BaseType] = {
     this.collect { case p if p.children.isEmpty => p }
   }
 
   /**
-   * Finds and returns the first [[TreeNode]] of the tree for which the given partial function
-   * is defined (pre-order), and applies the partial function to it.
+   *  先序遍历树，并返回第一个应用偏函数的结果
+   *
    */
   def collectFirst[B](pf: PartialFunction[BaseType, B]): Option[B] = {
     val lifted = pf.lift
@@ -185,7 +197,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Efficient alternative to `productIterator.map(f).toArray`.
+   *  productIterator.map(f).toArray的快速版本
    */
   protected def mapProductIterator[B: ClassTag](f: Any => B): Array[B] = {
     val arr = Array.ofDim[B](productArity)
@@ -198,7 +210,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node with the children replaced.
+   * 返回该节点带有新的子节点的一个拷贝
    * TODO: Validate somewhere (in debug mode?) that children are ordered correctly.
    */
   def withNewChildren(newChildren: Seq[BaseType]): BaseType = {
@@ -244,44 +256,44 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied to the tree.
-   * When `rule` does not apply to a given node it is left unchanged.
-   * Users should not expect a specific directionality. If a specific directionality is needed,
-   * transformDown or transformUp should be used.
    *
-   * @param rule the function use to transform this nodes children
+   *  返回以先序遍历应用规则后的树
+   *  如果规则未生效则不做改变
+   *  可以用transformDown/transformUp来指定遍历的顺序
+   *
+   * @param rule 转换规则
    */
   def transform(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     transformDown(rule)
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied to it and all of its
-   * children (pre-order). When `rule` does not apply to a given node it is left unchanged.
    *
-   * @param rule the function used to transform this nodes children
+   * pre-order
+   *
+   * @param rule
    */
   def transformDown(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     val afterRule = CurrentOrigin.withOrigin(origin) {
       rule.applyOrElse(this, identity[BaseType])
     }
 
-    // Check if unchanged and then possibly return old copy to avoid gc churn.
+    // 如果未改变则直接返回旧值避免gc
     if (this fastEquals afterRule) {
       mapChildren(_.transformDown(rule))
     } else {
       // If the transform function replaces this node with a new one, carry over the tags.
+      //TODO 2.4.5无此特性
       afterRule.copyTagsFrom(this)
       afterRule.mapChildren(_.transformDown(rule))
     }
   }
 
   /**
-   * Returns a copy of this node where `rule` has been recursively applied first to all of its
-   * children and then itself (post-order). When `rule` does not apply to a given node, it is left
-   * unchanged.
+   *  post-order
    *
-   * @param rule the function use to transform this nodes children
+   *
+   * @param rule
    */
   def transformUp(rule: PartialFunction[BaseType, BaseType]): BaseType = {
     val afterRuleOnChildren = mapChildren(_.transformUp(rule))
@@ -295,12 +307,13 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       }
     }
     // If the transform function replaces this node with a new one, carry over the tags.
+    //TODO tags problem
     newNode.copyTagsFrom(this)
     newNode
   }
 
   /**
-   * Returns a copy of this node where `f` has been applied to all the nodes in `children`.
+   *  将规则作用在该节点所有的子节点后返回该节点，默认不是深拷贝
    */
   def mapChildren(f: BaseType => BaseType): BaseType = {
     if (containsChild.nonEmpty) {
@@ -311,12 +324,11 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Returns a copy of this node where `f` has been applied to all the nodes in `children`.
-   * @param f The transform function to be applied on applicable `TreeNode` elements.
-   * @param forceCopy Whether to force making a copy of the nodes even if no child has been changed.
+   * 同上
+   * @param f  transform function
+   * @param forceCopy 即使子节点没有变化也复制
    */
-  private def mapChildren(
-                           f: BaseType => BaseType,
+  private def mapChildren(f: BaseType => BaseType,
                            forceCopy: Boolean): BaseType = {
     var changed = false
 
@@ -389,17 +401,17 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * Args to the constructor that should be copied, but not transformed.
-   * These are appended to the transformed args automatically by makeCopy
+   *  传给构造函数中应当被拷贝的参数
+   *  会自动通过makeCopy函数追加到转换的参数中
    * @return
    */
   protected def otherCopyArgs: Seq[AnyRef] = Nil
 
   /**
-   * Creates a copy of this type of tree node after a transformation.
-   * Must be overridden by child classes that have constructor arguments
-   * that are not present in the productIterator.
-   * @param newArgs the new product arguments.
+   *  在转换后构造树节点的一个拷贝
+   *  如果子类的构造参数中有未在ProductIterator中遍历的则需要重写
+   *
+   * @param newArgs 新实例的参数
    */
   def makeCopy(newArgs: Array[AnyRef]): BaseType = makeCopy(newArgs, allowEmptyArgs = false)
 
@@ -407,8 +419,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
    * Creates a copy of this type of tree node after a transformation.
    * Must be overridden by child classes that have constructor arguments
    * that are not present in the productIterator.
-   * @param newArgs the new product arguments.
-   * @param allowEmptyArgs whether to allow argument list to be empty.
+   * @param newArgs 新参数
+   * @param allowEmptyArgs 是否允许参数列表为空
    */
   private def makeCopy(
                         newArgs: Array[AnyRef],
@@ -420,7 +432,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       return this
     }
 
-    // Skip no-arg constructors that are just there for kryo.
+    // 跳过无参的构造函数，或者允许无参
     val ctors = allCtors.filter(allowEmptyArgs || _.getParameterTypes.size != 0)
     if (ctors.isEmpty) {
       sys.error(s"No valid constructor for $nodeName")
@@ -441,11 +453,12 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
         val argsArray: Array[Class[_]] = allArgs.map(_.getClass)
         ClassUtils.isAssignable(argsArray, ctor.getParameterTypes, true /* autoboxing */)
       }
-    }.getOrElse(ctors.maxBy(_.getParameterTypes.length)) // fall back to older heuristic
+    }.getOrElse(ctors.maxBy(_.getParameterTypes.length)) // 否则选择参数列表最长的构造函数
 
     try {
       CurrentOrigin.withOrigin(origin) {
         val res = defaultCtor.newInstance(allArgs.toArray: _*).asInstanceOf[BaseType]
+        //TODO tags
         res.copyTagsFrom(this)
         res
       }
@@ -464,35 +477,50 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     }
   }
 
+  /**
+   * 深拷贝
+   * @return
+   */
   override def clone(): BaseType = {
     mapChildren(_.clone(), forceCopy = true)
   }
 
   /**
-   * Returns the name of this type of TreeNode.  Defaults to the class name.
-   * Note that we remove the "Exec" suffix for physical operators here.
+   *
+   * @return 返回该TreeNode的类型名称，默认是classname
+   *         去除了物理计划的后缀Exec
    */
   def nodeName: String = getClass.getSimpleName.replaceAll("Exec$", "")
 
   /**
-   * The arguments that should be included in the arg string.  Defaults to the `productIterator`.
+   * 返回所有参数列表的迭代器，默认使用productIterator
    */
   protected def stringArgs: Iterator[Any] = productIterator
 
+  // allChildren=children++innerChildren
   private lazy val allChildren: Set[TreeNode[_]] = (children ++ innerChildren).toSet[TreeNode[_]]
 
-  /** Returns a string representing the arguments to this node, minus any children */
-  def argString(maxFields: Int): String = stringArgs.flatMap {
+
+
+
+
+
+
+  /**
+   * 返回代表该节点参数（除去所有children信息）的string信息
+   * @return
+   */
+  def argString: String = stringArgs.flatMap {
     case tn: TreeNode[_] if allChildren.contains(tn) => Nil
     case Some(tn: TreeNode[_]) if allChildren.contains(tn) => Nil
-    case Some(tn: TreeNode[_]) => tn.simpleString(maxFields) :: Nil
-    case tn: TreeNode[_] => tn.simpleString(maxFields) :: Nil
+    case Some(tn: TreeNode[_]) => tn.simpleString :: Nil
+    case tn: TreeNode[_] => tn.simpleString :: Nil
     case seq: Seq[Any] if seq.toSet.subsetOf(allChildren.asInstanceOf[Set[Any]]) => Nil
     case iter: Iterable[_] if iter.isEmpty => Nil
-    case seq: Seq[_] => truncatedString(seq, "[", ", ", "]", maxFields) :: Nil
-    case set: Set[_] => truncatedString(set.toSeq, "{", ", ", "}", maxFields) :: Nil
+    case seq: Seq[_] => Utils.truncatedString(seq, "[", ", ", "]") :: Nil
+    case set: Set[_] => Utils.truncatedString(set.toSeq, "{", ", ", "}") :: Nil
     case array: Array[_] if array.isEmpty => Nil
-    case array: Array[_] => truncatedString(array, "[", ", ", "]", maxFields) :: Nil
+    case array: Array[_] => Utils.truncatedString(array, "[", ", ", "]") :: Nil
     case null => Nil
     case None => Nil
     case Some(null) => Nil
@@ -505,74 +533,73 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     case other => other :: Nil
   }.mkString(", ")
 
+
+
+
   /**
-   * ONE line description of this node.
-   * @param maxFields Maximum number of fields that will be converted to strings.
-   *                  Any elements beyond the limit will be dropped.
+   *
+   * @return 返回该节点的描述信息
    */
-  def simpleString(maxFields: Int): String = s"$nodeName ${argString(maxFields)}".trim
+  def simpleString: String = s"$nodeName $argString".trim
 
   /**
    * ONE line description of this node containing the node identifier.
    * @return
+   * TODO 2.4.5 not compatible
    */
-  def simpleStringWithNodeId(): String
+ // def simpleStringWithNodeId(): String
 
-  /** ONE line description of this node with more information */
-  def verboseString(maxFields: Int): String
+  /**
+   *
+   *  @return 返回更加详细的节点信息
+   *
+   */
+  def verboseString: String
 
-  /** ONE line description of this node with some suffix information */
-  def verboseStringWithSuffix(maxFields: Int): String = verboseString(maxFields)
+  /**
+   *
+   * @return 返回更加详细的节点信息并附带后缀
+   */
+  def verboseStringWithSuffix: String = verboseString
 
   override def toString: String = treeString
 
-  /** Returns a string representation of the nodes in this tree */
-  final def treeString: String = treeString(verbose = true)
+  /**
+   *
+   * @return 返回该节点的树状信息
+   */
+  def treeString: String = treeString(verbose = true)
 
-  final def treeString(
-                        verbose: Boolean,
-                        addSuffix: Boolean = false,
-                        maxFields: Int = SQLConf.get.maxToStringFields,
-                        printOperatorId: Boolean = false): String = {
-    val concat = new PlanStringConcat()
-    treeString(concat.append, verbose, addSuffix, maxFields, printOperatorId)
-    concat.toString
+  def treeString(verbose: Boolean, addSuffix: Boolean = false): String = {
+    generateTreeString(0, Nil, new StringBuilder, verbose = verbose, addSuffix = addSuffix).toString
   }
 
-  def treeString(
-                  append: String => Unit,
-                  verbose: Boolean,
-                  addSuffix: Boolean,
-                  maxFields: Int,
-                  printOperatorId: Boolean): Unit = {
-    generateTreeString(0, Nil, append, verbose, "", addSuffix, maxFields, printOperatorId)
-  }
 
   /**
-   * Returns a string representation of the nodes in this tree, where each operator is numbered.
-   * The numbers can be used with [[TreeNode.apply]] to easily access specific subtrees.
+   *  返回可以表示节点与树关系的字符串，其中每个操作符都指定id,可以使用TreeNode.apply方法访问对应的子树
    *
-   * The numbers are based on depth-first traversal of the tree (with innerChildren traversed first
-   * before children).
+   *  这些id是由depth-first的遍历方式指定的（优先遍历inner Children然后是children）
+   * @return
    */
   def numberedTreeString: String =
     treeString.split("\n").zipWithIndex.map { case (line, i) => f"$i%02d $line" }.mkString("\n")
 
   /**
-   * Returns the tree node at the specified number, used primarily for interactive debugging.
-   * Numbers for each node can be found in the [[numberedTreeString]].
+   *  返回指定id的TreeNode，主要用于debugging
    *
-   * Note that this cannot return BaseType because logical plan's plan node might return
-   * physical plan for innerChildren, e.g. in-memory relation logical plan node has a reference
-   * to the physical plan node it is referencing.
+   *  这里不反悔BaseType的原因是logical plan的plan node的innerChildren有可能返回physical plan
+   * @param number
+   * @return
    */
   def apply(number: Int): TreeNode[_] = getNodeNumbered(new MutableInt(number)).orNull
 
+
   /**
-   * Returns the tree node at the specified number, used primarily for interactive debugging.
-   * Numbers for each node can be found in the [[numberedTreeString]].
+   *  返回指定id的TreeNode，主要用于debugging
    *
-   * This is a variant of [[apply]] that returns the node as BaseType (if the type matches).
+   *   apply的变体，如果类型匹配则返回BaseType
+   * @param number
+   * @return
    */
   def p(number: Int): BaseType = apply(number).asInstanceOf[BaseType]
 
@@ -591,75 +618,69 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   }
 
   /**
-   * All the nodes that should be shown as a inner nested tree of this node.
-   * For example, this can be used to show sub-queries.
+   *  该节点的inner nested tree中的所有节点
+   *  可以用来展示子查询
+   * @return
    */
   def innerChildren: Seq[TreeNode[_]] = Seq.empty
 
   /**
-   * Appends the string representation of this node and its children to the given Writer.
+   *  将该节点和其子节点的表示信息追加到StringBuilder中
    *
-   * The `i`-th element in `lastChildren` indicates whether the ancestor of the current node at
-   * depth `i + 1` is the last child of its own parent node.  The depth of the root node is 0, and
-   * `lastChildren` for the root node should be empty.
+   *  lastChildren中的i-th个元素表示当前节点在i+1层的祖先是否为它父节点的最后一个子节点
+   *  根节点的depth为0，lastChildren应该为空
    *
-   * Note that this traversal (numbering) order must be the same as [[getNodeNumbered]].
+   *  遍历方式需要和getNodeNumbered相同
+   *
    */
   def generateTreeString(
                           depth: Int,
                           lastChildren: Seq[Boolean],
-                          append: String => Unit,
+                          builder: StringBuilder,
                           verbose: Boolean,
                           prefix: String = "",
-                          addSuffix: Boolean = false,
-                          maxFields: Int,
-                          printNodeId: Boolean): Unit = {
+                          addSuffix: Boolean = false): StringBuilder = {
 
     if (depth > 0) {
       lastChildren.init.foreach { isLast =>
-        append(if (isLast) "   " else ":  ")
+        builder.append(if (isLast) "   " else ":  ")
       }
-      append(if (lastChildren.last) "+- " else ":- ")
+      builder.append(if (lastChildren.last) "+- " else ":- ")
     }
 
     val str = if (verbose) {
-      if (addSuffix) verboseStringWithSuffix(maxFields) else verboseString(maxFields)
+      if (addSuffix) verboseStringWithSuffix else verboseString
     } else {
-      if (printNodeId) {
-        simpleStringWithNodeId()
-      } else {
-        simpleString(maxFields)
-      }
+      simpleString
     }
-    append(prefix)
-    append(str)
-    append("\n")
+    builder.append(prefix)
+    builder.append(str)
+    builder.append("\n")
 
     if (innerChildren.nonEmpty) {
       innerChildren.init.foreach(_.generateTreeString(
-        depth + 2, lastChildren :+ children.isEmpty :+ false, append, verbose,
-        addSuffix = addSuffix, maxFields = maxFields, printNodeId = printNodeId))
+        depth + 2, lastChildren :+ children.isEmpty :+ false, builder, verbose,
+        addSuffix = addSuffix))
       innerChildren.last.generateTreeString(
-        depth + 2, lastChildren :+ children.isEmpty :+ true, append, verbose,
-        addSuffix = addSuffix, maxFields = maxFields, printNodeId = printNodeId)
+        depth + 2, lastChildren :+ children.isEmpty :+ true, builder, verbose,
+        addSuffix = addSuffix)
     }
 
     if (children.nonEmpty) {
       children.init.foreach(_.generateTreeString(
-        depth + 1, lastChildren :+ false, append, verbose, prefix, addSuffix,
-        maxFields, printNodeId = printNodeId)
-      )
+        depth + 1, lastChildren :+ false, builder, verbose, prefix, addSuffix))
       children.last.generateTreeString(
-        depth + 1, lastChildren :+ true, append, verbose, prefix,
-        addSuffix, maxFields, printNodeId = printNodeId)
+        depth + 1, lastChildren :+ true, builder, verbose, prefix, addSuffix)
     }
+
+    builder
   }
 
+
   /**
-   * Returns a 'scala code' representation of this `TreeNode` and its children.  Intended for use
-   * when debugging where the prettier toString function is obfuscating the actual structure. In the
-   * case of 'pure' `TreeNodes` that only contain primitives and other TreeNodes, the result can be
-   * pasted in the REPL to build an equivalent Tree.
+   *  返回该节点和其子节点的Scala code表示
+   *  用于在debugging阶段使用
+   * @return
    */
   def asCode: String = {
     val args = productIterator.map {
@@ -692,7 +713,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     val fieldNames = getConstructorParameterNames(getClass)
     val fieldValues = productIterator.toSeq ++ otherCopyArgs
     assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
-      fieldNames.mkString(", ") + s", values: " + fieldValues.mkString(", "))
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
 
     fieldNames.zip(fieldValues).map {
       // If the field value is a child, then use an int to encode it, represents the index of
@@ -734,7 +755,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       t.forall(_.isInstanceOf[Partitioning]) || t.forall(_.isInstanceOf[DataType]) =>
       JArray(t.map(parseToJson).toList)
     case t: Seq[_] if t.length > 0 && t.head.isInstanceOf[String] =>
-      JString(truncatedString(t, "[", ", ", "]", SQLConf.get.maxToStringFields))
+      JString(Utils.truncatedString(t, "[", ", ", "]"))
     case t: Seq[_] => JNull
     case m: Map[_, _] => JNull
     // if it's a scala object, we can simply keep the full class path.
@@ -745,8 +766,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
       try {
         val fieldNames = getConstructorParameterNames(p.getClass)
         val fieldValues = p.productIterator.toSeq
-        assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
-          fieldNames.mkString(", ") + s", values: " + fieldValues.mkString(", "))
+        assert(fieldNames.length == fieldValues.length)
         ("product-class" -> JString(p.getClass.getName)) :: fieldNames.zip(fieldValues).map {
           case (name, value) => name -> parseToJson(value)
         }.toList
@@ -770,8 +790,5 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     case storage: CatalogStorageFormat => true
     case _ => false
   }
-
-
-
 
 }
