@@ -1,7 +1,5 @@
-package org.daslab.sqlengine.visitors;
-
-import org.daslab.NewSqlBaseBaseVisitor;
-import org.daslab.NewSqlBaseParser;
+import org.spark.daslab.NewSqlBaseBaseVisitor;
+import org.spark.daslab.NewSqlBaseParser;
 
 public class PrintVisitor extends NewSqlBaseBaseVisitor<Object> {
 
