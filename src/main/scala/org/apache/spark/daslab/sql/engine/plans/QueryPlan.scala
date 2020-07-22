@@ -19,8 +19,9 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   def output: Seq[Attribute]
 
+
   /**
-   * Returns the set of attributes that are output by this node.
+    * @return 返回该节点的属性的集合 /Returns the set of attributes that are output by this node.
    */
   def outputSet: AttributeSet = AttributeSet(output)
 
@@ -32,12 +33,14 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   /**
    * The set of all attributes that are input to this operator by its children.
+   *  返回该节点子节点的属性
    */
   def inputSet: AttributeSet =
     AttributeSet(children.flatMap(_.asInstanceOf[QueryPlan[PlanType]].output))
 
   /**
    * The set of all attributes that are produced by this node.
+   * 当前节点生成的所有属性
    */
   def producedAttributes: AttributeSet = AttributeSet.empty
 
@@ -45,12 +48,14 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    * Attributes that are referenced by expressions but not provided by this node's children.
    * Subclasses should override this method if they produce attributes internally as it is used by
    * assertions designed to prevent the construction of invalid plans.
+   *  被表达式引用但是没有被子节点提供的属性
    */
   def missingInput: AttributeSet = references -- inputSet -- producedAttributes
 
   /**
    * Runs [[transformExpressionsDown]] with `rule` on all expressions present
    * in this query operator.
+   *
    * Users should not expect a specific directionality. If a specific directionality is needed,
    * transformExpressionsDown or transformExpressionsUp should be used.
    *
@@ -141,6 +146,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
     }.toSeq
   }
 
+  //返回对应的schema信息
   lazy val schema: StructType = StructType.fromAttributes(output)
 
   /** Returns the output schema in the tree format. */
@@ -186,7 +192,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    * Returns a plan where a best effort attempt has been made to transform `this` in a way
    * that preserves the result but removes cosmetic variations (case sensitivity, ordering for
    * commutative operations, expression id, etc.)
-   *
+   * 在保留执行结果不变的前提下，转换逻辑计划消除差异（大小写，可交换顺序算子的排序，表达式id）
    * Plans where `this.canonicalized == other.canonicalized` will always evaluate to the same
    * result.
    *
@@ -206,6 +212,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   /**
    * Defines how the canonicalization should work for the current plan.
+   * 标准化
    */
   protected def doCanonicalize(): PlanType = {
     val canonicalizedChildren = children.map(_.canonicalized)
@@ -231,7 +238,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   /**
    * Returns true when the given query plan will return the same results as this query plan.
-   *
+   * 判断另一个query plan是否与当前的query plan会生成一样的结果
    * Since its likely undecidable to generally determine if two given plans will produce the same
    * results, it is okay for this function to return false, even if the results are actually
    * the same.  Such behavior will not affect correctness, only the application of performance

@@ -12,6 +12,7 @@ import org.apache.spark.daslab.sql.engine.plans.logical.statsEstimation.LogicalP
 import org.apache.spark.internal.Logging
 
 //todo predicates
+//逻辑计划
 abstract class LogicalPlan
   extends QueryPlan[LogicalPlan]
     with AnalysisHelper
@@ -19,46 +20,52 @@ abstract class LogicalPlan
     with QueryPlanConstraints
     with Logging {
 
-  /** Returns true if this subtree has data from a streaming data source. */
+
+   /**
+   *   如果子树中有流数据源的数据 就返回true
+   * @return
+   */
   def isStreaming: Boolean = children.exists(_.isStreaming == true)
+
 
   override def verboseStringWithSuffix: String = {
     super.verboseString + statsCache.map(", " + _.toString).getOrElse("")
   }
 
   /**
-   * Returns the maximum number of rows that this plan may compute.
+   * 返回该计划可能计算的最大的行数
    *
-   * Any operator that a Limit can be pushed passed should override this function (e.g., Union).
-   * Any operator that can push through a Limit should override this function (e.g., Project).
+   * 任何一个可以通过限制的算子都应该重写这个函数，例如（Union）
+   * 任何一个可以被下推的限制算子都应该重写这个函数 ，例如（Project）
    */
   def maxRows: Option[Long] = None
 
   /**
-   * Returns the maximum number of rows this plan may compute on each partition.
+   * 返回该计划在每个分区上可能计算的最大行数
    */
   def maxRowsPerPartition: Option[Long] = maxRows
 
+
   /**
-   * Returns true if this expression and all its children have been resolved to a specific schema
-   * and false if it still contains any unresolved placeholders. Implementations of LogicalPlan
-   * can override this (e.g.
-   *
-   * should return `false`).
+   * 如果该表达式和它所有的子及表达式都已经解析到了一个具体的schema就返回true
+   * 如果其中还包含未解析的placeholders就返回false
    */
   lazy val resolved: Boolean = expressions.forall(_.resolved) && childrenResolved
 
   override protected def statePrefix = if (!resolved) "'" else super.statePrefix
 
   /**
-   * Returns true if all its children of this query plan have been resolved.
+   * 该计划的所有子节点都已经被解析了就返回true
    */
   def childrenResolved: Boolean = children.forall(_.resolved)
 
+
   /**
-   * Resolves a given schema to concrete [[Attribute]] references in this query plan. This function
-   * should only be called on analyzed plans since it will throw [[AnalysisException]] for
-   * unresolved [[Attribute]]s.
+   *  用给定的schema解析逻辑计划中的Attribute，使之变为具体的Attribute references
+   *  该函数应该只用于解析逻辑计划，因为对于未解析的Attribute就会抛出AnalysisException
+   * @param schema
+   * @param resolver
+   * @return
    */
   def resolve(schema: StructType, resolver: Resolver): Seq[Attribute] = {
     schema.map { field =>
@@ -119,7 +126,7 @@ abstract class LogicalPlan
 }
 
 /**
- * A logical plan node with no children.
+ * 无子节点的逻辑计划
  */
 abstract class LeafNode extends LogicalPlan {
   override final def children: Seq[LogicalPlan] = Nil
@@ -130,7 +137,7 @@ abstract class LeafNode extends LogicalPlan {
 }
 
 /**
- * A logical plan node with single child.
+ * 只有一个子节点的逻辑计划
  */
 abstract class UnaryNode extends LogicalPlan {
   def child: LogicalPlan
@@ -163,7 +170,7 @@ abstract class UnaryNode extends LogicalPlan {
 }
 
 /**
- * A logical plan node with a left and right child.
+ * 拥有左子节点和右子节点的逻辑计划
  */
 abstract class BinaryNode extends LogicalPlan {
   def left: LogicalPlan
