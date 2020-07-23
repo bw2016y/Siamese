@@ -1,17 +1,17 @@
-
 package org.apache.spark.daslab.sql.engine.util
+
+
 
 import scala.reflect.ClassTag
 
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.expressions.{SpecializedGetters, UnsafeArrayData}
 import org.apache.spark.daslab.sql.types._
+
+//todo spark core
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.array.ByteArrayMethods
 
-/**
-  * ArrayData和UnsafeArrayData相互耦合
-  */
 object ArrayData {
   def toArrayData(input: Any): ArrayData = input match {
     case a: Array[Boolean] => UnsafeArrayData.fromPrimitiveArray(a)
@@ -26,13 +26,13 @@ object ArrayData {
 
 
   /**
-    * Allocate [[UnsafeArrayData]] or [[GenericArrayData]] based on given parameters.
-    *
-    * @param elementSize a size of an element in bytes. If less than zero, the type of an element is
-    *                    non-primitive type
-    * @param numElements the number of elements the array should contain
-    * @param additionalErrorMessage string to include in the error message
-    */
+   * Allocate [[UnsafeArrayData]] or [[GenericArrayData]] based on given parameters.
+   *
+   * @param elementSize a size of an element in bytes. If less than zero, the type of an element is
+   *                    non-primitive type
+   * @param numElements the number of elements the array should contain
+   * @param additionalErrorMessage string to include in the error message
+   */
   def allocateArrayData(
                          elementSize: Int,
                          numElements: Long,
@@ -185,10 +185,10 @@ abstract class ArrayData extends SpecializedGetters with Serializable {
 }
 
 /**
-  * Implements an `IndexedSeq` interface for `ArrayData`. Notice that if the original `ArrayData`
-  * is a primitive array and contains null elements, it is better to ask for `IndexedSeq[Any]`,
-  * instead of `IndexedSeq[Int]`, in order to keep the null elements.
-  */
+ * Implements an `IndexedSeq` interface for `ArrayData`. Notice that if the original `ArrayData`
+ * is a primitive array and contains null elements, it is better to ask for `IndexedSeq[Any]`,
+ * instead of `IndexedSeq[Int]`, in order to keep the null elements.
+ */
 class ArrayDataIndexedSeq[T](arrayData: ArrayData, dataType: DataType) extends IndexedSeq[T] {
 
   private val accessor: (SpecializedGetters, Int) => Any = InternalRow.getAccessor(dataType)

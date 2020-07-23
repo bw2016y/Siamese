@@ -1,5 +1,7 @@
 package org.apache.spark.daslab.sql.engine.parser
 
+
+
 import java.util
 
 import scala.collection.mutable.StringBuilder
@@ -8,12 +10,15 @@ import org.antlr.v4.runtime.{ParserRuleContext, Token}
 import org.antlr.v4.runtime.misc.Interval
 import org.antlr.v4.runtime.tree.TerminalNode
 
+
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
-import org.apache.spark.daslab.sql.engine.trees.{CurrentOrigin, Origin}
+import org.apache.spark.daslab.sql.engine.trees.{CurrentOrigin,Origin}
+
+
 
 /**
-  * A collection of utility methods for use during the parsing process.
-  */
+ * A collection of utility methods for use during the parsing process.
+ */
 object ParserUtils {
   /** Get the command which created the token. */
   def command(ctx: ParserRuleContext): String = {
@@ -81,10 +86,10 @@ object ParserUtils {
   }
 
   /**
-    * Register the origin of the context. Any TreeNode created in the closure will be assigned the
-    * registered origin. This method restores the previously set origin after completion of the
-    * closure.
-    */
+   * Register the origin of the context. Any TreeNode created in the closure will be assigned the
+   * registered origin. This method restores the previously set origin after completion of the
+   * closure.
+   */
   def withOrigin[T](ctx: ParserRuleContext)(f: => T): T = {
     val current = CurrentOrigin.get
     CurrentOrigin.set(position(ctx.getStart))
@@ -179,9 +184,9 @@ object ParserUtils {
   /** Some syntactic sugar which makes it easier to work with optional clauses for LogicalPlans. */
   implicit class EnhancedLogicalPlan(val plan: LogicalPlan) extends AnyVal {
     /**
-      * Create a plan using the block of code when the given context exists. Otherwise return the
-      * original plan.
-      */
+     * Create a plan using the block of code when the given context exists. Otherwise return the
+     * original plan.
+     */
     def optional(ctx: AnyRef)(f: => LogicalPlan): LogicalPlan = {
       if (ctx != null) {
         f
@@ -191,9 +196,9 @@ object ParserUtils {
     }
 
     /**
-      * Map a [[LogicalPlan]] to another [[LogicalPlan]] if the passed context exists using the
-      * passed function. The original plan is returned when the context does not exist.
-      */
+     * Map a [[LogicalPlan]] to another [[LogicalPlan]] if the passed context exists using the
+     * passed function. The original plan is returned when the context does not exist.
+     */
     def optionalMap[C](ctx: C)(f: (C, LogicalPlan) => LogicalPlan): LogicalPlan = {
       if (ctx != null) {
         f(ctx, plan)

@@ -3,14 +3,17 @@ package org.apache.spark.daslab.sql.engine.expressions
 
 import java.util.Locale
 
-import org.apache.spark.daslab.sql.engine.trees.TreeNode
-
 import org.apache.spark.daslab.sql.engine.InternalRow
-//import org.apache.spark.daslab.sql.engine.analysis.{TypeCheckResult, TypeCoercion}
-//import org.apache.spark.sql.catalyst.expressions.codegen._
-//import org.apache.spark.sql.catalyst.expressions.codegen.Block._
+import org.apache.spark.daslab.sql.engine.analysis.{TypeCheckResult, TypeCoercion}
+import org.apache.spark.daslab.sql.engine.expressions.codegen._
+import org.apache.spark.daslab.sql.engine.expressions.codegen.Block._
+import org.apache.spark.daslab.sql.engine.trees.TreeNode
 import org.apache.spark.daslab.sql.types._
+
+//todo spark core
 import org.apache.spark.util.Utils
+
+
 
 ///**
 //  * 表达式：不需要触发执行引擎就可以直接计算的单元，如四则运算、逻辑运算、过滤等等
