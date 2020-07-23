@@ -10,12 +10,13 @@ import org.json4s.JsonDSL._
 
 import org.apache.spark.SparkException
 import org.apache.spark.annotation.InterfaceStability
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, InterpretedOrdering}
-import org.apache.spark.sql.catalyst.parser.{CatalystSqlParser, LegacyTypeStringParser}
-import org.apache.spark.sql.catalyst.util.{escapeSingleQuotedString, quoteIdentifier}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeReference, InterpretedOrdering}
+import org.apache.spark.daslab.sql.engine.parser.{CatalystSqlParser, LegacyTypeStringParser}
+import org.apache.spark.daslab.sql.engine.util.{escapeSingleQuotedString, quoteIdentifier}
 import org.apache.spark.util.Utils
 
 /**
+  * StructType使用到了parser中的类，还有部分util中的类
  * A [[StructType]] object can be constructed by
  * {{{
  * StructType(fields: Seq[StructField])
@@ -58,7 +59,7 @@ import org.apache.spark.util.Utils
  * //    ...
  * }}}
  *
- * A [[org.apache.spark.sql.Row]] object is used as a value of the [[StructType]].
+ * A [[org.apache.spark.daslab.sql.Row]] object is used as a value of the [[StructType]].
  *
  * Scala Example:
  * {{{

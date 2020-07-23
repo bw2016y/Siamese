@@ -209,23 +209,23 @@ abstract class Expression extends TreeNode[Expression] {
     case single => single :: Nil
   }
 
-//  // Marks this as final, Expression.verboseString should never be called, and thus shouldn't be
-//  // overridden by concrete classes.
-//  final override def verboseString: String = simpleString
-//
-//  override def simpleString: String = toString
+  // Marks this as final, Expression.verboseString should never be called, and thus shouldn't be
+  // overridden by concrete classes.
+  final override def verboseString: String = simpleString
 
-//  override def toString: String = prettyName + Utils.truncatedString(
-//    flatArguments.toSeq, "(", ", ", ")")
+  override def simpleString: String = toString
 
-//  /**
-//    * Returns SQL representation of this expression.  For expressions extending [[NonSQLExpression]],
-//    * this method may return an arbitrary user facing string.
-//    */
-//  def sql: String = {
-//    val childrenSQL = children.map(_.sql).mkString(", ")
-//    s"$prettyName($childrenSQL)"
-//  }
+  override def toString: String = prettyName + Utils.truncatedString(
+    flatArguments.toSeq, "(", ", ", ")")
+
+  /**
+    * Returns SQL representation of this expression.  For expressions extending [[NonSQLExpression]],
+    * this method may return an arbitrary user facing string.
+    */
+  def sql: String = {
+    val childrenSQL = children.map(_.sql).mkString(", ")
+    s"$prettyName($childrenSQL)"
+  }
 }
 
 

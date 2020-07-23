@@ -1,7 +1,7 @@
 package org.apache.spark.daslab.sql.engine
 
 import org.apache.spark.daslab.sql.engine.expressions._
-//import org.apache.spark.daslab.sql.engine.util.{ArrayData, MapData}
+import org.apache.spark.daslab.sql.engine.util.{ArrayData, MapData}
 import org.apache.spark.daslab.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
@@ -37,12 +37,12 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
     * Note: In order to support update decimal with precision > 18 in UnsafeRow,
     * CAN NOT call setNullAt() for decimal column on UnsafeRow, call setDecimal(i, null, precision).
     */
-//  def setDecimal(i: Int, value: Decimal, precision: Int) { update(i, value) }
+  def setDecimal(i: Int, value: Decimal, precision: Int) { update(i, value) }
 
   /**
     * copy当前的[[InternalRow]]对象
     */
-//  def copy(): InternalRow
+  def copy(): InternalRow
 
   /** 如果当前行中是否有null值 */
   def anyNull: Boolean = {
@@ -90,39 +90,39 @@ object InternalRow {
   /** Returns an empty [[InternalRow]]. */
   val empty = apply()
 
-//  /**
-//    * Copies the given value if it's string/struct/array/map type.
-//    */
-//  def copyValue(value: Any): Any = value match {
-//    case v: UTF8String => v.copy()
-//    case v: InternalRow => v.copy()
-//    case v: ArrayData => v.copy()
-//    case v: MapData => v.copy()
-//    case _ => value
-//  }
-//
-//  /**
-//    * Returns an accessor for an `InternalRow` with given data type. The returned accessor
-//    * actually takes a `SpecializedGetters` input because it can be generalized to other classes
-//    * that implements `SpecializedGetters` (e.g., `ArrayData`) too.
-//    */
-//  def getAccessor(dataType: DataType): (SpecializedGetters, Int) => Any = dataType match {
-//    case BooleanType => (input, ordinal) => input.getBoolean(ordinal)
-//    case ByteType => (input, ordinal) => input.getByte(ordinal)
-//    case ShortType => (input, ordinal) => input.getShort(ordinal)
-//    case IntegerType | DateType => (input, ordinal) => input.getInt(ordinal)
-//    case LongType | TimestampType => (input, ordinal) => input.getLong(ordinal)
-//    case FloatType => (input, ordinal) => input.getFloat(ordinal)
-//    case DoubleType => (input, ordinal) => input.getDouble(ordinal)
-//    case StringType => (input, ordinal) => input.getUTF8String(ordinal)
-//    case BinaryType => (input, ordinal) => input.getBinary(ordinal)
-//    case CalendarIntervalType => (input, ordinal) => input.getInterval(ordinal)
-//    case t: DecimalType => (input, ordinal) => input.getDecimal(ordinal, t.precision, t.scale)
-//    case t: StructType => (input, ordinal) => input.getStruct(ordinal, t.size)
-//    case _: ArrayType => (input, ordinal) => input.getArray(ordinal)
-//    case _: MapType => (input, ordinal) => input.getMap(ordinal)
-//    case u: UserDefinedType[_] => getAccessor(u.sqlType)
-//    case _ => (input, ordinal) => input.get(ordinal, dataType)
-//  }
+  /**
+    * Copies the given value if it's string/struct/array/map type.
+    */
+  def copyValue(value: Any): Any = value match {
+    case v: UTF8String => v.copy()
+    case v: InternalRow => v.copy()
+    case v: ArrayData => v.copy()
+    case v: MapData => v.copy()
+    case _ => value
+  }
+
+  /**
+    * Returns an accessor for an `InternalRow` with given data type. The returned accessor
+    * actually takes a `SpecializedGetters` input because it can be generalized to other classes
+    * that implements `SpecializedGetters` (e.g., `ArrayData`) too.
+    */
+  def getAccessor(dataType: DataType): (SpecializedGetters, Int) => Any = dataType match {
+    case BooleanType => (input, ordinal) => input.getBoolean(ordinal)
+    case ByteType => (input, ordinal) => input.getByte(ordinal)
+    case ShortType => (input, ordinal) => input.getShort(ordinal)
+    case IntegerType | DateType => (input, ordinal) => input.getInt(ordinal)
+    case LongType | TimestampType => (input, ordinal) => input.getLong(ordinal)
+    case FloatType => (input, ordinal) => input.getFloat(ordinal)
+    case DoubleType => (input, ordinal) => input.getDouble(ordinal)
+    case StringType => (input, ordinal) => input.getUTF8String(ordinal)
+    case BinaryType => (input, ordinal) => input.getBinary(ordinal)
+    case CalendarIntervalType => (input, ordinal) => input.getInterval(ordinal)
+    case t: DecimalType => (input, ordinal) => input.getDecimal(ordinal, t.precision, t.scale)
+    case t: StructType => (input, ordinal) => input.getStruct(ordinal, t.size)
+    case _: ArrayType => (input, ordinal) => input.getArray(ordinal)
+    case _: MapType => (input, ordinal) => input.getMap(ordinal)
+    case u: UserDefinedType[_] => getAccessor(u.sqlType)
+    case _ => (input, ordinal) => input.get(ordinal, dataType)
+  }
 }
 

@@ -20,7 +20,7 @@ import org.apache.spark.annotation.InterfaceStability
  */
 @InterfaceStability.Unstable
 final class Decimal extends Ordered[Decimal] with Serializable {
-  import org.apache.spark.sql.types.Decimal._
+  import org.apache.spark.daslab.sql.types.Decimal._
 
   private var decimalVal: BigDecimal = null
   private var longVal: Long = 0L

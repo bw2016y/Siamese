@@ -9,11 +9,9 @@ import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.daslab.sql.engine.expressions.Expression
-import org.spark.daslab.sql.engine.expressions.Expression
 //import org.apache.spark.sql.catalyst.analysis.Resolver
-//import org.daslab.sql.engine.expressions.Expression
-//import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
-import org.apache.spark.sql.internal.SQLConf
+import org.apache.spark.daslab.sql.engine.parser.CatalystSqlParser
+import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.util.Utils
 
 /**
@@ -99,33 +97,33 @@ object DataType {
 
   private val FIXED_DECIMAL = """decimal\(\s*(\d+)\s*,\s*(\-?\d+)\s*\)""".r
 
-//  def fromDDL(ddl: String): DataType = {
-//    try {
-//      CatalystSqlParser.parseDataType(ddl)
-//    } catch {
-//      case NonFatal(_) => CatalystSqlParser.parseTableSchema(ddl)
-//    }
-//  }
-//
-//  def fromJson(json: String): DataType = parseDataType(parse(json))
-//
-//  private val nonDecimalNameToType = {
-//    Seq(NullType, DateType, TimestampType, BinaryType, IntegerType, BooleanType, LongType,
-//      DoubleType, FloatType, ShortType, ByteType, StringType, CalendarIntervalType)
-//      .map(t => t.typeName -> t).toMap
-//  }
+  def fromDDL(ddl: String): DataType = {
+    try {
+      CatalystSqlParser.parseDataType(ddl)
+    } catch {
+      case NonFatal(_) => CatalystSqlParser.parseTableSchema(ddl)
+    }
+  }
 
-//  /** Given the string representation of a type, return its DataType */
-//  private def nameToType(name: String): DataType = {
-//    name match {
-//      case "decimal" => DecimalType.USER_DEFAULT
-//      case FIXED_DECIMAL(precision, scale) => DecimalType(precision.toInt, scale.toInt)
-//      case other => nonDecimalNameToType.getOrElse(
-//        other,
-//        throw new IllegalArgumentException(
-//          s"Failed to convert the JSON string '$name' to a data type."))
-//    }
-//  }
+  def fromJson(json: String): DataType = parseDataType(parse(json))
+
+  private val nonDecimalNameToType = {
+    Seq(NullType, DateType, TimestampType, BinaryType, IntegerType, BooleanType, LongType,
+      DoubleType, FloatType, ShortType, ByteType, StringType, CalendarIntervalType)
+      .map(t => t.typeName -> t).toMap
+  }
+
+  /** Given the string representation of a type, return its DataType */
+  private def nameToType(name: String): DataType = {
+    name match {
+      case "decimal" => DecimalType.USER_DEFAULT
+      case FIXED_DECIMAL(precision, scale) => DecimalType(precision.toInt, scale.toInt)
+      case other => nonDecimalNameToType.getOrElse(
+        other,
+        throw new IllegalArgumentException(
+          s"Failed to convert the JSON string '$name' to a data type."))
+    }
+  }
 
   private object JSortedObject {
     def unapplySeq(value: JValue): Option[List[(String, JValue)]] = value match {
@@ -134,101 +132,101 @@ object DataType {
     }
   }
 
-//  // NOTE: Map fields must be sorted in alphabetical order to keep consistent with the Python side.
-//  private[sql] def parseDataType(json: JValue): DataType = json match {
-//    case JString(name) =>
-//      nameToType(name)
-//
-//    case JSortedObject(
-//    ("containsNull", JBool(n)),
-//    ("elementType", t: JValue),
-//    ("type", JString("array"))) =>
-//      ArrayType(parseDataType(t), n)
-//
-//    case JSortedObject(
-//    ("keyType", k: JValue),
-//    ("type", JString("map")),
-//    ("valueContainsNull", JBool(n)),
-//    ("valueType", v: JValue)) =>
-//      MapType(parseDataType(k), parseDataType(v), n)
-//
-//    case JSortedObject(
-//    ("fields", JArray(fields)),
-//    ("type", JString("struct"))) =>
-//      StructType(fields.map(parseStructField))
-//
-//    // Scala/Java UDT
-//    case JSortedObject(
-//    ("class", JString(udtClass)),
-//    ("pyClass", _),
-//    ("sqlType", _),
-//    ("type", JString("udt"))) =>
-//      Utils.classForName(udtClass).newInstance().asInstanceOf[UserDefinedType[_]]
-//
-//    // Python UDT
-//    case JSortedObject(
-//    ("pyClass", JString(pyClass)),
-//    ("serializedClass", JString(serialized)),
-//    ("sqlType", v: JValue),
-//    ("type", JString("udt"))) =>
-//      new PythonUserDefinedType(parseDataType(v), pyClass, serialized)
-//
-//    case other =>
-//      throw new IllegalArgumentException(
-//        s"Failed to convert the JSON string '${compact(render(other))}' to a data type.")
-//  }
+  // NOTE: Map fields must be sorted in alphabetical order to keep consistent with the Python side.
+  private[sql] def parseDataType(json: JValue): DataType = json match {
+    case JString(name) =>
+      nameToType(name)
 
-//  private def parseStructField(json: JValue): StructField = json match {
-//    case JSortedObject(
-//    ("metadata", metadata: JObject),
-//    ("name", JString(name)),
-//    ("nullable", JBool(nullable)),
-//    ("type", dataType: JValue)) =>
-//      StructField(name, parseDataType(dataType), nullable, Metadata.fromJObject(metadata))
-//    // Support reading schema when 'metadata' is missing.
-//    case JSortedObject(
-//    ("name", JString(name)),
-//    ("nullable", JBool(nullable)),
-//    ("type", dataType: JValue)) =>
-//      StructField(name, parseDataType(dataType), nullable)
-//    case other =>
-//      throw new IllegalArgumentException(
-//        s"Failed to convert the JSON string '${compact(render(other))}' to a field.")
-//  }
+    case JSortedObject(
+    ("containsNull", JBool(n)),
+    ("elementType", t: JValue),
+    ("type", JString("array"))) =>
+      ArrayType(parseDataType(t), n)
 
-//  protected[types] def buildFormattedString(
-//    dataType: DataType,
-//    prefix: String,
-//    builder: StringBuilder): Unit = {
-//    dataType match {
-//      case array: ArrayType =>
-//        array.buildFormattedString(prefix, builder)
-//      case struct: StructType =>
-//        struct.buildFormattedString(prefix, builder)
-//      case map: MapType =>
-//        map.buildFormattedString(prefix, builder)
-//      case _ =>
-//    }
-//  }
+    case JSortedObject(
+    ("keyType", k: JValue),
+    ("type", JString("map")),
+    ("valueContainsNull", JBool(n)),
+    ("valueType", v: JValue)) =>
+      MapType(parseDataType(k), parseDataType(v), n)
 
-//  /**
-//    * Compares two types, ignoring nullability of ArrayType, MapType, StructType.
-//    */
-//  private[types] def equalsIgnoreNullability(left: DataType, right: DataType): Boolean = {
-//    (left, right) match {
-//      case (ArrayType(leftElementType, _), ArrayType(rightElementType, _)) =>
-//        equalsIgnoreNullability(leftElementType, rightElementType)
-//      case (MapType(leftKeyType, leftValueType, _), MapType(rightKeyType, rightValueType, _)) =>
-//        equalsIgnoreNullability(leftKeyType, rightKeyType) &&
-//          equalsIgnoreNullability(leftValueType, rightValueType)
-//      case (StructType(leftFields), StructType(rightFields)) =>
-//        leftFields.length == rightFields.length &&
-//          leftFields.zip(rightFields).forall { case (l, r) =>
-//            l.name == r.name && equalsIgnoreNullability(l.dataType, r.dataType)
-//          }
-//      case (l, r) => l == r
-//    }
-//  }
+    case JSortedObject(
+    ("fields", JArray(fields)),
+    ("type", JString("struct"))) =>
+      StructType(fields.map(parseStructField))
+
+    // Scala/Java UDT
+    case JSortedObject(
+    ("class", JString(udtClass)),
+    ("pyClass", _),
+    ("sqlType", _),
+    ("type", JString("udt"))) =>
+      Utils.classForName(udtClass).newInstance().asInstanceOf[UserDefinedType[_]]
+
+    // Python UDT
+    case JSortedObject(
+    ("pyClass", JString(pyClass)),
+    ("serializedClass", JString(serialized)),
+    ("sqlType", v: JValue),
+    ("type", JString("udt"))) =>
+      new PythonUserDefinedType(parseDataType(v), pyClass, serialized)
+
+    case other =>
+      throw new IllegalArgumentException(
+        s"Failed to convert the JSON string '${compact(render(other))}' to a data type.")
+  }
+
+  private def parseStructField(json: JValue): StructField = json match {
+    case JSortedObject(
+    ("metadata", metadata: JObject),
+    ("name", JString(name)),
+    ("nullable", JBool(nullable)),
+    ("type", dataType: JValue)) =>
+      StructField(name, parseDataType(dataType), nullable, Metadata.fromJObject(metadata))
+    // Support reading schema when 'metadata' is missing.
+    case JSortedObject(
+    ("name", JString(name)),
+    ("nullable", JBool(nullable)),
+    ("type", dataType: JValue)) =>
+      StructField(name, parseDataType(dataType), nullable)
+    case other =>
+      throw new IllegalArgumentException(
+        s"Failed to convert the JSON string '${compact(render(other))}' to a field.")
+  }
+
+  protected[types] def buildFormattedString(
+    dataType: DataType,
+    prefix: String,
+    builder: StringBuilder): Unit = {
+    dataType match {
+      case array: ArrayType =>
+        array.buildFormattedString(prefix, builder)
+      case struct: StructType =>
+        struct.buildFormattedString(prefix, builder)
+      case map: MapType =>
+        map.buildFormattedString(prefix, builder)
+      case _ =>
+    }
+  }
+
+  /**
+    * Compares two types, ignoring nullability of ArrayType, MapType, StructType.
+    */
+  private[types] def equalsIgnoreNullability(left: DataType, right: DataType): Boolean = {
+    (left, right) match {
+      case (ArrayType(leftElementType, _), ArrayType(rightElementType, _)) =>
+        equalsIgnoreNullability(leftElementType, rightElementType)
+      case (MapType(leftKeyType, leftValueType, _), MapType(rightKeyType, rightValueType, _)) =>
+        equalsIgnoreNullability(leftKeyType, rightKeyType) &&
+          equalsIgnoreNullability(leftValueType, rightValueType)
+      case (StructType(leftFields), StructType(rightFields)) =>
+        leftFields.length == rightFields.length &&
+          leftFields.zip(rightFields).forall { case (l, r) =>
+            l.name == r.name && equalsIgnoreNullability(l.dataType, r.dataType)
+          }
+      case (l, r) => l == r
+    }
+  }
 
 //  /**
 //    * Compares two types, ignoring compatible nullability of ArrayType, MapType, StructType.
@@ -266,29 +264,29 @@ object DataType {
 //    }
 //  }
 
-//  /**
-//    * Compares two types, ignoring nullability of ArrayType, MapType, StructType, and ignoring case
-//    * sensitivity of field names in StructType.
-//    */
-//  private[sql] def equalsIgnoreCaseAndNullability(from: DataType, to: DataType): Boolean = {
-//    (from, to) match {
-//      case (ArrayType(fromElement, _), ArrayType(toElement, _)) =>
-//        equalsIgnoreCaseAndNullability(fromElement, toElement)
-//
-//      case (MapType(fromKey, fromValue, _), MapType(toKey, toValue, _)) =>
-//        equalsIgnoreCaseAndNullability(fromKey, toKey) &&
-//          equalsIgnoreCaseAndNullability(fromValue, toValue)
-//
-//      case (StructType(fromFields), StructType(toFields)) =>
-//        fromFields.length == toFields.length &&
-//          fromFields.zip(toFields).forall { case (l, r) =>
-//            l.name.equalsIgnoreCase(r.name) &&
-//              equalsIgnoreCaseAndNullability(l.dataType, r.dataType)
-//          }
-//
-//      case (fromDataType, toDataType) => fromDataType == toDataType
-//    }
-//  }
+  /**
+    * Compares two types, ignoring nullability of ArrayType, MapType, StructType, and ignoring case
+    * sensitivity of field names in StructType.
+    */
+  private[sql] def equalsIgnoreCaseAndNullability(from: DataType, to: DataType): Boolean = {
+    (from, to) match {
+      case (ArrayType(fromElement, _), ArrayType(toElement, _)) =>
+        equalsIgnoreCaseAndNullability(fromElement, toElement)
+
+      case (MapType(fromKey, fromValue, _), MapType(toKey, toValue, _)) =>
+        equalsIgnoreCaseAndNullability(fromKey, toKey) &&
+          equalsIgnoreCaseAndNullability(fromValue, toValue)
+
+      case (StructType(fromFields), StructType(toFields)) =>
+        fromFields.length == toFields.length &&
+          fromFields.zip(toFields).forall { case (l, r) =>
+            l.name.equalsIgnoreCase(r.name) &&
+              equalsIgnoreCaseAndNullability(l.dataType, r.dataType)
+          }
+
+      case (fromDataType, toDataType) => fromDataType == toDataType
+    }
+  }
 
 //  /**
 //    * Returns true if the two data types share the same "shape", i.e. the types

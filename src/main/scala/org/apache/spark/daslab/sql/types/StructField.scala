@@ -6,7 +6,7 @@ import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 
 import org.apache.spark.annotation.InterfaceStability
-import org.apache.spark.sql.catalyst.util.{escapeSingleQuotedString, quoteIdentifier}
+import org.apache.spark.daslab.sql.engine.util.{escapeSingleQuotedString, quoteIdentifier}
 
 /**
  * A field inside a StructType.
