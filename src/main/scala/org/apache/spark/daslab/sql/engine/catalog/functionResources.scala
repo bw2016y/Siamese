@@ -4,7 +4,8 @@ package org.apache.spark.daslab.sql.engine.catalog
 
 import java.util.Locale
 
-import org.apache.spark.sql.AnalysisException
+import org.apache.spark.daslab.sql.AnalysisException
+
 
 /** A trait that represents the type of a resourced needed by a function. */
 abstract class FunctionResourceType(val resourceType: String)
