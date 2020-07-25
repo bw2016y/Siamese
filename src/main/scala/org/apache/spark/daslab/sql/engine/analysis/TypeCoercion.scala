@@ -1,12 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.daslab.sql.engine.analysis
-
-
 
 import javax.annotation.Nullable
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate._
 import org.apache.spark.daslab.sql.engine.plans.logical._
@@ -15,25 +31,19 @@ import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.daslab.sql.types._
 
 
-
-//todo spark core
-import org.apache.spark.internal.Logging
-
-
-
 /**
- * A collection of [[Rule]] that can be used to coerce differing types that participate in
- * operations into compatible ones.
- *
- * Notes about type widening / tightest common types: Broadly, there are two cases when we need
- * to widen data types (e.g. union, binary comparison). In case 1, we are looking for a common
- * data type for two or more data types, and in this case no loss of precision is allowed. Examples
- * include type inference in JSON (e.g. what's the column's data type if one row is an integer
- * while the other row is a long?). In case 2, we are looking for a widened data type with
- * some acceptable loss of precision (e.g. there is no common type for double and decimal because
- * double's range is larger than decimal, and yet decimal is more precise than double, but in
- * union we would cast the decimal into double).
- */
+  * A collection of [[Rule]] that can be used to coerce differing types that participate in
+  * operations into compatible ones.
+  *
+  * Notes about type widening / tightest common types: Broadly, there are two cases when we need
+  * to widen data types (e.g. union, binary comparison). In case 1, we are looking for a common
+  * data type for two or more data types, and in this case no loss of precision is allowed. Examples
+  * include type inference in JSON (e.g. what's the column's data type if one row is an integer
+  * while the other row is a long?). In case 2, we are looking for a widened data type with
+  * some acceptable loss of precision (e.g. there is no common type for double and decimal because
+  * double's range is larger than decimal, and yet decimal is more precise than double, but in
+  * union we would cast the decimal into double).
+  */
 object TypeCoercion {
 
   def typeCoercionRules(conf: SQLConf): List[Rule[LogicalPlan]] =
@@ -66,13 +76,13 @@ object TypeCoercion {
     DoubleType)
 
   /**
-   * Case 1 type widening (see the classdoc comment above for TypeCoercion).
-   *
-   * Find the tightest common type of two types that might be used in a binary expression.
-   * This handles all numeric types except fixed-precision decimals interacting with each other or
-   * with primitive types, because in that case the precision and scale of the result depends on
-   * the operation. Those rules are implemented in [[DecimalPrecision]].
-   */
+    * Case 1 type widening (see the classdoc comment above for TypeCoercion).
+    *
+    * Find the tightest common type of two types that might be used in a binary expression.
+    * This handles all numeric types except fixed-precision decimals interacting with each other or
+    * with primitive types, because in that case the precision and scale of the result depends on
+    * the operation. Those rules are implemented in [[DecimalPrecision]].
+    */
   val findTightestCommonType: (DataType, DataType) => Option[DataType] = {
     case (t1, t2) if t1 == t2 => Some(t1)
     case (NullType, t1) => Some(t1)
@@ -103,10 +113,10 @@ object TypeCoercion {
   }
 
   /**
-   * This function determines the target type of a comparison operator when one operand
-   * is a String and the other is not. It also handles when one op is a Date and the
-   * other is a Timestamp by making the target type to be String.
-   */
+    * This function determines the target type of a comparison operator when one operand
+    * is a String and the other is not. It also handles when one op is a Date and the
+    * other is a Timestamp by making the target type to be String.
+    */
   private def findCommonTypeForBinaryComparison(
                                                  dt1: DataType, dt2: DataType, conf: SQLConf): Option[DataType] = (dt1, dt2) match {
     // We should cast all relative timestamp/date/string comparison into string comparisons
@@ -170,9 +180,9 @@ object TypeCoercion {
   }
 
   /**
-   * The method finds a common type for data types that differ only in nullable, containsNull
-   * and valueContainsNull flags. If the input types are too different, None is returned.
-   */
+    * The method finds a common type for data types that differ only in nullable, containsNull
+    * and valueContainsNull flags. If the input types are too different, None is returned.
+    */
   def findCommonTypeDifferentOnlyInNullFlags(t1: DataType, t2: DataType): Option[DataType] = {
     if (t1 == t2) {
       Some(t1)
@@ -193,11 +203,11 @@ object TypeCoercion {
   }
 
   /**
-   * Case 2 type widening (see the classdoc comment above for TypeCoercion).
-   *
-   * i.e. the main difference with [[findTightestCommonType]] is that here we allow some
-   * loss of precision when widening decimal and double, and promotion to string.
-   */
+    * Case 2 type widening (see the classdoc comment above for TypeCoercion).
+    *
+    * i.e. the main difference with [[findTightestCommonType]] is that here we allow some
+    * loss of precision when widening decimal and double, and promotion to string.
+    */
   def findWiderTypeForTwo(t1: DataType, t2: DataType): Option[DataType] = {
     findTightestCommonType(t1, t2)
       .orElse(findWiderTypeForDecimal(t1, t2))
@@ -206,8 +216,8 @@ object TypeCoercion {
   }
 
   /**
-   * Whether the data type contains StringType.
-   */
+    * Whether the data type contains StringType.
+    */
   def hasStringType(dt: DataType): Boolean = dt match {
     case StringType => true
     case ArrayType(et, _) => hasStringType(et)
@@ -229,10 +239,10 @@ object TypeCoercion {
   }
 
   /**
-   * Similar to [[findWiderTypeForTwo]] that can handle decimal types, but can't promote to
-   * string. If the wider decimal type exceeds system limitation, this rule will truncate
-   * the decimal type before return it.
-   */
+    * Similar to [[findWiderTypeForTwo]] that can handle decimal types, but can't promote to
+    * string. If the wider decimal type exceeds system limitation, this rule will truncate
+    * the decimal type before return it.
+    */
   private[analysis] def findWiderTypeWithoutStringPromotionForTwo(
                                                                    t1: DataType,
                                                                    t2: DataType): Option[DataType] = {
@@ -249,10 +259,10 @@ object TypeCoercion {
   }
 
   /**
-   * Finds a wider type when one or both types are decimals. If the wider decimal type exceeds
-   * system limitation, this rule will truncate the decimal type. If a decimal and other fractional
-   * types are compared, returns a double type.
-   */
+    * Finds a wider type when one or both types are decimals. If the wider decimal type exceeds
+    * system limitation, this rule will truncate the decimal type. If a decimal and other fractional
+    * types are compared, returns a double type.
+    */
   private def findWiderTypeForDecimal(dt1: DataType, dt2: DataType): Option[DataType] = {
     (dt1, dt2) match {
       case (t1: DecimalType, t2: DecimalType) =>
@@ -268,8 +278,8 @@ object TypeCoercion {
   }
 
   /**
-   * Check whether the given types are equal ignoring nullable, containsNull and valueContainsNull.
-   */
+    * Check whether the given types are equal ignoring nullable, containsNull and valueContainsNull.
+    */
   def haveSameType(types: Seq[DataType]): Boolean = {
     if (types.size <= 1) {
       true
@@ -288,31 +298,31 @@ object TypeCoercion {
   }
 
   /**
-   * Widens numeric types and converts strings to numbers when appropriate.
-   *
-   * Loosely based on rules from "Hadoop: The Definitive Guide" 2nd edition, by Tom White
-   *
-   * The implicit conversion rules can be summarized as follows:
-   *   - Any integral numeric type can be implicitly converted to a wider type.
-   *   - All the integral numeric types, FLOAT, and (perhaps surprisingly) STRING can be implicitly
-   *     converted to DOUBLE.
-   *   - TINYINT, SMALLINT, and INT can all be converted to FLOAT.
-   *   - BOOLEAN types cannot be converted to any other type.
-   *   - Any integral numeric type can be implicitly converted to decimal type.
-   *   - two different decimal types will be converted into a wider decimal type for both of them.
-   *   - decimal type will be converted into double if there float or double together with it.
-   *
-   * Additionally, all types when UNION-ed with strings will be promoted to strings.
-   * Other string conversions are handled by PromoteStrings.
-   *
-   * Widening types might result in loss of precision in the following cases:
-   * - IntegerType to FloatType
-   * - LongType to FloatType
-   * - LongType to DoubleType
-   * - DecimalType to Double
-   *
-   * This rule is only applied to Union/Except/Intersect
-   */
+    * Widens numeric types and converts strings to numbers when appropriate.
+    *
+    * Loosely based on rules from "Hadoop: The Definitive Guide" 2nd edition, by Tom White
+    *
+    * The implicit conversion rules can be summarized as follows:
+    *   - Any integral numeric type can be implicitly converted to a wider type.
+    *   - All the integral numeric types, FLOAT, and (perhaps surprisingly) STRING can be implicitly
+    *     converted to DOUBLE.
+    *   - TINYINT, SMALLINT, and INT can all be converted to FLOAT.
+    *   - BOOLEAN types cannot be converted to any other type.
+    *   - Any integral numeric type can be implicitly converted to decimal type.
+    *   - two different decimal types will be converted into a wider decimal type for both of them.
+    *   - decimal type will be converted into double if there float or double together with it.
+    *
+    * Additionally, all types when UNION-ed with strings will be promoted to strings.
+    * Other string conversions are handled by PromoteStrings.
+    *
+    * Widening types might result in loss of precision in the following cases:
+    * - IntegerType to FloatType
+    * - LongType to FloatType
+    * - LongType to DoubleType
+    * - DecimalType to Double
+    *
+    * This rule is only applied to Union/Except/Intersect
+    */
   object WidenSetOperationTypes extends Rule[LogicalPlan] {
 
     def apply(plan: LogicalPlan): LogicalPlan = plan resolveOperatorsUp {
@@ -382,8 +392,8 @@ object TypeCoercion {
   }
 
   /**
-   * Promotes strings that appear in arithmetic expressions.
-   */
+    * Promotes strings that appear in arithmetic expressions.
+    */
   case class PromoteStrings(conf: SQLConf) extends TypeCoercionRule {
     private def castExpr(expr: Expression, targetType: DataType): Expression = {
       (expr.dataType, targetType) match {
@@ -432,19 +442,19 @@ object TypeCoercion {
   }
 
   /**
-   * Handles type coercion for both IN expression with subquery and IN
-   * expressions without subquery.
-   * 1. In the first case, find the common type by comparing the left hand side (LHS)
-   *    expression types against corresponding right hand side (RHS) expression derived
-   *    from the subquery expression's plan output. Inject appropriate casts in the
-   *    LHS and RHS side of IN expression.
-   *
-   * 2. In the second case, convert the value and in list expressions to the
-   *    common operator type by looking at all the argument types and finding
-   *    the closest one that all the arguments can be cast to. When no common
-   *    operator type is found the original expression will be returned and an
-   *    Analysis Exception will be raised at the type checking phase.
-   */
+    * Handles type coercion for both IN expression with subquery and IN
+    * expressions without subquery.
+    * 1. In the first case, find the common type by comparing the left hand side (LHS)
+    *    expression types against corresponding right hand side (RHS) expression derived
+    *    from the subquery expression's plan output. Inject appropriate casts in the
+    *    LHS and RHS side of IN expression.
+    *
+    * 2. In the second case, convert the value and in list expressions to the
+    *    common operator type by looking at all the argument types and finding
+    *    the closest one that all the arguments can be cast to. When no common
+    *    operator type is found the original expression will be returned and an
+    *    Analysis Exception will be raised at the type checking phase.
+    */
   case class InConversion(conf: SQLConf) extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -491,8 +501,8 @@ object TypeCoercion {
   }
 
   /**
-   * Changes numeric values to booleans so that expressions like true = 1 can be evaluated.
-   */
+    * Changes numeric values to booleans so that expressions like true = 1 can be evaluated.
+    */
   object BooleanEquality extends Rule[LogicalPlan] {
     private val trueValues = Seq(1.toByte, 1.toShort, 1, 1L, Decimal.ONE)
     private val falseValues = Seq(0.toByte, 0.toShort, 0, 0L, Decimal.ZERO)
@@ -535,8 +545,8 @@ object TypeCoercion {
   }
 
   /**
-   * This ensure that the types for various functions are as expected.
-   */
+    * This ensure that the types for various functions are as expected.
+    */
   object FunctionArgumentConversion extends TypeCoercionRule {
 
     override protected def coerceTypes(
@@ -650,9 +660,9 @@ object TypeCoercion {
   }
 
   /**
-   * Hive only performs integral division with the DIV operator. The arguments to / are always
-   * converted to fractional types.
-   */
+    * Hive only performs integral division with the DIV operator. The arguments to / are always
+    * converted to fractional types.
+    */
   object Division extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -674,8 +684,8 @@ object TypeCoercion {
   }
 
   /**
-   * Coerces the type of different branches of a CASE WHEN statement to a common type.
-   */
+    * Coerces the type of different branches of a CASE WHEN statement to a common type.
+    */
   object CaseWhenCoercion extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -692,8 +702,8 @@ object TypeCoercion {
   }
 
   /**
-   * Coerces the type of different branches of If statement to a common type.
-   */
+    * Coerces the type of different branches of If statement to a common type.
+    */
   object IfCoercion extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -713,8 +723,8 @@ object TypeCoercion {
   }
 
   /**
-   * Coerces NullTypes in the Stack expression to the column types of the corresponding positions.
-   */
+    * Coerces NullTypes in the Stack expression to the column types of the corresponding positions.
+    */
   object StackCoercion extends TypeCoercionRule {
     override def coerceTypes(plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
       case s @ Stack(children) if s.childrenResolved && s.hasFoldableNumRows =>
@@ -729,11 +739,11 @@ object TypeCoercion {
   }
 
   /**
-   * Coerces the types of [[Concat]] children to expected ones.
-   *
-   * If `spark.sql.function.concatBinaryAsString` is false and all children types are binary,
-   * the expected types are binary. Otherwise, the expected ones are strings.
-   */
+    * Coerces the types of [[Concat]] children to expected ones.
+    *
+    * If `spark.sql.function.concatBinaryAsString` is false and all children types are binary,
+    * the expected types are binary. Otherwise, the expected ones are strings.
+    */
   case class ConcatCoercion(conf: SQLConf) extends TypeCoercionRule {
 
     override protected def coerceTypes(plan: LogicalPlan): LogicalPlan = {
@@ -753,11 +763,11 @@ object TypeCoercion {
   }
 
   /**
-   * Coerces the types of [[Elt]] children to expected ones.
-   *
-   * If `spark.sql.function.eltOutputAsString` is false and all children types are binary,
-   * the expected types are binary. Otherwise, the expected ones are strings.
-   */
+    * Coerces the types of [[Elt]] children to expected ones.
+    *
+    * If `spark.sql.function.eltOutputAsString` is false and all children types are binary,
+    * the expected types are binary. Otherwise, the expected ones are strings.
+    */
   case class EltCoercion(conf: SQLConf) extends TypeCoercionRule {
 
     override protected def coerceTypes(plan: LogicalPlan): LogicalPlan = {
@@ -783,9 +793,9 @@ object TypeCoercion {
   }
 
   /**
-   * Turns Add/Subtract of DateType/TimestampType/StringType and CalendarIntervalType
-   * to TimeAdd/TimeSub
-   */
+    * Turns Add/Subtract of DateType/TimestampType/StringType and CalendarIntervalType
+    * to TimeAdd/TimeSub
+    */
   object DateTimeOperations extends Rule[LogicalPlan] {
 
     private val acceptedTypes = Seq(DateType, TimestampType, StringType)
@@ -804,8 +814,8 @@ object TypeCoercion {
   }
 
   /**
-   * Casts types according to the expected input types for [[Expression]]s.
-   */
+    * Casts types according to the expected input types for [[Expression]]s.
+    */
   object ImplicitTypeCasts extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -846,11 +856,11 @@ object TypeCoercion {
     }
 
     /**
-     * Given an expected data type, try to cast the expression and return the cast expression.
-     *
-     * If the expression already fits the input type, we simply return the expression itself.
-     * If the expression has an incompatible type that cannot be implicitly cast, return None.
-     */
+      * Given an expected data type, try to cast the expression and return the cast expression.
+      *
+      * If the expression already fits the input type, we simply return the expression itself.
+      * If the expression has an incompatible type that cannot be implicitly cast, return None.
+      */
     def implicitCast(e: Expression, expectedType: AbstractDataType): Option[Expression] = {
       implicitCast(e.dataType, expectedType).map { dt =>
         if (dt == e.dataType) e else Cast(e, dt)
@@ -941,8 +951,8 @@ object TypeCoercion {
   }
 
   /**
-   * Cast WindowFrame boundaries to the type they operate upon.
-   */
+    * Cast WindowFrame boundaries to the type they operate upon.
+    */
   object WindowFrameCoercion extends TypeCoercionRule {
     override protected def coerceTypes(
                                         plan: LogicalPlan): LogicalPlan = plan resolveExpressions {
@@ -969,9 +979,9 @@ object TypeCoercion {
 
 trait TypeCoercionRule extends Rule[LogicalPlan] with Logging {
   /**
-   * Applies any changes to [[AttributeReference]] data types that are made by the transform method
-   * to instances higher in the query tree.
-   */
+    * Applies any changes to [[AttributeReference]] data types that are made by the transform method
+    * to instances higher in the query tree.
+    */
   def apply(plan: LogicalPlan): LogicalPlan = {
     val newPlan = coerceTypes(plan)
     if (plan.fastEquals(newPlan)) {

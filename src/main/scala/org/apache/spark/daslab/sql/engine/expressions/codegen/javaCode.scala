@@ -1,12 +1,10 @@
+
 package org.apache.spark.daslab.sql.engine.expressions.codegen
-
-
 
 import java.lang.{Boolean => JBool}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.language.{existentials, implicitConversions}
-
 
 import org.apache.spark.daslab.sql.engine.trees.TreeNode
 import org.apache.spark.daslab.sql.types.{BooleanType, DataType}

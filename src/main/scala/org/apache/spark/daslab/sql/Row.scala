@@ -4,7 +4,7 @@ import scala.collection.JavaConverters._
 import scala.util.hashing.MurmurHash3
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.daslab.sql.engine.expressions.GenericRow
-import org.daslab.sql.types.StructType
+import org.apache.spark.daslab.sql.types.StructType
 
 /**
   * @since 1.3.0

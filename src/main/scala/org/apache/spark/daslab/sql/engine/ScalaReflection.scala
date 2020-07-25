@@ -1,6 +1,5 @@
 package org.apache.spark.daslab.sql.engine
 
-//TODO add Class
 import java.lang.reflect.Constructor
 
 import scala.util.Properties
@@ -8,26 +7,28 @@ import scala.util.Properties
 import org.apache.commons.lang3.reflect.ConstructorUtils
 
 import org.apache.spark.internal.Logging
+import org.apache.spark.daslab.sql.engine.analysis.{GetColumnByOrdinal, UnresolvedAttribute, UnresolvedExtractValue}
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.objects._
+import org.apache.spark.daslab.sql.engine.util.{ArrayData, DateTimeUtils, GenericArrayData, MapData}
 import org.apache.spark.daslab.sql.types._
 import org.apache.spark.unsafe.types.{CalendarInterval, UTF8String}
 
 
-/**
- * A helper trait to create [[org.apache.spark.sql.catalyst.encoders.ExpressionEncoder]]s
- * for classes whose fields are entirely defined by constructor params but should not be
- * case classes.
- */
+///**
+//  * A helper trait to create [[org.apache.spark.sql.catalyst.encoders.ExpressionEncoder]]s
+//  * for classes whose fields are entirely defined by constructor params but should not be
+//  * case classes.
+//  */
 trait DefinedByConstructorParams
 
 
-private[catalyst] object ScalaSubtypeLock
+private[engine] object ScalaSubtypeLock
 
 
 /**
- * A default version of ScalaReflection that uses the runtime universe.
- */
+  * A default version of ScalaReflection that uses the runtime universe.
+  */
 object ScalaReflection extends ScalaReflection {
   val universe: scala.reflect.runtime.universe.type = scala.reflect.runtime.universe
   // Since we are creating a runtime mirror using the class loader of current thread,
@@ -44,23 +45,23 @@ object ScalaReflection extends ScalaReflection {
   import scala.collection.Map
 
   /**
-   * Returns the Spark SQL DataType for a given scala type.  Where this is not an exact mapping
-   * to a native type, an ObjectType is returned. Special handling is also used for Arrays including
-   * those that hold primitive types.
-   *
-   * Unlike `schemaFor`, this function doesn't do any massaging of types into the Spark SQL type
-   * system.  As a result, ObjectType will be returned for things like boxed Integers
-   */
+    * Returns the Spark SQL DataType for a given scala type.  Where this is not an exact mapping
+    * to a native type, an ObjectType is returned. Special handling is also used for Arrays including
+    * those that hold primitive types.
+    *
+    * Unlike `schemaFor`, this function doesn't do any massaging of types into the Spark SQL type
+    * system.  As a result, ObjectType will be returned for things like boxed Integers
+    */
   def dataTypeFor[T : TypeTag]: DataType = dataTypeFor(localTypeOf[T])
 
   /**
-   * Synchronize to prevent concurrent usage of `<:<` operator.
-   * This operator is not thread safe in any current version of scala; i.e.
-   * (2.11.12, 2.12.10, 2.13.0-M5).
-   *
-   * See https://github.com/scala/bug/issues/10766
-   */
-  private[catalyst] def isSubtype(tpe1: `Type`, tpe2: `Type`): Boolean = {
+    * Synchronize to prevent concurrent usage of `<:<` operator.
+    * This operator is not thread safe in any current version of scala; i.e.
+    * (2.11.12, 2.12.10, 2.13.0-M5).
+    *
+    * See https://github.com/scala/bug/issues/10766
+    */
+  private[engine] def isSubtype(tpe1: `Type`, tpe2: `Type`): Boolean = {
     ScalaSubtypeLock.synchronized {
       tpe1 <:< tpe2
     }
@@ -93,12 +94,12 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Given a type `T` this function constructs `ObjectType` that holds a class of type
-   * `Array[T]`.
-   *
-   * Special handling is performed for primitive types to map them back to their raw
-   * JVM form instead of the Scala Array that handles auto boxing.
-   */
+    * Given a type `T` this function constructs `ObjectType` that holds a class of type
+    * `Array[T]`.
+    *
+    * Special handling is performed for primitive types, Array[Byte], CalendarInterval and Decimal
+    * to map them back to their raw JVM form instead of the Scala Array that handles auto boxing.
+    */
   private def arrayClassFor(tpe: `Type`): ObjectType = cleanUpReflectionObjects {
     val cls = tpe.dealias match {
       case t if isSubtype(t, definitions.IntTpe) => classOf[Array[Int]]
@@ -108,6 +109,9 @@ object ScalaReflection extends ScalaReflection {
       case t if isSubtype(t, definitions.ShortTpe) => classOf[Array[Short]]
       case t if isSubtype(t, definitions.ByteTpe) => classOf[Array[Byte]]
       case t if isSubtype(t, definitions.BooleanTpe) => classOf[Array[Boolean]]
+      case t if isSubtype(t, localTypeOf[Array[Byte]]) => classOf[Array[Array[Byte]]]
+      case t if isSubtype(t, localTypeOf[CalendarInterval]) => classOf[Array[CalendarInterval]]
+      case t if isSubtype(t, localTypeOf[Decimal]) => classOf[Array[Decimal]]
       case other =>
         // There is probably a better way to do this, but I couldn't find it...
         val elementType = dataTypeFor(other).asInstanceOf[ObjectType].cls
@@ -118,8 +122,8 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns true if the value of this data type is same between internal and external.
-   */
+    * Returns true if the value of this data type is same between internal and external.
+    */
   def isNativeType(dt: DataType): Boolean = dt match {
     case NullType | BooleanType | ByteType | ShortType | IntegerType | LongType |
          FloatType | DoubleType | BinaryType | CalendarIntervalType => true
@@ -127,15 +131,15 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns an expression that can be used to deserialize an input row to an object of type `T`
-   * with a compatible schema.  Fields of the row will be extracted using UnresolvedAttributes
-   * of the same name as the constructor arguments.  Nested classes will have their fields accessed
-   * using UnresolvedExtractValue.
-   *
-   * When used on a primitive type, the constructor will instead default to extracting the value
-   * from ordinal 0 (since there are no names to map to).  The actual location can be moved by
-   * calling resolve/bind with a new schema.
-   */
+    * Returns an expression that can be used to deserialize an input row to an object of type `T`
+    * with a compatible schema.  Fields of the row will be extracted using UnresolvedAttributes
+    * of the same name as the constructor arguments.  Nested classes will have their fields accessed
+    * using UnresolvedExtractValue.
+    *
+    * When used on a primitive type, the constructor will instead default to extracting the value
+    * from ordinal 0 (since there are no names to map to).  The actual location can be moved by
+    * calling resolve/bind with a new schema.
+    */
   def deserializerFor[T : TypeTag]: Expression = {
     val tpe = localTypeOf[T]
     val clsName = getClassNameFromType(tpe)
@@ -184,16 +188,16 @@ object ScalaReflection extends ScalaReflection {
     }
 
     /**
-     * When we build the `deserializer` for an encoder, we set up a lot of "unresolved" stuff
-     * and lost the required data type, which may lead to runtime error if the real type doesn't
-     * match the encoder's schema.
-     * For example, we build an encoder for `case class Data(a: Int, b: String)` and the real type
-     * is [a: int, b: long], then we will hit runtime error and say that we can't construct class
-     * `Data` with int and long, because we lost the information that `b` should be a string.
-     *
-     * This method help us "remember" the required data type by adding a `UpCast`. Note that we
-     * only need to do this for leaf nodes.
-     */
+      * When we build the `deserializer` for an encoder, we set up a lot of "unresolved" stuff
+      * and lost the required data type, which may lead to runtime error if the real type doesn't
+      * match the encoder's schema.
+      * For example, we build an encoder for `case class Data(a: Int, b: String)` and the real type
+      * is [a: int, b: long], then we will hit runtime error and say that we can't construct class
+      * `Data` with int and long, because we lost the information that `b` should be a string.
+      *
+      * This method help us "remember" the required data type by adding a `UpCast`. Note that we
+      * only need to do this for leaf nodes.
+      */
     def upCastToExpectedType(
                               expr: Expression,
                               expected: DataType,
@@ -421,17 +425,17 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns an expression for serializing an object of type T to an internal row.
-   *
-   * If the given type is not supported, i.e. there is no encoder can be built for this type,
-   * an [[UnsupportedOperationException]] will be thrown with detailed error message to explain
-   * the type path walked so far and which class we are not supporting.
-   * There are 4 kinds of type path:
-   *  * the root type: `root class: "abc.xyz.MyClass"`
-   *  * the value type of [[Option]]: `option value class: "abc.xyz.MyClass"`
-   *  * the element type of [[Array]] or [[Seq]]: `array element class: "abc.xyz.MyClass"`
-   *  * the field of [[Product]]: `field (class: "abc.xyz.MyClass", name: "myField")`
-   */
+    * Returns an expression for serializing an object of type T to an internal row.
+    *
+    * If the given type is not supported, i.e. there is no encoder can be built for this type,
+    * an [[UnsupportedOperationException]] will be thrown with detailed error message to explain
+    * the type path walked so far and which class we are not supporting.
+    * There are 4 kinds of type path:
+    *  * the root type: `root class: "abc.xyz.MyClass"`
+    *  * the value type of [[Option]]: `option value class: "abc.xyz.MyClass"`
+    *  * the element type of [[Array]] or [[Seq]]: `array element class: "abc.xyz.MyClass"`
+    *  * the field of [[Product]]: `field (class: "abc.xyz.MyClass", name: "myField")`
+    */
   def serializerFor[T : TypeTag](inputObject: Expression): CreateNamedStruct = {
     val tpe = localTypeOf[T]
     val clsName = getClassNameFromType(tpe)
@@ -651,9 +655,9 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns true if the given type is option of product type, e.g. `Option[Tuple2]`. Note that,
-   * we also treat [[DefinedByConstructorParams]] as product type.
-   */
+    * Returns true if the given type is option of product type, e.g. `Option[Tuple2]`. Note that,
+    * we also treat [[DefinedByConstructorParams]] as product type.
+    */
   def optionOfProductType(tpe: `Type`): Boolean = cleanUpReflectionObjects {
     tpe.dealias match {
       case t if isSubtype(t, localTypeOf[Option[_]]) =>
@@ -664,11 +668,11 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns the parameter names and types for the primary constructor of this class.
-   *
-   * Note that it only works for scala classes with primary constructor, and currently doesn't
-   * support inner class.
-   */
+    * Returns the parameter names and types for the primary constructor of this class.
+    *
+    * Note that it only works for scala classes with primary constructor, and currently doesn't
+    * support inner class.
+    */
   def getConstructorParameters(cls: Class[_]): Seq[(String, Type)] = {
     val m = runtimeMirror(cls.getClassLoader)
     val classSymbol = m.staticClass(cls.getName)
@@ -677,12 +681,12 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns the parameter names for the primary constructor of this class.
-   *
-   * Logically we should call `getConstructorParameters` and throw away the parameter types to get
-   * parameter names, however there are some weird scala reflection problems and this method is a
-   * workaround to avoid getting parameter types.
-   */
+    * Returns the parameter names for the primary constructor of this class.
+    *
+    * Logically we should call `getConstructorParameters` and throw away the parameter types to get
+    * parameter names, however there are some weird scala reflection problems and this method is a
+    * workaround to avoid getting parameter types.
+    */
   def getConstructorParameterNames(cls: Class[_]): Seq[String] = {
     val m = runtimeMirror(cls.getClassLoader)
     val classSymbol = m.staticClass(cls.getName)
@@ -691,8 +695,8 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Returns the parameter values for the primary constructor of this class.
-   */
+    * Returns the parameter values for the primary constructor of this class.
+    */
   def getConstructorParameterValues(obj: DefinedByConstructorParams): Seq[AnyRef] = {
     getConstructorParameterNames(obj.getClass).map { name =>
       obj.getClass.getMethod(name).invoke(obj)
@@ -793,17 +797,17 @@ object ScalaReflection extends ScalaReflection {
   }
 
   /**
-   * Finds an accessible constructor with compatible parameters. This is a more flexible search
-   * than the exact matching algorithm in `Class.getConstructor`. The first assignment-compatible
-   * matching constructor is returned. Otherwise, it returns `None`.
-   */
+    * Finds an accessible constructor with compatible parameters. This is a more flexible search
+    * than the exact matching algorithm in `Class.getConstructor`. The first assignment-compatible
+    * matching constructor is returned. Otherwise, it returns `None`.
+    */
   def findConstructor(cls: Class[_], paramTypes: Seq[Class[_]]): Option[Constructor[_]] = {
     Option(ConstructorUtils.getMatchingAccessibleConstructor(cls, paramTypes: _*))
   }
 
   /**
-   * Whether the fields of the given type is defined entirely by its constructor parameters.
-   */
+    * Whether the fields of the given type is defined entirely by its constructor parameters.
+    */
   def definedByConstructorParams(tpe: Type): Boolean = cleanUpReflectionObjects {
     tpe.dealias match {
       // `Option` is a `Product`, but we don't wanna treat `Option[Int]` as a struct type.
@@ -881,9 +885,9 @@ object ScalaReflection extends ScalaReflection {
 }
 
 /**
- * Support for generating catalyst schemas for scala objects.  Note that unlike its companion
- * object, this trait able to work in both the runtime and the compile time (macro) universe.
- */
+  * Support for generating catalyst schemas for scala objects.  Note that unlike its companion
+  * object, this trait able to work in both the runtime and the compile time (macro) universe.
+  */
 trait ScalaReflection extends Logging {
   /** The universe we work in (runtime or macro) */
   val universe: scala.reflect.api.Universe
@@ -898,51 +902,51 @@ trait ScalaReflection extends Logging {
   import scala.collection.Map
 
   /**
-   * Any codes calling `scala.reflect.api.Types.TypeApi.<:<` should be wrapped by this method to
-   * clean up the Scala reflection garbage automatically. Otherwise, it will leak some objects to
-   * `scala.reflect.runtime.JavaUniverse.undoLog`.
-   *
-   * @see https://github.com/scala/bug/issues/8302
-   */
+    * Any codes calling `scala.reflect.api.Types.TypeApi.<:<` should be wrapped by this method to
+    * clean up the Scala reflection garbage automatically. Otherwise, it will leak some objects to
+    * `scala.reflect.runtime.JavaUniverse.undoLog`.
+    *
+    * @see https://github.com/scala/bug/issues/8302
+    */
   def cleanUpReflectionObjects[T](func: => T): T = {
     universe.asInstanceOf[scala.reflect.runtime.JavaUniverse].undoLog.undo(func)
   }
 
   /**
-   * Return the Scala Type for `T` in the current classloader mirror.
-   *
-   * Use this method instead of the convenience method `universe.typeOf`, which
-   * assumes that all types can be found in the classloader that loaded scala-reflect classes.
-   * That's not necessarily the case when running using Eclipse launchers or even
-   * Sbt console or test (without `fork := true`).
-   *
-   * @see SPARK-5281
-   */
+    * Return the Scala Type for `T` in the current classloader mirror.
+    *
+    * Use this method instead of the convenience method `universe.typeOf`, which
+    * assumes that all types can be found in the classloader that loaded scala-reflect classes.
+    * That's not necessarily the case when running using Eclipse launchers or even
+    * Sbt console or test (without `fork := true`).
+    *
+    * @see SPARK-5281
+    */
   def localTypeOf[T: TypeTag]: `Type` = {
     val tag = implicitly[TypeTag[T]]
     tag.in(mirror).tpe.dealias
   }
 
   /**
-   * Returns the full class name for a type. The returned name is the canonical
-   * Scala name, where each component is separated by a period. It is NOT the
-   * Java-equivalent runtime name (no dollar signs).
-   *
-   * In simple cases, both the Scala and Java names are the same, however when Scala
-   * generates constructs that do not map to a Java equivalent, such as singleton objects
-   * or nested classes in package objects, it uses the dollar sign ($) to create
-   * synthetic classes, emulating behaviour in Java bytecode.
-   */
+    * Returns the full class name for a type. The returned name is the canonical
+    * Scala name, where each component is separated by a period. It is NOT the
+    * Java-equivalent runtime name (no dollar signs).
+    *
+    * In simple cases, both the Scala and Java names are the same, however when Scala
+    * generates constructs that do not map to a Java equivalent, such as singleton objects
+    * or nested classes in package objects, it uses the dollar sign ($) to create
+    * synthetic classes, emulating behaviour in Java bytecode.
+    */
   def getClassNameFromType(tpe: `Type`): String = {
     tpe.dealias.erasure.typeSymbol.asClass.fullName
   }
 
   /**
-   * Returns the nullability of the input parameter types of the scala function object.
-   *
-   * Note that this only works with Scala 2.11, and the information returned may be inaccurate if
-   * used with a different Scala version.
-   */
+    * Returns the nullability of the input parameter types of the scala function object.
+    *
+    * Note that this only works with Scala 2.11, and the information returned may be inaccurate if
+    * used with a different Scala version.
+    */
   def getParameterTypeNullability(func: AnyRef): Seq[Boolean] = {
     if (!Properties.versionString.contains("2.11")) {
       logWarning(s"Scala ${Properties.versionString} cannot get type nullability correctly via " +
@@ -955,11 +959,11 @@ trait ScalaReflection extends Logging {
   }
 
   /**
-   * Returns the parameter names and types for the primary constructor of this type.
-   *
-   * Note that it only works for scala classes with primary constructor, and currently doesn't
-   * support inner class.
-   */
+    * Returns the parameter names and types for the primary constructor of this type.
+    *
+    * Note that it only works for scala classes with primary constructor, and currently doesn't
+    * support inner class.
+    */
   def getConstructorParameters(tpe: Type): Seq[(String, Type)] = {
     val dealiasedTpe = tpe.dealias
     val formalTypeArgs = dealiasedTpe.typeSymbol.asClass.typeParams

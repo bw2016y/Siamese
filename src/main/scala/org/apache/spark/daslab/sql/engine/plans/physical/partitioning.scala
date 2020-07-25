@@ -1,8 +1,8 @@
 package org.apache.spark.daslab.sql.engine.plans.physical
 
 
-import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.types.{DataType, IntegerType}
+import org.apache.spark.daslab.sql.engine.expressions._
+import org.apache.spark.daslab.sql.types.{DataType, IntegerType}
 
 /**
  * Specifies how tuples that share common expressions will be distributed when a query is executed

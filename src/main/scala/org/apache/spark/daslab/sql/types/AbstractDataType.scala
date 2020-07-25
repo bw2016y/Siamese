@@ -3,8 +3,6 @@ package org.apache.spark.daslab.sql.types
 import scala.reflect.runtime.universe.TypeTag
 import org.apache.spark.annotation.InterfaceStability
 import org.apache.spark.daslab.sql.engine.expressions.Expression
-import org.daslab.sql.engine.expressions.Expression
-import org.spark.daslab.sql.engine.expressions.Expression
 
 /**
   * A non-concrete data type, reserved for internal uses.

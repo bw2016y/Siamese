@@ -1,6 +1,6 @@
 package org.apache.spark.daslab.sql.engine.plans.logical
 
-import org.apache.spark.daslab.sql.engine.analysis.CheckAnalysis
+//import org.apache.spark.daslab.sql.engine.analysis.CheckAnalysis
 import org.apache.spark.daslab.sql.engine.expressions.Expression
 import org.apache.spark.daslab.sql.engine.plans.QueryPlan
 import org.apache.spark.daslab.sql.engine.trees.{CurrentOrigin,TreeNode}
@@ -29,11 +29,11 @@ trait AnalysisHelper extends QueryPlan[LogicalPlan] { self: LogicalPlan =>
 
   private var _analyzed: Boolean = false
 
-  /**
-   * Recursively marks all nodes in this plan tree as analyzed.
-   * This should only be called by [[CheckAnalysis]].
-   */
-  private[catalyst] def setAnalyzed(): Unit = {
+//  /**
+//   * Recursively marks all nodes in this plan tree as analyzed.
+//   * This should only be called by [[CheckAnalysis]].
+//   */
+  private[engine] def setAnalyzed(): Unit = {
     if (!_analyzed) {
       _analyzed = true
       children.foreach(_.setAnalyzed())

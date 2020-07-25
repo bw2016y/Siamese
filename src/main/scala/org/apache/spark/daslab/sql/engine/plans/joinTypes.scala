@@ -6,7 +6,7 @@ package org.apache.spark.daslab.sql.engine.plans
 
 import java.util.Locale
 
-import org.apache.spark.sql.catalyst.expressions.Attribute
+import org.apache.spark.daslab.sql.engine.expressions.Attribute
 
 object JoinType {
   def apply(typ: String): JoinType = typ.toLowerCase(Locale.ROOT).replace("_", "") match {

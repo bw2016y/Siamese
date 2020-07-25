@@ -20,14 +20,10 @@ package org.apache.spark.daslab.sql.engine.expressions
 import java.util.{Objects, UUID}
 
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.types.{DataType, Metadata}
-import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.types.{DataType, Metadata}
-//import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
-//import org.apache.spark.sql.catalyst.expressions.codegen._
-//import org.apache.spark.sql.catalyst.plans.logical.EventTimeWatermark
-//import org.apache.spark.sql.catalyst.util.quoteIdentifier
+import org.apache.spark.daslab.sql.engine.analysis.UnresolvedAttribute
+import org.apache.spark.daslab.sql.engine.expressions.codegen._
+//import org.apache.spark.daslab.sql.engine.plans.logical.EventTimeWatermark
+import org.apache.spark.daslab.sql.engine.util.quoteIdentifier
 import org.apache.spark.daslab.sql.types._
 
 object NamedExpression {
@@ -92,7 +88,7 @@ trait NamedExpression extends Expression {
     */
   def qualifier: Seq[String]
 
-//  def toAttribute: Attribute
+  def toAttribute: Attribute
 
   /** Returns the metadata when an expression is a reference to another expression with metadata. */
   def metadata: Metadata = Metadata.empty
@@ -100,15 +96,15 @@ trait NamedExpression extends Expression {
   /** Returns a copy of this expression with a new `exprId`. */
   def newInstance(): NamedExpression
 
-//  protected def typeSuffix =
-//    if (resolved) {
-//      dataType match {
-//        case LongType => "L"
-//        case _ => ""
-//      }
-//    } else {
-//      ""
-//    }
+  protected def typeSuffix =
+    if (resolved) {
+      dataType match {
+        case LongType => "L"
+        case _ => ""
+      }
+    } else {
+      ""
+    }
 }
 
 abstract class Attribute extends LeafExpression with NamedExpression with NullIntolerant {
@@ -121,7 +117,7 @@ abstract class Attribute extends LeafExpression with NamedExpression with NullIn
   def withMetadata(newMetadata: Metadata): Attribute
   def withExprId(newExprId: ExprId): Attribute
 
-//  override def toAttribute: Attribute = this
+  override def toAttribute: Attribute = this
   def newInstance(): Attribute
 
 }
@@ -149,17 +145,17 @@ case class Alias(child: Expression, name: String)(
   val explicitMetadata: Option[Metadata] = None)
   extends UnaryExpression with NamedExpression {
 
-//  // Alias(Generator, xx) need to be transformed into Generate(generator, ...)
-//  override lazy val resolved =
-//    childrenResolved && checkInputDataTypes().isSuccess && !child.isInstanceOf[Generator]
+  // Alias(Generator, xx) need to be transformed into Generate(generator, ...)
+  override lazy val resolved =
+    childrenResolved && checkInputDataTypes().isSuccess && !child.isInstanceOf[Generator]
 
   override def eval(input: InternalRow): Any = child.eval(input)
 
-//  /** Just a simple passthrough for code generation. */
-//  override def genCode(ctx: CodegenContext): ExprCode = child.genCode(ctx)
-//  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-//    throw new IllegalStateException("Alias.doGenCode should not be called.")
-//  }
+  /** Just a simple passthrough for code generation. */
+  override def genCode(ctx: CodegenContext): ExprCode = child.genCode(ctx)
+  override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    throw new IllegalStateException("Alias.doGenCode should not be called.")
+  }
 
   override def dataType: DataType = child.dataType
   override def nullable: Boolean = child.nullable
@@ -175,14 +171,14 @@ case class Alias(child: Expression, name: String)(
   def newInstance(): NamedExpression =
     Alias(child, name)(qualifier = qualifier, explicitMetadata = explicitMetadata)
 
-//  override def toAttribute: Attribute = {
-//    if (resolved) {
-//      AttributeReference(name, child.dataType, child.nullable, metadata)(exprId, qualifier)
-//    } else {
-//      UnresolvedAttribute(name)
-//    }
-//  }
-//
+  override def toAttribute: Attribute = {
+    if (resolved) {
+      AttributeReference(name, child.dataType, child.nullable, metadata)(exprId, qualifier)
+    } else {
+      UnresolvedAttribute(name)
+    }
+  }
+
 //  /** Used to signal the column used to calculate an eventTime watermark (e.g. a#1-T{delayMs}) */
 //  private def delaySuffix = if (metadata.contains(EventTimeWatermark.delayKey)) {
 //    s"-T${metadata.getLong(EventTimeWatermark.delayKey)}ms"
@@ -339,59 +335,59 @@ case class AttributeReference(
 //  }
 }
 
-///**
-//  * A place holder used when printing expressions without debugging information such as the
-//  * expression id or the unresolved indicator.
-//  */
-//case class PrettyAttribute(
-//                            name: String,
-//                            dataType: DataType = NullType)
-//  extends Attribute with Unevaluable {
-//
-//  def this(attribute: Attribute) = this(attribute.name, attribute match {
-//    case a: AttributeReference => a.dataType
-//    case a: PrettyAttribute => a.dataType
-//    case _ => NullType
-//  })
-//
-//  override def toString: String = name
-//  override def sql: String = toString
-//
-//  override def withNullability(newNullability: Boolean): Attribute =
-//    throw new UnsupportedOperationException
-//  override def newInstance(): Attribute = throw new UnsupportedOperationException
-//  override def withQualifier(newQualifier: Seq[String]): Attribute =
-//    throw new UnsupportedOperationException
-//  override def withName(newName: String): Attribute = throw new UnsupportedOperationException
-//  override def withMetadata(newMetadata: Metadata): Attribute =
-//    throw new UnsupportedOperationException
-//  override def qualifier: Seq[String] = throw new UnsupportedOperationException
-//  override def exprId: ExprId = throw new UnsupportedOperationException
-//  override def withExprId(newExprId: ExprId): Attribute =
-//    throw new UnsupportedOperationException
-//  override def nullable: Boolean = true
-//}
+/**
+  * A place holder used when printing expressions without debugging information such as the
+  * expression id or the unresolved indicator.
+  */
+case class PrettyAttribute(
+                            name: String,
+                            dataType: DataType = NullType)
+  extends Attribute with Unevaluable {
 
-///**
-//  * A place holder used to hold a reference that has been resolved to a field outside of the current
-//  * plan. This is used for correlated subqueries.
-//  */
-//case class OuterReference(e: NamedExpression)
-//  extends LeafExpression with NamedExpression with Unevaluable {
-//  override def dataType: DataType = e.dataType
-//  override def nullable: Boolean = e.nullable
-//  override def prettyName: String = "outer"
-//
-//  override def name: String = e.name
-//  override def qualifier: Seq[String] = e.qualifier
-//  override def exprId: ExprId = e.exprId
-//  override def toAttribute: Attribute = e.toAttribute
-//  override def newInstance(): NamedExpression = OuterReference(e.newInstance())
-//}
+  def this(attribute: Attribute) = this(attribute.name, attribute match {
+    case a: AttributeReference => a.dataType
+    case a: PrettyAttribute => a.dataType
+    case _ => NullType
+  })
 
-//object VirtualColumn {
-//  // The attribute name used by Hive, which has different result than Spark, deprecated.
-//  val hiveGroupingIdName: String = "grouping__id"
-//  val groupingIdName: String = "spark_grouping_id"
-//  val groupingIdAttribute: UnresolvedAttribute = UnresolvedAttribute(groupingIdName)
-//}
+  override def toString: String = name
+  override def sql: String = toString
+
+  override def withNullability(newNullability: Boolean): Attribute =
+    throw new UnsupportedOperationException
+  override def newInstance(): Attribute = throw new UnsupportedOperationException
+  override def withQualifier(newQualifier: Seq[String]): Attribute =
+    throw new UnsupportedOperationException
+  override def withName(newName: String): Attribute = throw new UnsupportedOperationException
+  override def withMetadata(newMetadata: Metadata): Attribute =
+    throw new UnsupportedOperationException
+  override def qualifier: Seq[String] = throw new UnsupportedOperationException
+  override def exprId: ExprId = throw new UnsupportedOperationException
+  override def withExprId(newExprId: ExprId): Attribute =
+    throw new UnsupportedOperationException
+  override def nullable: Boolean = true
+}
+
+/**
+  * A place holder used to hold a reference that has been resolved to a field outside of the current
+  * plan. This is used for correlated subqueries.
+  */
+case class OuterReference(e: NamedExpression)
+  extends LeafExpression with NamedExpression with Unevaluable {
+  override def dataType: DataType = e.dataType
+  override def nullable: Boolean = e.nullable
+  override def prettyName: String = "outer"
+
+  override def name: String = e.name
+  override def qualifier: Seq[String] = e.qualifier
+  override def exprId: ExprId = e.exprId
+  override def toAttribute: Attribute = e.toAttribute
+  override def newInstance(): NamedExpression = OuterReference(e.newInstance())
+}
+
+object VirtualColumn {
+  // The attribute name used by Hive, which has different result than Spark, deprecated.
+  val hiveGroupingIdName: String = "grouping__id"
+  val groupingIdName: String = "spark_grouping_id"
+  val groupingIdAttribute: UnresolvedAttribute = UnresolvedAttribute(groupingIdName)
+}

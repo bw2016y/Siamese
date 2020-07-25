@@ -10,6 +10,7 @@
 
     <properties>
         <scala.binary.version>2.12</scala.binary.version>
+        <janino.version>3.0.16</janino.version>
     </properties>
 
     <dependencies>
@@ -25,12 +26,29 @@
             <artifactId>spark-core_${scala.binary.version}</artifactId>
             <version>2.4.5</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sketch_${scala.binary.version}</artifactId>
+            <version>2.4.5</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>16.0.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>${janino.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>commons-compiler</artifactId>
+            <version>${janino.version}</version>
+        </dependency>
+
     </dependencies>
 
         <build>

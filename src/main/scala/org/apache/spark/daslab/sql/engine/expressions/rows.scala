@@ -3,7 +3,7 @@ package org.apache.spark.daslab.sql.engine.expressions
 
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.Row
-//import org.apache.spark.daslab.sql.engine.util.{ArrayData, MapData}
+import org.apache.spark.daslab.sql.engine.util.{ArrayData, MapData}
 import org.apache.spark.daslab.sql.types._
 import org.apache.spark.unsafe.types.{CalendarInterval, UTF8String}
 
@@ -17,7 +17,7 @@ trait BaseGenericInternalRow extends InternalRow {
   // 默认实现
   private def getAs[T](ordinal: Int) = genericGet(ordinal).asInstanceOf[T]
   override def isNullAt(ordinal: Int): Boolean = getAs[AnyRef](ordinal) eq null
-//  override def get(ordinal: Int, dataType: DataType): AnyRef = getAs(ordinal)
+  override def get(ordinal: Int, dataType: DataType): AnyRef = getAs(ordinal)
   override def getBoolean(ordinal: Int): Boolean = getAs(ordinal)
   override def getByte(ordinal: Int): Byte = getAs(ordinal)
   override def getShort(ordinal: Int): Short = getAs(ordinal)
@@ -25,12 +25,12 @@ trait BaseGenericInternalRow extends InternalRow {
   override def getLong(ordinal: Int): Long = getAs(ordinal)
   override def getFloat(ordinal: Int): Float = getAs(ordinal)
   override def getDouble(ordinal: Int): Double = getAs(ordinal)
-//  override def getDecimal(ordinal: Int, precision: Int, scale: Int): Decimal = getAs(ordinal)
+  override def getDecimal(ordinal: Int, precision: Int, scale: Int): Decimal = getAs(ordinal)
   override def getUTF8String(ordinal: Int): UTF8String = getAs(ordinal)
   override def getBinary(ordinal: Int): Array[Byte] = getAs(ordinal)
-//  override def getArray(ordinal: Int): ArrayData = getAs(ordinal)
+  override def getArray(ordinal: Int): ArrayData = getAs(ordinal)
   override def getInterval(ordinal: Int): CalendarInterval = getAs(ordinal)
-//  override def getMap(ordinal: Int): MapData = getAs(ordinal)
+  override def getMap(ordinal: Int): MapData = getAs(ordinal)
   override def getStruct(ordinal: Int, numFields: Int): InternalRow = getAs(ordinal)
 
   override def toString: String = {
@@ -52,16 +52,16 @@ trait BaseGenericInternalRow extends InternalRow {
     }
   }
 
-//  override def copy(): GenericInternalRow = {
-//    val len = numFields
-//    val newValues = new Array[Any](len)
-//    var i = 0
-//    while (i < len) {
-//      newValues(i) = InternalRow.copyValue(genericGet(i))
-//      i += 1
-//    }
-//    new GenericInternalRow(newValues)
-//  }
+  override def copy(): GenericInternalRow = {
+    val len = numFields
+    val newValues = new Array[Any](len)
+    var i = 0
+    while (i < len) {
+      newValues(i) = InternalRow.copyValue(genericGet(i))
+      i += 1
+    }
+    new GenericInternalRow(newValues)
+  }
 
   override def equals(o: Any): Boolean = {
     if (!o.isInstanceOf[BaseGenericInternalRow]) {
@@ -161,14 +161,14 @@ class GenericRow(protected[sql] val values: Array[Any]) extends Row {
   override def copy(): GenericRow = this
 }
 
-//class GenericRowWithSchema(values: Array[Any], override val schema: StructType)
-//  extends GenericRow(values) {
-//
-//  /** No-arg constructor for serialization. */
-//  protected def this() = this(null, null)
-//
-//  override def fieldIndex(name: String): Int = schema.fieldIndex(name)
-//}
+class GenericRowWithSchema(values: Array[Any], override val schema: StructType)
+  extends GenericRow(values) {
+
+  /** No-arg constructor for serialization. */
+  protected def this() = this(null, null)
+
+  override def fieldIndex(name: String): Int = schema.fieldIndex(name)
+}
 
 /**
   * An internal row implementation that uses an array of objects as the underlying storage.

@@ -288,37 +288,37 @@ object DataType {
     }
   }
 
-//  /**
-//    * Returns true if the two data types share the same "shape", i.e. the types
-//    * are the same, but the field names don't need to be the same.
-//    *
-//    * @param ignoreNullability whether to ignore nullability when comparing the types
-//    */
-//  def equalsStructurally(
-//  from: DataType,
-//  to: DataType,
-//  ignoreNullability: Boolean = false): Boolean = {
-//    (from, to) match {
-//      case (left: ArrayType, right: ArrayType) =>
-//        equalsStructurally(left.elementType, right.elementType) &&
-//          (ignoreNullability || left.containsNull == right.containsNull)
-//
-//      case (left: MapType, right: MapType) =>
-//        equalsStructurally(left.keyType, right.keyType) &&
-//          equalsStructurally(left.valueType, right.valueType) &&
-//          (ignoreNullability || left.valueContainsNull == right.valueContainsNull)
-//
-//      case (StructType(fromFields), StructType(toFields)) =>
-//        fromFields.length == toFields.length &&
-//          fromFields.zip(toFields)
-//            .forall { case (l, r) =>
-//              equalsStructurally(l.dataType, r.dataType) &&
-//                (ignoreNullability || l.nullable == r.nullable)
-//            }
-//
-//      case (fromDataType, toDataType) => fromDataType == toDataType
-//    }
-//  }
+  /**
+    * Returns true if the two data types share the same "shape", i.e. the types
+    * are the same, but the field names don't need to be the same.
+    *
+    * @param ignoreNullability whether to ignore nullability when comparing the types
+    */
+  def equalsStructurally(
+  from: DataType,
+  to: DataType,
+  ignoreNullability: Boolean = false): Boolean = {
+    (from, to) match {
+      case (left: ArrayType, right: ArrayType) =>
+        equalsStructurally(left.elementType, right.elementType) &&
+          (ignoreNullability || left.containsNull == right.containsNull)
+
+      case (left: MapType, right: MapType) =>
+        equalsStructurally(left.keyType, right.keyType) &&
+          equalsStructurally(left.valueType, right.valueType) &&
+          (ignoreNullability || left.valueContainsNull == right.valueContainsNull)
+
+      case (StructType(fromFields), StructType(toFields)) =>
+        fromFields.length == toFields.length &&
+          fromFields.zip(toFields)
+            .forall { case (l, r) =>
+              equalsStructurally(l.dataType, r.dataType) &&
+                (ignoreNullability || l.nullable == r.nullable)
+            }
+
+      case (fromDataType, toDataType) => fromDataType == toDataType
+    }
+  }
 
   private val SparkGeneratedName = """col\d+""".r
   private def isSparkGeneratedName(name: String): Boolean = name match {

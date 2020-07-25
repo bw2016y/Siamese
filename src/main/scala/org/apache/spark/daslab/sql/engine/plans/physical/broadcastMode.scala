@@ -1,7 +1,7 @@
 package org.apache.spark.daslab.sql.engine.plans.physical
 
 
-import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.daslab.sql.engine.InternalRow
 
 /**
  * Marker trait to identify the shape in which tuples are broadcasted. Typical examples of this are

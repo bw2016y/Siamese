@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.spark.daslab.sql.engine.analysis
 
 import org.apache.spark.daslab.sql.engine.expressions._
@@ -8,44 +25,42 @@ import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.daslab.sql.types._
 
 
-
-
 // scalastyle:off
 /**
- * Calculates and propagates precision for fixed-precision decimals. Hive has a number of
- * rules for this based on the SQL standard and MS SQL:
- * https://cwiki.apache.org/confluence/download/attachments/27362075/Hive_Decimal_Precision_Scale_Support.pdf
- * https://msdn.microsoft.com/en-us/library/ms190476.aspx
- *
- * In particular, if we have expressions e1 and e2 with precision/scale p1/s2 and p2/s2
- * respectively, then the following operations have the following precision / scale:
- *
- *   Operation    Result Precision                        Result Scale
- *   ------------------------------------------------------------------------
- *   e1 + e2      max(s1, s2) + max(p1-s1, p2-s2) + 1     max(s1, s2)
- *   e1 - e2      max(s1, s2) + max(p1-s1, p2-s2) + 1     max(s1, s2)
- *   e1 * e2      p1 + p2 + 1                             s1 + s2
- *   e1 / e2      p1 - s1 + s2 + max(6, s1 + p2 + 1)      max(6, s1 + p2 + 1)
- *   e1 % e2      min(p1-s1, p2-s2) + max(s1, s2)         max(s1, s2)
- *   e1 union e2  max(s1, s2) + max(p1-s1, p2-s2)         max(s1, s2)
- *
- * When `spark.sql.decimalOperations.allowPrecisionLoss` is set to true, if the precision / scale
- * needed are out of the range of available values, the scale is reduced up to 6, in order to
- * prevent the truncation of the integer part of the decimals.
- *
- * To implement the rules for fixed-precision types, we introduce casts to turn them to unlimited
- * precision, do the math on unlimited-precision numbers, then introduce casts back to the
- * required fixed precision. This allows us to do all rounding and overflow handling in the
- * cast-to-fixed-precision operator.
- *
- * In addition, when mixing non-decimal types with decimals, we use the following rules:
- * - BYTE gets turned into DECIMAL(3, 0)
- * - SHORT gets turned into DECIMAL(5, 0)
- * - INT gets turned into DECIMAL(10, 0)
- * - LONG gets turned into DECIMAL(20, 0)
- * - FLOAT and DOUBLE cause fixed-length decimals to turn into DOUBLE
- * - Literals INT and LONG get turned into DECIMAL with the precision strictly needed by the value
- */
+  * Calculates and propagates precision for fixed-precision decimals. Hive has a number of
+  * rules for this based on the SQL standard and MS SQL:
+  * https://cwiki.apache.org/confluence/download/attachments/27362075/Hive_Decimal_Precision_Scale_Support.pdf
+  * https://msdn.microsoft.com/en-us/library/ms190476.aspx
+  *
+  * In particular, if we have expressions e1 and e2 with precision/scale p1/s2 and p2/s2
+  * respectively, then the following operations have the following precision / scale:
+  *
+  *   Operation    Result Precision                        Result Scale
+  *   ------------------------------------------------------------------------
+  *   e1 + e2      max(s1, s2) + max(p1-s1, p2-s2) + 1     max(s1, s2)
+  *   e1 - e2      max(s1, s2) + max(p1-s1, p2-s2) + 1     max(s1, s2)
+  *   e1 * e2      p1 + p2 + 1                             s1 + s2
+  *   e1 / e2      p1 - s1 + s2 + max(6, s1 + p2 + 1)      max(6, s1 + p2 + 1)
+  *   e1 % e2      min(p1-s1, p2-s2) + max(s1, s2)         max(s1, s2)
+  *   e1 union e2  max(s1, s2) + max(p1-s1, p2-s2)         max(s1, s2)
+  *
+  * When `spark.sql.decimalOperations.allowPrecisionLoss` is set to true, if the precision / scale
+  * needed are out of the range of available values, the scale is reduced up to 6, in order to
+  * prevent the truncation of the integer part of the decimals.
+  *
+  * To implement the rules for fixed-precision types, we introduce casts to turn them to unlimited
+  * precision, do the math on unlimited-precision numbers, then introduce casts back to the
+  * required fixed precision. This allows us to do all rounding and overflow handling in the
+  * cast-to-fixed-precision operator.
+  *
+  * In addition, when mixing non-decimal types with decimals, we use the following rules:
+  * - BYTE gets turned into DECIMAL(3, 0)
+  * - SHORT gets turned into DECIMAL(5, 0)
+  * - INT gets turned into DECIMAL(10, 0)
+  * - LONG gets turned into DECIMAL(20, 0)
+  * - FLOAT and DOUBLE cause fixed-length decimals to turn into DOUBLE
+  * - Literals INT and LONG get turned into DECIMAL with the precision strictly needed by the value
+  */
 // scalastyle:on
 object DecimalPrecision extends TypeCoercionRule {
   import scala.math.{max, min}
@@ -74,7 +89,7 @@ object DecimalPrecision extends TypeCoercionRule {
   }
 
   /** Decimal precision promotion for +, -, *, /, %, pmod, and binary comparison. */
-  private[catalyst] val decimalAndDecimal: PartialFunction[Expression, Expression] = {
+  private[engine] val decimalAndDecimal: PartialFunction[Expression, Expression] = {
     // Skip nodes whose children have not been resolved yet
     case e if !e.childrenResolved => e
 
@@ -164,23 +179,23 @@ object DecimalPrecision extends TypeCoercionRule {
   }
 
   /**
-   * Strength reduction for comparing integral expressions with decimal literals.
-   * 1. int_col > decimal_literal => int_col > floor(decimal_literal)
-   * 2. int_col >= decimal_literal => int_col >= ceil(decimal_literal)
-   * 3. int_col < decimal_literal => int_col < ceil(decimal_literal)
-   * 4. int_col <= decimal_literal => int_col <= floor(decimal_literal)
-   * 5. decimal_literal > int_col => ceil(decimal_literal) > int_col
-   * 6. decimal_literal >= int_col => floor(decimal_literal) >= int_col
-   * 7. decimal_literal < int_col => floor(decimal_literal) < int_col
-   * 8. decimal_literal <= int_col => ceil(decimal_literal) <= int_col
-   *
-   * Note that technically this is an "optimization" and should go into the optimizer. However,
-   * by the time the optimizer runs, these comparison expressions would be pretty hard to pattern
-   * match because there are multiple (at least 2) levels of casts involved.
-   *
-   * There are a lot more possible rules we can implement, but we don't do them
-   * because we are not sure how common they are.
-   */
+    * Strength reduction for comparing integral expressions with decimal literals.
+    * 1. int_col > decimal_literal => int_col > floor(decimal_literal)
+    * 2. int_col >= decimal_literal => int_col >= ceil(decimal_literal)
+    * 3. int_col < decimal_literal => int_col < ceil(decimal_literal)
+    * 4. int_col <= decimal_literal => int_col <= floor(decimal_literal)
+    * 5. decimal_literal > int_col => ceil(decimal_literal) > int_col
+    * 6. decimal_literal >= int_col => floor(decimal_literal) >= int_col
+    * 7. decimal_literal < int_col => floor(decimal_literal) < int_col
+    * 8. decimal_literal <= int_col => ceil(decimal_literal) <= int_col
+    *
+    * Note that technically this is an "optimization" and should go into the optimizer. However,
+    * by the time the optimizer runs, these comparison expressions would be pretty hard to pattern
+    * match because there are multiple (at least 2) levels of casts involved.
+    *
+    * There are a lot more possible rules we can implement, but we don't do them
+    * because we are not sure how common they are.
+    */
   private val integralAndDecimalLiteral: PartialFunction[Expression, Expression] = {
 
     case GreaterThan(i @ IntegralType(), DecimalLiteral(value)) =>
@@ -257,9 +272,9 @@ object DecimalPrecision extends TypeCoercionRule {
   }
 
   /**
-   * Type coercion for BinaryOperator in which one side is a non-decimal numeric, and the other
-   * side is a decimal.
-   */
+    * Type coercion for BinaryOperator in which one side is a non-decimal numeric, and the other
+    * side is a decimal.
+    */
   private val nondecimalAndDecimal: PartialFunction[Expression, Expression] = {
     // Promote integers inside a binary expression with fixed-precision decimals to decimals,
     // and fixed-precision decimals in an expression with floats / doubles to doubles

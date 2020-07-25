@@ -7,9 +7,7 @@ import java.security.{MessageDigest, NoSuchAlgorithmException}
 import java.util.zip.CRC32
 
 import scala.annotation.tailrec
-
 import org.apache.commons.codec.digest.DigestUtils
-
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult
 import org.apache.spark.daslab.sql.engine.expressions.codegen._
@@ -21,6 +19,9 @@ import org.apache.spark.daslab.sql.types._
 import org.apache.spark.unsafe.Platform
 import org.apache.spark.unsafe.hash.Murmur3_x86_32
 import org.apache.spark.unsafe.types.{CalendarInterval, UTF8String}
+
+//spark-unsafe中的catalyst中的HiveHasher
+import org.apache.spark.sql.catalyst.expressions.HiveHasher
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // This file defines all the expressions for hashing.
