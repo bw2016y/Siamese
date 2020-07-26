@@ -16,7 +16,7 @@ object StringUtils {
    *
    * Underscores (_) are converted to '.' and percent signs (%) are converted to '.*', other
    * characters are quoted literally. Escaping is done according to the rules specified in
-   * [[org.apache.spark.sql.catalyst.expressions.Like]] usage documentation. An invalid pattern will
+   * [[org.apache.spark.daslab.sql.engine.expressions.Like]] usage documentation. An invalid pattern will
    * throw an [[AnalysisException]].
    *
    * @param pattern the SQL pattern to convert

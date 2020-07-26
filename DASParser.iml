@@ -138,6 +138,9 @@
     <orderEntry type="library" name="Maven: org.apache.spark:spark-tags_2.12:2.4.5" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-crypto:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.spark-project.spark:unused:1.0.0" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-sketch_2.12:2.4.5" level="project" />
     <orderEntry type="library" name="Maven: com.google.guava:guava:16.0.1" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.janino:janino:3.0.16" level="project" />
+    <orderEntry type="library" name="Maven: org.codehaus.janino:commons-compiler:3.0.16" level="project" />
   </component>
 </module>

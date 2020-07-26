@@ -2609,7 +2609,7 @@ object EliminateEventTimeWatermark extends Rule[LogicalPlan] {
  * filter out the rows where the time column is not inside the time window.
  */
 object TimeWindowing extends Rule[LogicalPlan] {
-  import org.apache.spark.sql.catalyst.dsl.expressions._
+  import org.apache.spark.daslab.sql.engine.dsl.expressions._
 
   private final val WINDOW_COL_NAME = "window"
   private final val WINDOW_START = "start"

@@ -36,7 +36,7 @@ case class UnresolvedRelation(tableIdentifier: TableIdentifier)
 
 /**
  * An inline table that has not been resolved yet. Once resolved, it is turned by the analyzer into
- * a [[org.apache.spark.sql.catalyst.plans.logical.LocalRelation]].
+ * a [[org.apache.spark.daslab.sql.engine.plans.logical.LocalRelation]].
  *
  * @param names list of column names
  * @param rows expressions for the data
@@ -168,7 +168,7 @@ object UnresolvedAttribute {
 
 /**
  * Represents an unresolved generator, which will be created by the parser for
- * the [[org.apache.spark.sql.catalyst.plans.logical.Generate]] operator.
+ * the [[org.apache.spark.daslab.sql.engine.plans.logical.Generate]] operator.
  * The analyzer will resolve this generator.
  */
 case class UnresolvedGenerator(name: FunctionIdentifier, children: Seq[Expression])

@@ -70,7 +70,7 @@ object SubqueryExpression {
   /**
    * Returns true when an expression contains a subquery that has outer reference(s). The outer
    * reference attributes are kept as children of subquery expression by
-   * [[org.apache.spark.sql.catalyst.analysis.Analyzer.ResolveSubquery]]
+   * [[org.apache.spark.daslab.sql.engine.analysis.Analyzer.ResolveSubquery]]
    */
   def hasCorrelatedSubquery(e: Expression): Boolean = {
     e.find {

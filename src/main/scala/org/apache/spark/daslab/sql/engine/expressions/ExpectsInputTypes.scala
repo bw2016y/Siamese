@@ -51,7 +51,7 @@ object ExpectsInputTypes {
 
 /**
  * A mixin for the analyzer to perform implicit type casting using
- * [[org.apache.spark.sql.catalyst.analysis.TypeCoercion.ImplicitTypeCasts]].
+ * [[org.apache.spark.daslab.sql.engine.analysis.TypeCoercion.ImplicitTypeCasts]].
  */
 trait ImplicitCastInputTypes extends ExpectsInputTypes {
   // No other methods

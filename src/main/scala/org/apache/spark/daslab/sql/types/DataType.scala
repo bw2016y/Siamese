@@ -3,16 +3,21 @@ package org.apache.spark.daslab.sql.types
 import java.util.Locale
 
 import scala.util.control.NonFatal
+
 import org.json4s._
 import org.json4s.JsonAST.JValue
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import org.apache.spark.annotation.InterfaceStability
-import org.apache.spark.daslab.sql.engine.expressions.Expression
-//import org.apache.spark.sql.catalyst.analysis.Resolver
+
+import org.apache.spark.daslab.sql.engine.analysis.Resolver
+import org.apache.spark.daslab.sql.engine.expressions.{Cast, Expression}
 import org.apache.spark.daslab.sql.engine.parser.CatalystSqlParser
 import org.apache.spark.daslab.sql.internal.SQLConf
+
+//todo
 import org.apache.spark.util.Utils
+import org.apache.spark.annotation.InterfaceStability
+
 
 /**
   * The base type of all Spark SQL data types.
@@ -228,41 +233,41 @@ object DataType {
     }
   }
 
-//  /**
-//    * Compares two types, ignoring compatible nullability of ArrayType, MapType, StructType.
-//    *
-//    * Compatible nullability is defined as follows:
-//    *   - If `from` and `to` are ArrayTypes, `from` has a compatible nullability with `to`
-//    *   if and only if `to.containsNull` is true, or both of `from.containsNull` and
-//    *   `to.containsNull` are false.
-//    *   - If `from` and `to` are MapTypes, `from` has a compatible nullability with `to`
-//    *   if and only if `to.valueContainsNull` is true, or both of `from.valueContainsNull` and
-//    *   `to.valueContainsNull` are false.
-//    *   - If `from` and `to` are StructTypes, `from` has a compatible nullability with `to`
-//    *   if and only if for all every pair of fields, `to.nullable` is true, or both
-//    *   of `fromField.nullable` and `toField.nullable` are false.
-//    */
-//  private[sql] def equalsIgnoreCompatibleNullability(from: DataType, to: DataType): Boolean = {
-//    (from, to) match {
-//      case (ArrayType(fromElement, fn), ArrayType(toElement, tn)) =>
-//        (tn || !fn) && equalsIgnoreCompatibleNullability(fromElement, toElement)
-//
-//      case (MapType(fromKey, fromValue, fn), MapType(toKey, toValue, tn)) =>
-//        (tn || !fn) &&
-//          equalsIgnoreCompatibleNullability(fromKey, toKey) &&
-//          equalsIgnoreCompatibleNullability(fromValue, toValue)
-//
-//      case (StructType(fromFields), StructType(toFields)) =>
-//        fromFields.length == toFields.length &&
-//          fromFields.zip(toFields).forall { case (fromField, toField) =>
-//            fromField.name == toField.name &&
-//              (toField.nullable || !fromField.nullable) &&
-//              equalsIgnoreCompatibleNullability(fromField.dataType, toField.dataType)
-//          }
-//
-//      case (fromDataType, toDataType) => fromDataType == toDataType
-//    }
-//  }
+  /**
+    * Compares two types, ignoring compatible nullability of ArrayType, MapType, StructType.
+    *
+    * Compatible nullability is defined as follows:
+    *   - If `from` and `to` are ArrayTypes, `from` has a compatible nullability with `to`
+    *   if and only if `to.containsNull` is true, or both of `from.containsNull` and
+    *   `to.containsNull` are false.
+    *   - If `from` and `to` are MapTypes, `from` has a compatible nullability with `to`
+    *   if and only if `to.valueContainsNull` is true, or both of `from.valueContainsNull` and
+    *   `to.valueContainsNull` are false.
+    *   - If `from` and `to` are StructTypes, `from` has a compatible nullability with `to`
+    *   if and only if for all every pair of fields, `to.nullable` is true, or both
+    *   of `fromField.nullable` and `toField.nullable` are false.
+    */
+  private[sql] def equalsIgnoreCompatibleNullability(from: DataType, to: DataType): Boolean = {
+    (from, to) match {
+      case (ArrayType(fromElement, fn), ArrayType(toElement, tn)) =>
+        (tn || !fn) && equalsIgnoreCompatibleNullability(fromElement, toElement)
+
+      case (MapType(fromKey, fromValue, fn), MapType(toKey, toValue, tn)) =>
+        (tn || !fn) &&
+          equalsIgnoreCompatibleNullability(fromKey, toKey) &&
+          equalsIgnoreCompatibleNullability(fromValue, toValue)
+
+      case (StructType(fromFields), StructType(toFields)) =>
+        fromFields.length == toFields.length &&
+          fromFields.zip(toFields).forall { case (fromField, toField) =>
+            fromField.name == toField.name &&
+              (toField.nullable || !fromField.nullable) &&
+              equalsIgnoreCompatibleNullability(fromField.dataType, toField.dataType)
+          }
+
+      case (fromDataType, toDataType) => fromDataType == toDataType
+    }
+  }
 
   /**
     * Compares two types, ignoring nullability of ArrayType, MapType, StructType, and ignoring case
@@ -326,117 +331,117 @@ object DataType {
     case _ => false
   }
 
-//  /**
-//    * Returns true if the write data type can be read using the read data type.
-//    *
-//    * The write type is compatible with the read type if:
-//    * - Both types are arrays, the array element types are compatible, and element nullability is
-//    *   compatible (read allows nulls or write does not contain nulls).
-//    * - Both types are maps and the map key and value types are compatible, and value nullability
-//    *   is compatible  (read allows nulls or write does not contain nulls).
-//    * - Both types are structs and each field in the read struct is present in the write struct and
-//    *   compatible (including nullability), or is nullable if the write struct does not contain the
-//    *   field. Write-side structs are not compatible if they contain fields that are not present in
-//    *   the read-side struct.
-//    * - Both types are atomic and the write type can be safely cast to the read type.
-//    *
-//    * Extra fields in write-side structs are not allowed to avoid accidentally writing data that
-//    * the read schema will not read, and to ensure map key equality is not changed when data is read.
-//    *
-//    * @param write a write-side data type to validate against the read type
-//    * @param read a read-side data type
-//    * @return true if data written with the write type can be read using the read type
-//    */
-//  def canWrite(
-//    write: DataType,
-//    read: DataType,
-//    resolver: Resolver,
-//    context: String,
-//    addError: String => Unit = (_: String) => {}): Boolean = {
-//    (write, read) match {
-//      case (wArr: ArrayType, rArr: ArrayType) =>
-//        // run compatibility check first to produce all error messages
-//        val typesCompatible =
-//          canWrite(wArr.elementType, rArr.elementType, resolver, context + ".element", addError)
-//
-//        if (wArr.containsNull && !rArr.containsNull) {
-//          addError(s"Cannot write nullable elements to array of non-nulls: '$context'")
-//          false
-//        } else {
-//          typesCompatible
-//        }
-//
-//      case (wMap: MapType, rMap: MapType) =>
-//        // map keys cannot include data fields not in the read schema without changing equality when
-//        // read. map keys can be missing fields as long as they are nullable in the read schema.
-//
-//        // run compatibility check first to produce all error messages
-//        val keyCompatible =
-//          canWrite(wMap.keyType, rMap.keyType, resolver, context + ".key", addError)
-//        val valueCompatible =
-//          canWrite(wMap.valueType, rMap.valueType, resolver, context + ".value", addError)
-//        val typesCompatible = keyCompatible && valueCompatible
-//
-//        if (wMap.valueContainsNull && !rMap.valueContainsNull) {
-//          addError(s"Cannot write nullable values to map of non-nulls: '$context'")
-//          false
-//        } else {
-//          typesCompatible
-//        }
-//
-//      case (StructType(writeFields), StructType(readFields)) =>
-//        var fieldCompatible = true
-//        readFields.zip(writeFields).foreach {
-//          case (rField, wField) =>
-//            val namesMatch = resolver(wField.name, rField.name) || isSparkGeneratedName(wField.name)
-//            val fieldContext = s"$context.${rField.name}"
-//            val typesCompatible =
-//              canWrite(wField.dataType, rField.dataType, resolver, fieldContext, addError)
-//
-//            if (!namesMatch) {
-//              addError(s"Struct '$context' field name does not match (may be out of order): " +
-//                s"expected '${rField.name}', found '${wField.name}'")
-//              fieldCompatible = false
-//            } else if (!rField.nullable && wField.nullable) {
-//              addError(s"Cannot write nullable values to non-null field: '$fieldContext'")
-//              fieldCompatible = false
-//            } else if (!typesCompatible) {
-//              // errors are added in the recursive call to canWrite above
-//              fieldCompatible = false
-//            }
-//        }
-//
-//        if (readFields.size > writeFields.size) {
-//          val missingFieldsStr = readFields.takeRight(readFields.size - writeFields.size)
-//            .map(f => s"'${f.name}'").mkString(", ")
-//          if (missingFieldsStr.nonEmpty) {
-//            addError(s"Struct '$context' missing fields: $missingFieldsStr")
-//            fieldCompatible = false
-//          }
-//
-//        } else if (writeFields.size > readFields.size) {
-//          val extraFieldsStr = writeFields.takeRight(writeFields.size - readFields.size)
-//            .map(f => s"'${f.name}'").mkString(", ")
-//          addError(s"Cannot write extra fields to struct '$context': $extraFieldsStr")
-//          fieldCompatible = false
-//        }
-//
-//        fieldCompatible
-//
-//      case (w: AtomicType, r: AtomicType) =>
-//        if (!Cast.canSafeCast(w, r)) {
-//          addError(s"Cannot safely cast '$context': $w to $r")
-//          false
-//        } else {
-//          true
-//        }
-//
-//      case (w, r) if w.sameType(r) && !w.isInstanceOf[NullType] =>
-//        true
-//
-//      case (w, r) =>
-//        addError(s"Cannot write '$context': $w is incompatible with $r")
-//        false
-//    }
-//  }
+  /**
+    * Returns true if the write data type can be read using the read data type.
+    *
+    * The write type is compatible with the read type if:
+    * - Both types are arrays, the array element types are compatible, and element nullability is
+    *   compatible (read allows nulls or write does not contain nulls).
+    * - Both types are maps and the map key and value types are compatible, and value nullability
+    *   is compatible  (read allows nulls or write does not contain nulls).
+    * - Both types are structs and each field in the read struct is present in the write struct and
+    *   compatible (including nullability), or is nullable if the write struct does not contain the
+    *   field. Write-side structs are not compatible if they contain fields that are not present in
+    *   the read-side struct.
+    * - Both types are atomic and the write type can be safely cast to the read type.
+    *
+    * Extra fields in write-side structs are not allowed to avoid accidentally writing data that
+    * the read schema will not read, and to ensure map key equality is not changed when data is read.
+    *
+    * @param write a write-side data type to validate against the read type
+    * @param read a read-side data type
+    * @return true if data written with the write type can be read using the read type
+    */
+  def canWrite(
+    write: DataType,
+    read: DataType,
+    resolver: Resolver,
+    context: String,
+    addError: String => Unit = (_: String) => {}): Boolean = {
+    (write, read) match {
+      case (wArr: ArrayType, rArr: ArrayType) =>
+        // run compatibility check first to produce all error messages
+        val typesCompatible =
+          canWrite(wArr.elementType, rArr.elementType, resolver, context + ".element", addError)
+
+        if (wArr.containsNull && !rArr.containsNull) {
+          addError(s"Cannot write nullable elements to array of non-nulls: '$context'")
+          false
+        } else {
+          typesCompatible
+        }
+
+      case (wMap: MapType, rMap: MapType) =>
+        // map keys cannot include data fields not in the read schema without changing equality when
+        // read. map keys can be missing fields as long as they are nullable in the read schema.
+
+        // run compatibility check first to produce all error messages
+        val keyCompatible =
+          canWrite(wMap.keyType, rMap.keyType, resolver, context + ".key", addError)
+        val valueCompatible =
+          canWrite(wMap.valueType, rMap.valueType, resolver, context + ".value", addError)
+        val typesCompatible = keyCompatible && valueCompatible
+
+        if (wMap.valueContainsNull && !rMap.valueContainsNull) {
+          addError(s"Cannot write nullable values to map of non-nulls: '$context'")
+          false
+        } else {
+          typesCompatible
+        }
+
+      case (StructType(writeFields), StructType(readFields)) =>
+        var fieldCompatible = true
+        readFields.zip(writeFields).foreach {
+          case (rField, wField) =>
+            val namesMatch = resolver(wField.name, rField.name) || isSparkGeneratedName(wField.name)
+            val fieldContext = s"$context.${rField.name}"
+            val typesCompatible =
+              canWrite(wField.dataType, rField.dataType, resolver, fieldContext, addError)
+
+            if (!namesMatch) {
+              addError(s"Struct '$context' field name does not match (may be out of order): " +
+                s"expected '${rField.name}', found '${wField.name}'")
+              fieldCompatible = false
+            } else if (!rField.nullable && wField.nullable) {
+              addError(s"Cannot write nullable values to non-null field: '$fieldContext'")
+              fieldCompatible = false
+            } else if (!typesCompatible) {
+              // errors are added in the recursive call to canWrite above
+              fieldCompatible = false
+            }
+        }
+
+        if (readFields.size > writeFields.size) {
+          val missingFieldsStr = readFields.takeRight(readFields.size - writeFields.size)
+            .map(f => s"'${f.name}'").mkString(", ")
+          if (missingFieldsStr.nonEmpty) {
+            addError(s"Struct '$context' missing fields: $missingFieldsStr")
+            fieldCompatible = false
+          }
+
+        } else if (writeFields.size > readFields.size) {
+          val extraFieldsStr = writeFields.takeRight(writeFields.size - readFields.size)
+            .map(f => s"'${f.name}'").mkString(", ")
+          addError(s"Cannot write extra fields to struct '$context': $extraFieldsStr")
+          fieldCompatible = false
+        }
+
+        fieldCompatible
+
+      case (w: AtomicType, r: AtomicType) =>
+        if (!Cast.canSafeCast(w, r)) {
+          addError(s"Cannot safely cast '$context': $w to $r")
+          false
+        } else {
+          true
+        }
+
+      case (w, r) if w.sameType(r) && !w.isInstanceOf[NullType] =>
+        true
+
+      case (w, r) =>
+        addError(s"Cannot write '$context': $w is incompatible with $r")
+        false
+    }
+  }
 }

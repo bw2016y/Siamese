@@ -57,23 +57,23 @@ abstract class InternalRow extends SpecializedGetters with Serializable {
 
   /* ---------------------- Scala的实用方法 ---------------------- */
 
-//  /**
-//    * 返回该Row对应的Seq，元素顺序相同
-//    */
-//  def toSeq(fieldTypes: Seq[DataType]): Seq[Any] = {
-//    val len = numFields
-//    assert(len == fieldTypes.length)
-//
-//    val values = new Array[Any](len)
-//    var i = 0
-//    while (i < len) {
-//      values(i) = get(i, fieldTypes(i))
-//      i += 1
-//    }
-//    values
-//  }
-//
-//  def toSeq(schema: StructType): Seq[Any] = toSeq(schema.map(_.dataType))
+  /**
+    * 返回该Row对应的Seq，元素顺序相同
+    */
+  def toSeq(fieldTypes: Seq[DataType]): Seq[Any] = {
+    val len = numFields
+    assert(len == fieldTypes.length)
+
+    val values = new Array[Any](len)
+    var i = 0
+    while (i < len) {
+      values(i) = get(i, fieldTypes(i))
+      i += 1
+    }
+    values
+  }
+
+  def toSeq(schema: StructType): Seq[Any] = toSeq(schema.map(_.dataType))
 }
 
 object InternalRow {

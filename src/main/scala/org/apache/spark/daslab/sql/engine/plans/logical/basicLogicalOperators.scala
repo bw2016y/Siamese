@@ -384,7 +384,7 @@ object AppendData {
  * concrete implementations during analysis.
  *
  * @param table the logical plan representing the table. In the future this should be a
- *              [[org.apache.spark.sql.catalyst.catalog.CatalogTable]] once we converge Hive tables
+ *              [[org.apache.spark.daslab.sql.engine.catalog.CatalogTable]] once we converge Hive tables
  *              and data source tables.
  * @param partition a map from the partition key to the partition value (optional). If the partition
  *                  value is optional, dynamic partition insert will be performed.
@@ -980,7 +980,7 @@ case class OneRowRelation() extends LeafNode {
   override def output: Seq[Attribute] = Nil
   override def computeStats(): Statistics = Statistics(sizeInBytes = 1)
 
-  /** [[org.apache.spark.sql.catalyst.trees.TreeNode.makeCopy()]] does not support 0-arg ctor. */
+  /** [[org.apache.spark.daslab.sql.engine.trees.TreeNode.makeCopy()]] does not support 0-arg ctor. */
   override def makeCopy(newArgs: Array[AnyRef]): OneRowRelation = OneRowRelation()
 }
 

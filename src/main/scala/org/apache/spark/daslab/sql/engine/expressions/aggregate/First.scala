@@ -1,9 +1,8 @@
-
 package org.apache.spark.daslab.sql.engine.expressions.aggregate
 
-import org.apache.spark.daslab.sql.AnalysisException
+
 import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult
-import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult.TypeCheckSuccess
+import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
 import org.apache.spark.daslab.sql.engine.dsl.expressions._
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.types._
@@ -20,16 +19,12 @@ import org.apache.spark.daslab.sql.types._
     _FUNC_(expr[, isIgnoreNull]) - Returns the first value of `expr` for a group of rows.
       If `isIgnoreNull` is true, returns only non-null values.
   """)
-case class First(child: Expression, ignoreNulls: Boolean)
+case class First(child: Expression, ignoreNullsExpr: Expression)
   extends DeclarativeAggregate with ExpectsInputTypes {
 
-  def this(child: Expression) = this(child, false)
+  def this(child: Expression) = this(child, Literal.create(false, BooleanType))
 
-  def this(child: Expression, ignoreNullsExpr: Expression) = {
-    this(child, FirstLast.validateIgnoreNullExpr(ignoreNullsExpr, "first"))
-  }
-
-  override def children: Seq[Expression] = child :: Nil
+  override def children: Seq[Expression] = child :: ignoreNullsExpr :: Nil
 
   override def nullable: Boolean = true
 
@@ -46,10 +41,15 @@ case class First(child: Expression, ignoreNulls: Boolean)
     val defaultCheck = super.checkInputDataTypes()
     if (defaultCheck.isFailure) {
       defaultCheck
+    } else if (!ignoreNullsExpr.foldable) {
+      TypeCheckFailure(
+        s"The second argument of First must be a boolean literal, but got: ${ignoreNullsExpr.sql}")
     } else {
       TypeCheckSuccess
     }
   }
+
+  private def ignoreNulls: Boolean = ignoreNullsExpr.eval().asInstanceOf[Boolean]
 
   private lazy val first = AttributeReference("first", child.dataType)()
 
@@ -89,12 +89,4 @@ case class First(child: Expression, ignoreNulls: Boolean)
   override lazy val evaluateExpression: AttributeReference = first
 
   override def toString: String = s"first($child)${if (ignoreNulls) " ignore nulls"}"
-}
-
-object FirstLast {
-  def validateIgnoreNullExpr(exp: Expression, funcName: String): Boolean = exp match {
-    case Literal(b: Boolean, BooleanType) => b
-    case _ => throw new AnalysisException(
-      s"The second argument in $funcName should be a boolean literal.")
-  }
 }
