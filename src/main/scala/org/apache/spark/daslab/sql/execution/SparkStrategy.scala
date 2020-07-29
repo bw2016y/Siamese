@@ -21,6 +21,8 @@ import org.apache.spark.daslab.sql.execution.streaming.sources.MemoryPlanV2
 import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.daslab.sql.streaming.{OutputMode, StreamingQuery}
 import org.apache.spark.daslab.sql.types.StructType
+
+import org.apache.spark.daslab.sql.execution.aggregate.AggUtils
 //todo
 import org.apache.spark.rdd.RDD
 
@@ -317,7 +319,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
         val stateVersion = conf.getConf(SQLConf.STREAMING_AGGREGATION_STATE_FORMAT_VERSION)
 
-        aggregate.AggUtils.planStreamingAggregation(
+        AggUtils.planStreamingAggregation(
           namedGroupingExpressions,
           aggregateExpressions.map(expr => expr.asInstanceOf[AggregateExpression]),
           rewrittenResultExpressions,
@@ -402,13 +404,13 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
         val aggregateOperator =
           if (functionsWithDistinct.isEmpty) {
-            aggregate.AggUtils.planAggregateWithoutDistinct(
+            AggUtils.planAggregateWithoutDistinct(
               groupingExpressions,
               aggregateExpressions,
               resultExpressions,
               planLater(child))
           } else {
-            aggregate.AggUtils.planAggregateWithOneDistinct(
+            AggUtils.planAggregateWithOneDistinct(
               groupingExpressions,
               functionsWithDistinct,
               functionsWithoutDistinct,

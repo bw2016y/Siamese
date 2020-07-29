@@ -16,14 +16,15 @@ import com.esotericsoftware.kryo.io.Output;
 
 import org.apache.spark.daslab.sql.engine.InternalRow;
 import org.apache.spark.daslab.sql.types.*;
+import static org.apache.spark.daslab.sql.types.DataTypes.*;
+
+//todo
 import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.array.ByteArrayMethods;
 import org.apache.spark.unsafe.bitset.BitSetMethods;
 import org.apache.spark.unsafe.hash.Murmur3_x86_32;
 import org.apache.spark.unsafe.types.CalendarInterval;
 import org.apache.spark.unsafe.types.UTF8String;
-
-import static org.apache.spark.daslab.sql.types.DataTypes.*;
 import static org.apache.spark.unsafe.Platform.BYTE_ARRAY_OFFSET;
 
 /**
@@ -62,26 +63,22 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     // DecimalType is also mutable
     static {
         mutableFieldTypes = Collections.unmodifiableSet(
-            new HashSet<>(
-                Arrays.asList(new DataType[] {
-                    NullType,
-                    BooleanType,
-                    ByteType,
-                    ShortType,
-                    IntegerType,
-                    LongType,
-                    FloatType,
-                    DoubleType,
-                    DateType,
-                    TimestampType
-                })));
+                new HashSet<>(
+                        Arrays.asList(new DataType[] {
+                                NullType,
+                                BooleanType,
+                                ByteType,
+                                ShortType,
+                                IntegerType,
+                                LongType,
+                                FloatType,
+                                DoubleType,
+                                DateType,
+                                TimestampType
+                        })));
     }
 
     public static boolean isFixedLength(DataType dt) {
-        if (dt instanceof UserDefinedType) {
-            return isFixedLength(((UserDefinedType) dt).sqlType());
-        }
-
         if (dt instanceof DecimalType) {
             return ((DecimalType) dt).precision() <= Decimal.MAX_LONG_DIGITS();
         } else {
@@ -90,10 +87,6 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     }
 
     public static boolean isMutable(DataType dt) {
-        if (dt instanceof UserDefinedType) {
-            return isMutable(((UserDefinedType) dt).sqlType());
-        }
-
         return mutableFieldTypes.contains(dt) || dt instanceof DecimalType;
     }
 
@@ -276,7 +269,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
             Platform.putLong(baseObject, baseOffset + cursor, 0L);
             Platform.putLong(baseObject, baseOffset + cursor + 8, 0L);
 
-            if (value == null || !value.changePrecision(precision, value.scale())) {
+            if (value == null) {
                 setNullAt(ordinal);
                 // keep the offset for future update
                 Platform.putLong(baseObject, getFieldOffset(ordinal), cursor << 32);

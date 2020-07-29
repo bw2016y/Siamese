@@ -74,7 +74,7 @@ class SparkPlanner(
     val projectSet = AttributeSet(projectList.flatMap(_.references))
     val filterSet = AttributeSet(filterPredicates.flatMap(_.references))
     val filterCondition: Option[Expression] =
-      prunePushedDownFilters(filterPredicates).reduceLeftOption(catalyst.expressions.And)
+      prunePushedDownFilters(filterPredicates).reduceLeftOption(engine.expressions.And)
 
     // Right now we still use a projection even if the only evaluation is applying an alias
     // to a column.  Since this is a no-op, it could be avoided. However, using this
