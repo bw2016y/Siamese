@@ -8,6 +8,7 @@ import org.apache.arrow.vector.complex.*;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
 
 import org.apache.spark.daslab.sql.execution.arrow.ArrowUtils;
+
 import org.apache.spark.daslab.sql.types.*;
 
 //todo
