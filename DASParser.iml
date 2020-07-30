@@ -147,7 +147,6 @@
     <orderEntry type="library" name="Maven: commons-lang:commons-lang:2.6" level="project" />
     <orderEntry type="library" name="Maven: io.airlift:aircompressor:0.10" level="project" />
     <orderEntry type="library" name="Maven: org.apache.orc:orc-mapreduce:nohive:1.5.5" level="project" />
-    <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.arrow:arrow-vector:0.10.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.arrow:arrow-format:0.10.0" level="project" />
     <orderEntry type="library" name="Maven: org.apache.arrow:arrow-memory:0.10.0" level="project" />
@@ -169,6 +168,13 @@
     <orderEntry type="library" name="Maven: commons-pool:commons-pool:1.6" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.janino:janino:3.0.16" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.janino:commons-compiler:3.0.16" level="project" />
+    <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.10" level="project" />
     <orderEntry type="library" name="Maven: com.univocity:univocity-parsers:2.7.3" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-servlet:9.3.27.v20190418" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-security:9.3.27.v20190418" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-server:9.3.27.v20190418" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-http:9.3.27.v20190418" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-util:9.3.27.v20190418" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.jetty:jetty-io:9.3.27.v20190418" level="project" />
   </component>
 </module>

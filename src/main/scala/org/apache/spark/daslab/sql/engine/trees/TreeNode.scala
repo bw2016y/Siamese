@@ -627,7 +627,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
    *  可以用来展示子查询
    * @return
    */
-  def innerChildren: Seq[TreeNode[_]] = Seq.empty
+   protected def innerChildren: Seq[TreeNode[_]] = Seq.empty
 
   /**
    *  将该节点和其子节点的表示信息追加到StringBuilder中
