@@ -7,7 +7,7 @@ import org.apache.spark.daslab.sql.engine.expressions.aggregate.AggregateExpress
 import org.apache.spark.daslab.sql.engine.expressions.codegen.{CodegenContext, CodeGenerator}
 import org.apache.spark.daslab.sql.types._
 
-//todo const
+//todo const  !!!
 
 /**
  * This is a helper class to generate an append-only row-based hash map that can act as a 'cache'
@@ -36,7 +36,7 @@ class RowBasedHashMapGenerator(
     val valueSchema = ctx.addReferenceObj("valueSchemaTerm", bufferSchema)
 
     s"""
-       |  private org.apache.spark.daslab.sql.catalyst.expressions.RowBasedKeyValueBatch batch;
+       |  private org.apache.spark.daslab.sql.engine.expressions.RowBasedKeyValueBatch batch;
        |  private int[] buckets;
        |  private int capacity = 1 << $bitMaxCapacity;
        |  private double loadFactor = 0.5;
@@ -52,7 +52,7 @@ class RowBasedHashMapGenerator(
        |  public $generatedClassName(
        |    org.apache.spark.memory.TaskMemoryManager taskMemoryManager,
        |    InternalRow emptyAggregationBuffer) {
-       |    batch = org.apache.spark.daslab.sql.catalyst.expressions.RowBasedKeyValueBatch
+       |    batch = org.apache.spark.daslab.sql.engine.expressions.RowBasedKeyValueBatch
        |      .allocate($keySchema, $valueSchema, taskMemoryManager, capacity);
        |
        |    final UnsafeProjection valueProjection = UnsafeProjection.create($valueSchema);
@@ -118,7 +118,7 @@ class RowBasedHashMapGenerator(
     }.mkString(";\n")
 
     s"""
-       |public org.apache.spark.daslab.sql.catalyst.expressions.UnsafeRow findOrInsert(${
+       |public org.apache.spark.daslab.sql.engine.expressions.UnsafeRow findOrInsert(${
       groupingKeySignature}) {
        |  long h = hash(${groupingKeys.map(_.name).mkString(", ")});
        |  int step = 0;
@@ -128,13 +128,13 @@ class RowBasedHashMapGenerator(
        |    if (buckets[idx] == -1) {
        |      if (numRows < capacity && !isBatchFull) {
        |        // creating the unsafe for new entry
-       |        org.apache.spark.daslab.sql.catalyst.expressions.codegen.UnsafeRowWriter agg_rowWriter
-       |          = new org.apache.spark.daslab.sql.catalyst.expressions.codegen.UnsafeRowWriter(
+       |        org.apache.spark.daslab.sql.engine.expressions.codegen.UnsafeRowWriter agg_rowWriter
+       |          = new org.apache.spark.daslab.sql.engine.expressions.codegen.UnsafeRowWriter(
        |              ${groupingKeySchema.length}, ${numVarLenFields * 32});
        |        agg_rowWriter.reset(); //TODO: investigate if reset or zeroout are actually needed
        |        agg_rowWriter.zeroOutNullBytes();
        |        ${createUnsafeRowForKey};
-       |        org.apache.spark.daslab.sql.catalyst.expressions.UnsafeRow agg_result
+       |        org.apache.spark.daslab.sql.engine.expressions.UnsafeRow agg_result
        |          = agg_rowWriter.getRow();
        |        Object kbase = agg_result.getBaseObject();
        |        long koff = agg_result.getBaseOffset();

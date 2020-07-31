@@ -5,6 +5,7 @@ package org.apache.spark.daslab.sql.execution.ui
 import org.apache.spark.internal.Logging
 import org.apache.spark.ui.{SparkUI, SparkUITab}
 
+//todo const
 class SQLTab(val sqlStore: SQLAppStatusStore, sparkUI: SparkUI)
   extends SparkUITab(sparkUI, "SQL") with Logging {
 
@@ -18,5 +19,5 @@ class SQLTab(val sqlStore: SQLAppStatusStore, sparkUI: SparkUI)
 }
 
 object SQLTab {
-  private val STATIC_RESOURCE_DIR = "org/apache/spark/sql/execution/ui/static"
+  private val STATIC_RESOURCE_DIR = "org/apache/spark/daslab/sql/execution/ui/static"
 }

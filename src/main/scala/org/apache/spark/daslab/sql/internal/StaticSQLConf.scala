@@ -2,7 +2,7 @@ package org.apache.spark.daslab.sql.internal
 
 import org.apache.spark.util.Utils
 
-
+//todo const
 /**
   * Static SQL configuration is a cross-session, immutable Spark configuration. External users can
   * see the static sql configs via `SparkSession.conf`, but can NOT set/unset them.

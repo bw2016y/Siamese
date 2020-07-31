@@ -10,7 +10,7 @@ import org.apache.spark.daslab.sql.types._
 import org.apache.spark.daslab.sql.vectorized.ColumnarBatch
 
 
-//todo const
+//todo const ?
 /**
  * This is a helper class to generate an append-only vectorized hash map that can act as a 'cache'
  * for extremely fast key-value lookups while evaluating aggregates (and fall back to the

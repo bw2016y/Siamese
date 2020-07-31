@@ -21,7 +21,7 @@ import org.apache.spark.unsafe.KVIterator
 import org.apache.spark.util.Utils
 
 
-//todo const
+//todo const 609
 /**
  * Hash-based aggregate operator that can also fallback to sorting when data exceeds memory size.
  */

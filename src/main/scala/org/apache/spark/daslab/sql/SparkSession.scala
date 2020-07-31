@@ -36,7 +36,7 @@ import org.apache.spark.scheduler.{SparkListener, SparkListenerApplicationEnd}
 
 
 
-//todo const
+//todo const 1066 hive dependency
 /**
  * The entry point to programming Spark with the Dataset and DataFrame API.
  *

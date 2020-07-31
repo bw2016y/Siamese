@@ -23,7 +23,7 @@ import org.apache.spark.util.{MutableURLClassLoader, Utils}
 import org.apache.spark.{SparkConf, SparkContext, SparkException}
 import org.apache.spark.internal.Logging
 
-
+//todo const
 /**
  * A class that holds all state shared across sessions in a given [[SQLContext]].
  */

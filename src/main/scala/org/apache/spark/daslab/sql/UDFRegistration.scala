@@ -24,7 +24,7 @@ import org.apache.spark.api.python.PythonEvalType
 import org.apache.spark.internal.Logging
 
 
-//todo api const
+//todo api const  658
 /**
  * Functions for registering user-defined functions. Use `SparkSession.udf` to access this:
  *
@@ -655,7 +655,7 @@ class UDFRegistration private[sql] (functionRegistry: FunctionRegistry) extends 
       val udfInterfaces = clazz.getGenericInterfaces
         .filter(_.isInstanceOf[ParameterizedType])
         .map(_.asInstanceOf[ParameterizedType])
-        .filter(e => e.getRawType.isInstanceOf[Class[_]] && e.getRawType.asInstanceOf[Class[_]].getCanonicalName.startsWith("org.apache.spark.sql.api.java.UDF"))
+        .filter(e => e.getRawType.isInstanceOf[Class[_]] && e.getRawType.asInstanceOf[Class[_]].getCanonicalName.startsWith("org.apache.spark.daslab.sql.api.java.UDF"))
       if (udfInterfaces.length == 0) {
         throw new AnalysisException(s"UDF class $className doesn't implement any UDF interface")
       } else if (udfInterfaces.length > 1) {

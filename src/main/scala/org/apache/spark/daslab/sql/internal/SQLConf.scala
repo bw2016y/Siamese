@@ -25,7 +25,7 @@ import org.apache.spark.util.Utils
 // This file defines the configuration options for Spark SQL.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+//todo const
 object SQLConf {
 
   private val sqlConfEntries = java.util.Collections.synchronizedMap(

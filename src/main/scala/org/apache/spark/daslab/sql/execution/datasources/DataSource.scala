@@ -567,27 +567,27 @@ object DataSource extends Logging {
     val rate = classOf[RateStreamProvider].getCanonicalName
 
     Map(
-      "org.apache.spark.sql.jdbc" -> jdbc,
-      "org.apache.spark.sql.jdbc.DefaultSource" -> jdbc,
-      "org.apache.spark.sql.execution.datasources.jdbc.DefaultSource" -> jdbc,
-      "org.apache.spark.sql.execution.datasources.jdbc" -> jdbc,
-      "org.apache.spark.sql.json" -> json,
-      "org.apache.spark.sql.json.DefaultSource" -> json,
-      "org.apache.spark.sql.execution.datasources.json" -> json,
-      "org.apache.spark.sql.execution.datasources.json.DefaultSource" -> json,
-      "org.apache.spark.sql.parquet" -> parquet,
-      "org.apache.spark.sql.parquet.DefaultSource" -> parquet,
-      "org.apache.spark.sql.execution.datasources.parquet" -> parquet,
-      "org.apache.spark.sql.execution.datasources.parquet.DefaultSource" -> parquet,
+      "org.apache.spark.daslab.sql.jdbc" -> jdbc,
+      "org.apache.spark.daslab.sql.jdbc.DefaultSource" -> jdbc,
+      "org.apache.spark.daslab.sql.execution.datasources.jdbc.DefaultSource" -> jdbc,
+      "org.apache.spark.daslab.sql.execution.datasources.jdbc" -> jdbc,
+      "org.apache.spark.daslab.sql.json" -> json,
+      "org.apache.spark.daslab.sql.json.DefaultSource" -> json,
+      "org.apache.spark.daslab.sql.execution.datasources.json" -> json,
+      "org.apache.spark.daslab.sql.execution.datasources.json.DefaultSource" -> json,
+      "org.apache.spark.daslab.sql.parquet" -> parquet,
+      "org.apache.spark.daslab.sql.parquet.DefaultSource" -> parquet,
+      "org.apache.spark.daslab.sql.execution.datasources.parquet" -> parquet,
+      "org.apache.spark.daslab.sql.execution.datasources.parquet.DefaultSource" -> parquet,
       "org.apache.spark.sql.hive.orc.DefaultSource" -> orc,
       "org.apache.spark.sql.hive.orc" -> orc,
-      "org.apache.spark.sql.execution.datasources.orc.DefaultSource" -> nativeOrc,
-      "org.apache.spark.sql.execution.datasources.orc" -> nativeOrc,
+      "org.apache.spark.daslab.sql.execution.datasources.orc.DefaultSource" -> nativeOrc,
+      "org.apache.spark.daslab.sql.execution.datasources.orc" -> nativeOrc,
       "org.apache.spark.ml.source.libsvm.DefaultSource" -> libsvm,
       "org.apache.spark.ml.source.libsvm" -> libsvm,
       "com.databricks.spark.csv" -> csv,
-      "org.apache.spark.sql.execution.streaming.TextSocketSourceProvider" -> socket,
-      "org.apache.spark.sql.execution.streaming.RateSourceProvider" -> rate
+      "org.apache.spark.daslab.sql.execution.streaming.TextSocketSourceProvider" -> socket,
+      "org.apache.spark.daslab.sql.execution.streaming.RateSourceProvider" -> rate
     )
   }
 
@@ -595,8 +595,8 @@ object DataSource extends Logging {
    * Class that were removed in Spark 2.0. Used to detect incompatibility libraries for Spark 2.0.
    */
   private val spark2RemovedClasses = Set(
-    "org.apache.spark.sql.DataFrame",
-    "org.apache.spark.sql.sources.HadoopFsRelationProvider",
+    "org.apache.spark.daslab.sql.DataFrame",
+    "org.apache.spark.daslab.sql.sources.HadoopFsRelationProvider",
     "org.apache.spark.Logging")
 
   /** Given a provider name, look up the data source class definition. */
@@ -669,7 +669,7 @@ object DataSource extends Logging {
           // that has "org.apache.spark" package in the prefix, we use it considering it is an
           // internal datasource within Spark.
           val sourceNames = sources.map(_.getClass.getName)
-          val internalSources = sources.filter(_.getClass.getName.startsWith("org.apache.spark"))
+          val internalSources = sources.filter(_.getClass.getName.startsWith("org.apache.spark.daslab"))
           if (internalSources.size == 1) {
             logWarning(s"Multiple sources found for $provider1 (${sourceNames.mkString(", ")}), " +
               s"defaulting to the internal datasource (${internalSources.head.getClass.getName}).")
