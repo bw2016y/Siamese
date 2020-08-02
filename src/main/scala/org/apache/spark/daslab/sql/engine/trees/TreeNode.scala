@@ -505,12 +505,6 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   // allChildren=children++innerChildren
   private lazy val allChildren: Set[TreeNode[_]] = (children ++ innerChildren).toSet[TreeNode[_]]
 
-
-
-
-
-
-
   /**
    * 返回代表该节点参数（除去所有children信息）的string信息
    * @return

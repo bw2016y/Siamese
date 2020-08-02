@@ -22,7 +22,7 @@ import java.util.{Objects, UUID}
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.analysis.UnresolvedAttribute
 import org.apache.spark.daslab.sql.engine.expressions.codegen._
-//import org.apache.spark.daslab.sql.engine.plans.logical.EventTimeWatermark
+import org.apache.spark.daslab.sql.engine.plans.logical.EventTimeWatermark
 import org.apache.spark.daslab.sql.engine.util.quoteIdentifier
 import org.apache.spark.daslab.sql.types._
 
@@ -109,7 +109,7 @@ trait NamedExpression extends Expression {
 
 abstract class Attribute extends LeafExpression with NamedExpression with NullIntolerant {
 
-//  override def references: AttributeSet = AttributeSet(this)
+  override def references: AttributeSet = AttributeSet(this)
 
   def withNullability(newNullability: Boolean): Attribute
   def withQualifier(newQualifier: Seq[String]): Attribute
@@ -122,23 +122,23 @@ abstract class Attribute extends LeafExpression with NamedExpression with NullIn
 
 }
 
-///**
-//  * Used to assign a new name to a computation.
-//  * For example the SQL expression "1 + 1 AS a" could be represented as follows:
-//  *  Alias(Add(Literal(1), Literal(1)), "a")()
-//  *
-//  * Note that exprId and qualifiers are in a separate parameter list because
-//  * we only pattern match on child and name.
-//  *
-//  * @param child The computation being performed
-//  * @param name The name to be associated with the result of computing [[child]].
-//  * @param exprId A globally unique id used to check if an [[AttributeReference]] refers to this
-//  *               alias. Auto-assigned if left blank.
-//  * @param qualifier An optional Seq of string that can be used to refer to this attribute in a
-//  *                  fully qualified way. Consider the examples tableName.name, subQueryAlias.name.
-//  *                  tableName and subQueryAlias are possible qualifiers.
-//  * @param explicitMetadata Explicit metadata associated with this alias that overwrites child's.
-//  */
+/**
+  * Used to assign a new name to a computation.
+  * For example the SQL expression "1 + 1 AS a" could be represented as follows:
+  *  Alias(Add(Literal(1), Literal(1)), "a")()
+  *
+  * Note that exprId and qualifiers are in a separate parameter list because
+  * we only pattern match on child and name.
+  *
+  * @param child The computation being performed
+  * @param name The name to be associated with the result of computing [[child]].
+  * @param exprId A globally unique id used to check if an [[AttributeReference]] refers to this
+  *               alias. Auto-assigned if left blank.
+  * @param qualifier An optional Seq of string that can be used to refer to this attribute in a
+  *                  fully qualified way. Consider the examples tableName.name, subQueryAlias.name.
+  *                  tableName and subQueryAlias are possible qualifiers.
+  * @param explicitMetadata Explicit metadata associated with this alias that overwrites child's.
+  */
 case class Alias(child: Expression, name: String)(
   val exprId: ExprId = NamedExpression.newExprId,
   val qualifier: Seq[String] = Seq.empty,
@@ -179,14 +179,14 @@ case class Alias(child: Expression, name: String)(
     }
   }
 
-//  /** Used to signal the column used to calculate an eventTime watermark (e.g. a#1-T{delayMs}) */
-//  private def delaySuffix = if (metadata.contains(EventTimeWatermark.delayKey)) {
-//    s"-T${metadata.getLong(EventTimeWatermark.delayKey)}ms"
-//  } else {
-//    ""
-//  }
-//
-//  override def toString: String = s"$child AS $name#${exprId.id}$typeSuffix$delaySuffix"
+  /** Used to signal the column used to calculate an eventTime watermark (e.g. a#1-T{delayMs}) */
+  private def delaySuffix = if (metadata.contains(EventTimeWatermark.delayKey)) {
+    s"-T${metadata.getLong(EventTimeWatermark.delayKey)}ms"
+  } else {
+    ""
+  }
+
+  override def toString: String = s"$child AS $name#${exprId.id}$typeSuffix$delaySuffix"
 
   override protected final def otherCopyArgs: Seq[AnyRef] = {
     exprId :: qualifier :: explicitMetadata :: Nil
@@ -204,10 +204,10 @@ case class Alias(child: Expression, name: String)(
     case _ => false
   }
 
-//  override def sql: String = {
-//    val qualifierPrefix = if (qualifier.nonEmpty) qualifier.mkString(".") + "." else ""
-//    s"${child.sql} AS $qualifierPrefix${quoteIdentifier(name)}"
-//  }
+  override def sql: String = {
+    val qualifierPrefix = if (qualifier.nonEmpty) qualifier.mkString(".") + "." else ""
+    s"${child.sql} AS $qualifierPrefix${quoteIdentifier(name)}"
+  }
 }
 
 /**
@@ -246,14 +246,14 @@ case class AttributeReference(
     case _ => false
   }
 
-//  override def semanticEquals(other: Expression): Boolean = other match {
-//    case ar: AttributeReference => sameRef(ar)
-//    case _ => false
-//  }
-//
-//  override def semanticHash(): Int = {
-//    this.exprId.hashCode()
-//  }
+  override def semanticEquals(other: Expression): Boolean = other match {
+    case ar: AttributeReference => sameRef(ar)
+    case _ => false
+  }
+
+  override def semanticHash(): Int = {
+    this.exprId.hashCode()
+  }
 
   override def hashCode: Int = {
     // See http://stackoverflow.com/questions/113511/hash-code-implementation
@@ -316,23 +316,23 @@ case class AttributeReference(
     exprId :: qualifier :: Nil
   }
 
-//  /** Used to signal the column used to calculate an eventTime watermark (e.g. a#1-T{delayMs}) */
-//  private def delaySuffix = if (metadata.contains(EventTimeWatermark.delayKey)) {
-//    s"-T${metadata.getLong(EventTimeWatermark.delayKey)}ms"
-//  } else {
-//    ""
-//  }
-//
-//  override def toString: String = s"$name#${exprId.id}$typeSuffix$delaySuffix"
-//
-//  // Since the expression id is not in the first constructor it is missing from the default
-//  // tree string.
-//  override def simpleString: String = s"$name#${exprId.id}: ${dataType.simpleString}"
-//
-//  override def sql: String = {
-//    val qualifierPrefix = if (qualifier.nonEmpty) qualifier.mkString(".") + "." else ""
-//    s"$qualifierPrefix${quoteIdentifier(name)}"
-//  }
+  /** Used to signal the column used to calculate an eventTime watermark (e.g. a#1-T{delayMs}) */
+  private def delaySuffix = if (metadata.contains(EventTimeWatermark.delayKey)) {
+    s"-T${metadata.getLong(EventTimeWatermark.delayKey)}ms"
+  } else {
+    ""
+  }
+
+  override def toString: String = s"$name#${exprId.id}$typeSuffix$delaySuffix"
+
+  // Since the expression id is not in the first constructor it is missing from the default
+  // tree string.
+  override def simpleString: String = s"$name#${exprId.id}: ${dataType.simpleString}"
+
+  override def sql: String = {
+    val qualifierPrefix = if (qualifier.nonEmpty) qualifier.mkString(".") + "." else ""
+    s"$qualifierPrefix${quoteIdentifier(name)}"
+  }
 }
 
 /**

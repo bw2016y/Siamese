@@ -183,7 +183,7 @@ class GenericInternalRow(val values: Array[Any]) extends BaseGenericInternalRow 
 
   override protected def genericGet(ordinal: Int) = values(ordinal)
 
-//  override def toSeq(fieldTypes: Seq[DataType]): Seq[Any] = values.clone()
+  override def toSeq(fieldTypes: Seq[DataType]): Seq[Any] = values.clone()
 
   override def numFields: Int = values.length
 

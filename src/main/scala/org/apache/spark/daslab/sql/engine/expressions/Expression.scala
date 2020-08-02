@@ -15,38 +15,38 @@ import org.apache.spark.util.Utils
 
 
 
-///**
-//  * 表达式：不需要触发执行引擎就可以直接计算的单元，如四则运算、逻辑运算、过滤等等
-//  *
-//  * If an expression wants to be exposed in the function registry (so users can call it with
-//  * "name(arguments...)", the concrete implementation must be a case class whose constructor
-//  * arguments are all Expressions types. See [[Substring]] for an example.
-//  *
-//  * 一些重要的特质:
-//  *
-//  * - [[Nondeterministic]]: 不确定的表达式
-//  * - [[Unevaluable]]: 不能被执行的表达式
-//  * - [[CodegenFallback]]: 不支持代码生成的表达式，涉及第三方实现，例如Hive的UDF
-//  *
-//  * - [[LeafExpression]]: 没有子表达式的表达式
-//  * - [[UnaryExpression]]: 只有一个子表达式的表达式
-//  * - [[BinaryExpression]]: 有两个子表达式的表达式
-//  * - [[TernaryExpression]]: 有三个子表达式的表达式
-//  * - [[BinaryOperator]]: [[BinaryExpression]]的特例，要求两个子表达式的output有相同的datatype
-//  *
-//  */
+/**
+  * 表达式：不需要触发执行引擎就可以直接计算的单元，如四则运算、逻辑运算、过滤等等
+  *
+  * If an expression wants to be exposed in the function registry (so users can call it with
+  * "name(arguments...)", the concrete implementation must be a case class whose constructor
+  * arguments are all Expressions types. See [[Substring]] for an example.
+  *
+  * 一些重要的特质:
+  *
+  * - [[Nondeterministic]]: 不确定的表达式
+  * - [[Unevaluable]]: 不能被执行的表达式
+  * - [[CodegenFallback]]: 不支持代码生成的表达式，涉及第三方实现，例如Hive的UDF
+  *
+  * - [[LeafExpression]]: 没有子表达式的表达式
+  * - [[UnaryExpression]]: 只有一个子表达式的表达式
+  * - [[BinaryExpression]]: 有两个子表达式的表达式
+  * - [[TernaryExpression]]: 有三个子表达式的表达式
+  * - [[BinaryOperator]]: [[BinaryExpression]]的特例，要求两个子表达式的output有相同的datatype
+  *
+  */
 abstract class Expression extends TreeNode[Expression] {
 
-//  /**
-//    * 可折叠：标记该表达式能否在查询之前直接静态计算，如常量表达式Literal
-//    *
-//    * 以下条件用于确定是否可折叠
-//    *  - [[Literal]]可折叠
-//    *  - 当子表达式可折叠，[[Coalesce]]可折叠
-//    *  - 当左右子表达式可折叠，[[BinaryExpression]]可折叠
-//    *  - 当子表达式可折叠，[[Not]], [[IsNull]], or [[IsNotNull]]可折叠
-//    *  - 当子表达式可折叠，[[Cast]] or [[UnaryMinus]]可折叠
-//    */
+  /**
+    * 可折叠：标记该表达式能否在查询之前直接静态计算，如常量表达式Literal
+    *
+    * 以下条件用于确定是否可折叠
+    *  - [[Literal]]可折叠
+    *  - 当子表达式可折叠，[[Coalesce]]可折叠
+    *  - 当左右子表达式可折叠，[[BinaryExpression]]可折叠
+    *  - 当子表达式可折叠，[[Not]], [[IsNull]], or [[IsNotNull]]可折叠
+    *  - 当子表达式可折叠，[[Cast]] or [[UnaryMinus]]可折叠
+    */
   def foldable: Boolean = false
 
   /**
@@ -246,16 +246,16 @@ trait Unevaluable extends Expression {
 }
 
 
-///**
-//  * An expression that gets replaced at runtime (currently by the optimizer) into a different
-//  * expression for evaluation. This is mainly used to provide compatibility with other databases.
-//  * For example, we use this to support "nvl" by replacing it with "coalesce".
-//  *
-//  * A RuntimeReplaceable should have the original parameters along with a "child" expression in the
-//  * case class constructor, and define a normal constructor that accepts only the original
-//  * parameters. For an example, see [[Nvl]]. To make sure the explain plan and expression SQL
-//  * works correctly, the implementation should also override flatArguments method and sql method.
-//  */
+/**
+  * An expression that gets replaced at runtime (currently by the optimizer) into a different
+  * expression for evaluation. This is mainly used to provide compatibility with other databases.
+  * For example, we use this to support "nvl" by replacing it with "coalesce".
+  *
+  * A RuntimeReplaceable should have the original parameters along with a "child" expression in the
+  * case class constructor, and define a normal constructor that accepts only the original
+  * parameters. For an example, see [[Nvl]]. To make sure the explain plan and expression SQL
+  * works correctly, the implementation should also override flatArguments method and sql method.
+  */
 trait RuntimeReplaceable extends UnaryExpression with Unevaluable {
   override def nullable: Boolean = child.nullable
   override def foldable: Boolean = child.foldable
@@ -263,7 +263,7 @@ trait RuntimeReplaceable extends UnaryExpression with Unevaluable {
   // As this expression gets replaced at optimization with its `child" expression,
   // two `RuntimeReplaceable` are considered to be semantically equal if their "child" expressions
   // are semantically equal.
-//  override lazy val canonicalized: Expression = child.canonicalized
+  override lazy val canonicalized: Expression = child.canonicalized
 }
 
 
@@ -362,7 +362,7 @@ abstract class UnaryExpression extends Expression {
 
   override final def children: Seq[Expression] = child :: Nil
 
-//  override def foldable: Boolean = child.foldable
+  override def foldable: Boolean = child.foldable
   override def nullable: Boolean = child.nullable
 
   /**
@@ -579,7 +579,7 @@ object BinaryOperator {
   */
 abstract class TernaryExpression extends Expression {
 
-//  override def foldable: Boolean = children.forall(_.foldable)
+  override def foldable: Boolean = children.forall(_.foldable)
 
   override def nullable: Boolean = children.exists(_.nullable)
 
@@ -668,11 +668,11 @@ abstract class TernaryExpression extends Expression {
   }
 }
 
-///**
-//  * A trait resolving nullable, containsNull, valueContainsNull flags of the output date type.
-//  * This logic is usually utilized by expressions combining data from multiple child expressions
-//  * of non-primitive types (e.g. [[CaseWhen]]).
-//  */
+/**
+  * A trait resolving nullable, containsNull, valueContainsNull flags of the output date type.
+  * This logic is usually utilized by expressions combining data from multiple child expressions
+  * of non-primitive types (e.g. [[CaseWhen]]).
+  */
 trait ComplexTypeMergingExpression extends Expression {
 
   /**

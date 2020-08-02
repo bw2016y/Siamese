@@ -1,7 +1,5 @@
 package org.apache.spark.daslab.sql.engine.plans
 
-//todo add expression/predicate
-
 import org.apache.spark.daslab.sql.engine.trees.{CurrentOrigin,TreeNode}
 import org.apache.spark.daslab.sql.types.{DataType,StructType}
 import org.apache.spark.daslab.sql.engine.expressions._
