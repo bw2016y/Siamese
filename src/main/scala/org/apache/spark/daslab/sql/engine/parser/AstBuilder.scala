@@ -17,7 +17,7 @@ import org.apache.spark.daslab.sql.engine.analysis._
 import org.apache.spark.daslab.sql.engine.catalog.CatalogStorageFormat
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.{First, Last}
-import org.apache.spark.daslab.sql.engine.parser.SqlBaseParser._
+import org.apache.spark.daslab.sql.engine.parser.NewSqlBaseParser._
 import org.apache.spark.daslab.sql.engine.plans._
 import org.apache.spark.daslab.sql.engine.plans.logical._
 import org.apache.spark.daslab.sql.internal.SQLConf
@@ -31,12 +31,16 @@ import org.apache.spark.util.random.RandomSampler
 /**
  * The AstBuilder converts an ANTLR4 ParseTree into a catalyst Expression, LogicalPlan or
  * TableIdentifier.
+ * TODO：重写aqp、spacial的visit方法
  */
-class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging {
+class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Logging {
   import ParserUtils._
 
   def this() = this(new SQLConf())
 
+  /**
+   * 有类型的visit方法，和普通的visit不同，typedvisit将accept的返回值转换为T类型(一般为logicalplan)
+   */
   protected def typedVisit[T](ctx: ParseTree): T = {
     ctx.accept(this).asInstanceOf[T]
   }
@@ -357,6 +361,8 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    */
   override def visitQuerySpecification(
                                         ctx: QuerySpecificationContext): LogicalPlan = withOrigin(ctx) {
+    // 从一个空的OneRowRelation节点开始构造逻辑算子树
+    // 第一步，加入from语句对应的节点
     val from = OneRowRelation().optional(ctx.fromClause) {
       visitFromClause(ctx.fromClause)
     }
@@ -390,16 +396,15 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
       Filter(predicate, plan)
     }
 
-
-    // Expressions.
-    val expressions = Option(namedExpressionSeq).toSeq
-      .flatMap(_.namedExpression.asScala)
-      .map(typedVisit[Expression])
+    // 得到想要select的东西的表达式.（可以是列名，*，agg函数等）
+    val expressions = Option(namedExpressionSeq).toSeq  // 得到Seq[NamedExpressionSeqContext]
+      .flatMap(_.namedExpression.asScala)  // 得到Seq[NamedExpressionContext]
+      .map(typedVisit[Expression])  //访问NamedExpressionContext，返回Expression
 
     // Create either a transform or a regular query.
-    val specType = Option(kind).map(_.getType).getOrElse(SqlBaseParser.SELECT)
+    val specType = Option(kind).map(_.getType).getOrElse(NewSqlBaseParser.SELECT)
     specType match {
-      case SqlBaseParser.MAP | SqlBaseParser.REDUCE | SqlBaseParser.TRANSFORM =>
+      case NewSqlBaseParser.MAP | NewSqlBaseParser.REDUCE | NewSqlBaseParser.TRANSFORM =>
         // Transform
 
         // Add where.
@@ -429,27 +434,30 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
           withScriptIOSchema(
             ctx, inRowFormat, recordWriter, outRowFormat, recordReader, schemaLess))
 
-      case SqlBaseParser.SELECT =>
+      case NewSqlBaseParser.SELECT =>
         // Regular select
 
-        // Add lateral views.
+        // 在逻辑算子树加上lateral views语句的节点
         val withLateralView = ctx.lateralView.asScala.foldLeft(relation)(withGenerate)
 
-        // Add where.
+        // 在逻辑算子树加上filter节点
         val withFilter = withLateralView.optionalMap(where)(filter)
-
-        // Add aggregation or a project.
+        
+        // 将expressions都转化为NamedExpression类型
         val namedExpressions = expressions.map {
           case e: NamedExpression => e
           case e: Expression => UnresolvedAlias(e)
         }
 
+        // 创建project节点的方法
         def createProject() = if (namedExpressions.nonEmpty) {
           Project(namedExpressions, withFilter)
         } else {
           withFilter
         }
 
+        // 创建Project节点
+        // 如果有agg或having，则要考虑几种不同的情况，创建agg节点和having节点
         val withProject = if (aggregation == null && having != null) {
           if (conf.getConf(SQLConf.LEGACY_HAVING_WITHOUT_GROUP_BY_AS_WHERE)) {
             // If the legacy conf is set, treat HAVING without GROUP BY as WHERE.
@@ -466,17 +474,17 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
           createProject()
         }
 
-        // Distinct
+        // 如果有Distinct，则加入Distinct节点
         val withDistinct = if (setQuantifier() != null && setQuantifier().DISTINCT() != null) {
           Distinct(withProject)
         } else {
           withProject
         }
 
-        // Window
+        // 如果有Window，则加入Window节点
         val withWindow = withDistinct.optionalMap(windows)(withWindows)
 
-        // Hint
+        // 如果有Hint，加入Hint节点
         hints.asScala.foldRight(withWindow)(withHints)
     }
   }
@@ -499,11 +507,21 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * separated) relations here, these get converted into a single plan by condition-less inner join.
    */
   override def visitFromClause(ctx: FromClauseContext): LogicalPlan = withOrigin(ctx) {
+    // fromClause
+    //    : FROM relation (',' relation)* lateralView* pivotClause?
+    //    ;
+    // from语句可能有很多relation，需要join起来，成为一个logicalplan节点
     val from = ctx.relation.asScala.foldLeft(null: LogicalPlan) { (left, relation) =>
+      //  relation
+      //    : relationPrimary joinRelation* ;
+      // 得到relationPrimary对应的logicalplan
       val right = plan(relation.relationPrimary)
+      // 将right和已有的relation们join起来
       val join = right.optionalMap(left)(Join(_, _, Inner, None))
+      // relation中还有joinRelation子句，加入Join节点
       withJoinRelations(join, relation)
     }
+    // pivot子句的处理
     if (ctx.pivotClause() != null) {
       if (!ctx.lateralView.isEmpty) {
         throw new ParseException("LATERAL cannot be used together with PIVOT in FROM clause", ctx)
@@ -528,21 +546,21 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     val right = plan(ctx.right)
     val all = Option(ctx.setQuantifier()).exists(_.ALL != null)
     ctx.operator.getType match {
-      case SqlBaseParser.UNION if all =>
+      case NewSqlBaseParser.UNION if all =>
         Union(left, right)
-      case SqlBaseParser.UNION =>
+      case NewSqlBaseParser.UNION =>
         Distinct(Union(left, right))
-      case SqlBaseParser.INTERSECT if all =>
+      case NewSqlBaseParser.INTERSECT if all =>
         Intersect(left, right, isAll = true)
-      case SqlBaseParser.INTERSECT =>
+      case NewSqlBaseParser.INTERSECT =>
         Intersect(left, right, isAll = false)
-      case SqlBaseParser.EXCEPT if all =>
+      case NewSqlBaseParser.EXCEPT if all =>
         Except(left, right, isAll = true)
-      case SqlBaseParser.EXCEPT =>
+      case NewSqlBaseParser.EXCEPT =>
         Except(left, right, isAll = false)
-      case SqlBaseParser.SETMINUS if all =>
+      case NewSqlBaseParser.SETMINUS if all =>
         Except(left, right, isAll = true)
-      case SqlBaseParser.SETMINUS =>
+      case NewSqlBaseParser.SETMINUS =>
         Except(left, right, isAll = false)
     }
   }
@@ -795,11 +813,14 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   }
 
   /**
-   * Create an aliased table reference. This is typically used in FROM clauses.
+   * 返回和表直接相关的logicalplan
    */
   override def visitTableName(ctx: TableNameContext): LogicalPlan = withOrigin(ctx) {
+    // tableId是一个TableIdentifier类型的对象
     val tableId = visitTableIdentifier(ctx.tableIdentifier)
+    // 通过tableId创建UnresolvedRelation节点，如果有别名的话在加上别名节点。
     val table = mayApplyAliasPlan(ctx.tableAlias, UnresolvedRelation(tableId))
+    // 如果ctx有采样子句，创建Sample节点
     table.optionalMap(ctx.sample)(withSample)
   }
 
@@ -891,8 +912,10 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * column aliases for a [[LogicalPlan]].
    */
   private def mayApplyAliasPlan(tableAlias: TableAliasContext, plan: LogicalPlan): LogicalPlan = {
+    // 如果表有别名，创建[[SubqueryAlias]]节点
     if (tableAlias.strictIdentifier != null) {
       val subquery = SubqueryAlias(tableAlias.strictIdentifier.getText, plan)
+      // 如果表的列也有别名，创建[[UnresolvedSubqueryColumnAliases]]节点
       if (tableAlias.identifierList != null) {
         val columnNames = visitIdentifierList(tableAlias.identifierList)
         UnresolvedSubqueryColumnAliases(columnNames, subquery)
@@ -922,7 +945,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * Table Identifier parsing
    * ******************************************************************************************** */
   /**
-   * Create a [[TableIdentifier]] from a 'tableName' or 'databaseName'.'tableName' pattern.
+   * 从SQL的表名或数据库名.表名子句中创建一个[[TableIdentifier]]对象
    */
   override def visitTableIdentifier(
                                      ctx: TableIdentifierContext): TableIdentifier = withOrigin(ctx) {
@@ -941,8 +964,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    * Expression parsing
    * ******************************************************************************************** */
   /**
-   * Create an expression from the given context. This method just passes the context on to the
-   * visitor and only takes care of typing (We assume that the visitor returns an Expression here).
+   * 访问ctx，得到相应的expression
    */
   protected def expression(ctx: ParserRuleContext): Expression = typedVisit(ctx)
 
@@ -954,6 +976,7 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   }
 
   /**
+   * 访问星号，返回一个star expression，即select * 语句
    * Create a star (i.e. all) expression; this selects all elements (in the specified object).
    * Both un-targeted (global) and targeted aliases are supported.
    */
@@ -986,8 +1009,8 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   override def visitLogicalBinary(ctx: LogicalBinaryContext): Expression = withOrigin(ctx) {
     val expressionType = ctx.operator.getType
     val expressionCombiner = expressionType match {
-      case SqlBaseParser.AND => And.apply _
-      case SqlBaseParser.OR => Or.apply _
+      case NewSqlBaseParser.AND => And.apply _
+      case NewSqlBaseParser.OR => Or.apply _
     }
 
     // Collect all similar left hand contexts.
@@ -1055,24 +1078,25 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     val right = expression(ctx.right)
     val operator = ctx.comparisonOperator().getChild(0).asInstanceOf[TerminalNode]
     operator.getSymbol.getType match {
-      case SqlBaseParser.EQ =>
+      case NewSqlBaseParser.EQ =>
         EqualTo(left, right)
-      case SqlBaseParser.NSEQ =>
+      case NewSqlBaseParser.NSEQ =>
         EqualNullSafe(left, right)
-      case SqlBaseParser.NEQ | SqlBaseParser.NEQJ =>
+      case NewSqlBaseParser.NEQ | NewSqlBaseParser.NEQJ =>
         Not(EqualTo(left, right))
-      case SqlBaseParser.LT =>
+      case NewSqlBaseParser.LT =>
         LessThan(left, right)
-      case SqlBaseParser.LTE =>
+      case NewSqlBaseParser.LTE =>
         LessThanOrEqual(left, right)
-      case SqlBaseParser.GT =>
+      case NewSqlBaseParser.GT =>
         GreaterThan(left, right)
-      case SqlBaseParser.GTE =>
+      case NewSqlBaseParser.GTE =>
         GreaterThanOrEqual(left, right)
     }
   }
 
   /**
+   * 访问谓词语句，返回相应的expression
    * Create a predicated expression. A predicated expression is a normal expression with a
    * predicate attached to it, for example:
    * {{{
@@ -1111,26 +1135,26 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
 
     // Create the predicate.
     ctx.kind.getType match {
-      case SqlBaseParser.BETWEEN =>
+      case NewSqlBaseParser.BETWEEN =>
         // BETWEEN is translated to lower <= e && e <= upper
         invertIfNotDefined(And(
           GreaterThanOrEqual(e, expression(ctx.lower)),
           LessThanOrEqual(e, expression(ctx.upper))))
-      case SqlBaseParser.IN if ctx.query != null =>
+      case NewSqlBaseParser.IN if ctx.query != null =>
         invertIfNotDefined(InSubquery(getValueExpressions(e), ListQuery(plan(ctx.query))))
-      case SqlBaseParser.IN =>
-        invertIfNotDefined(In(e, ctx.expression.asScala.map(expression)))
-      case SqlBaseParser.LIKE =>
+      case NewSqlBaseParser.IN =>
+        invertIfNotDefined(In(e, ctx.expression().asScala.map(expression)))
+      case NewSqlBaseParser.LIKE =>
         invertIfNotDefined(Like(e, expression(ctx.pattern)))
-      case SqlBaseParser.RLIKE =>
+      case NewSqlBaseParser.RLIKE =>
         invertIfNotDefined(RLike(e, expression(ctx.pattern)))
-      case SqlBaseParser.NULL if ctx.NOT != null =>
+      case NewSqlBaseParser.NULL if ctx.NOT != null =>
         IsNotNull(e)
-      case SqlBaseParser.NULL =>
+      case NewSqlBaseParser.NULL =>
         IsNull(e)
-      case SqlBaseParser.DISTINCT if ctx.NOT != null =>
+      case NewSqlBaseParser.DISTINCT if ctx.NOT != null =>
         EqualNullSafe(e, expression(ctx.right))
-      case SqlBaseParser.DISTINCT =>
+      case NewSqlBaseParser.DISTINCT =>
         Not(EqualNullSafe(e, expression(ctx.right)))
     }
   }
@@ -1151,25 +1175,25 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     val left = expression(ctx.left)
     val right = expression(ctx.right)
     ctx.operator.getType match {
-      case SqlBaseParser.ASTERISK =>
+      case NewSqlBaseParser.ASTERISK =>
         Multiply(left, right)
-      case SqlBaseParser.SLASH =>
+      case NewSqlBaseParser.SLASH =>
         Divide(left, right)
-      case SqlBaseParser.PERCENT =>
+      case NewSqlBaseParser.PERCENT =>
         Remainder(left, right)
-      case SqlBaseParser.DIV =>
+      case NewSqlBaseParser.DIV =>
         Cast(Divide(left, right), LongType)
-      case SqlBaseParser.PLUS =>
+      case NewSqlBaseParser.PLUS =>
         Add(left, right)
-      case SqlBaseParser.MINUS =>
+      case NewSqlBaseParser.MINUS =>
         Subtract(left, right)
-      case SqlBaseParser.CONCAT_PIPE =>
+      case NewSqlBaseParser.CONCAT_PIPE =>
         Concat(left :: right :: Nil)
-      case SqlBaseParser.AMPERSAND =>
+      case NewSqlBaseParser.AMPERSAND =>
         BitwiseAnd(left, right)
-      case SqlBaseParser.HAT =>
+      case NewSqlBaseParser.HAT =>
         BitwiseXor(left, right)
-      case SqlBaseParser.PIPE =>
+      case NewSqlBaseParser.PIPE =>
         BitwiseOr(left, right)
     }
   }
@@ -1183,11 +1207,11 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
   override def visitArithmeticUnary(ctx: ArithmeticUnaryContext): Expression = withOrigin(ctx) {
     val value = expression(ctx.valueExpression)
     ctx.operator.getType match {
-      case SqlBaseParser.PLUS =>
+      case NewSqlBaseParser.PLUS =>
         value
-      case SqlBaseParser.MINUS =>
+      case NewSqlBaseParser.MINUS =>
         UnaryMinus(value)
-      case SqlBaseParser.TILDE =>
+      case NewSqlBaseParser.TILDE =>
         BitwiseNot(value)
     }
   }
@@ -1271,9 +1295,9 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
             s"doesn't support with option ${opt.getText}.", ctx)
         }
         opt.getType match {
-          case SqlBaseParser.BOTH => funcID
-          case SqlBaseParser.LEADING => funcID.copy(funcName = "ltrim")
-          case SqlBaseParser.TRAILING => funcID.copy(funcName = "rtrim")
+          case NewSqlBaseParser.BOTH => funcID
+          case NewSqlBaseParser.LEADING => funcID.copy(funcName = "ltrim")
+          case NewSqlBaseParser.TRAILING => funcID.copy(funcName = "rtrim")
           case _ => throw new ParseException("Function trim doesn't support with " +
             s"type ${opt.getType}. Please use BOTH, LEADING or Trailing as trim type", ctx)
         }
@@ -1348,8 +1372,8 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     // RANGE/ROWS BETWEEN ...
     val frameSpecOption = Option(ctx.windowFrame).map { frame =>
       val frameType = frame.frameType.getType match {
-        case SqlBaseParser.RANGE => RangeFrame
-        case SqlBaseParser.ROWS => RowFrame
+        case NewSqlBaseParser.RANGE => RangeFrame
+        case NewSqlBaseParser.ROWS => RowFrame
       }
 
       SpecifiedWindowFrame(
@@ -1375,15 +1399,15 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
     }
 
     ctx.boundType.getType match {
-      case SqlBaseParser.PRECEDING if ctx.UNBOUNDED != null =>
+      case NewSqlBaseParser.PRECEDING if ctx.UNBOUNDED != null =>
         UnboundedPreceding
-      case SqlBaseParser.PRECEDING =>
+      case NewSqlBaseParser.PRECEDING =>
         UnaryMinus(value)
-      case SqlBaseParser.CURRENT =>
+      case NewSqlBaseParser.CURRENT =>
         CurrentRow
-      case SqlBaseParser.FOLLOWING if ctx.UNBOUNDED != null =>
+      case NewSqlBaseParser.FOLLOWING if ctx.UNBOUNDED != null =>
         UnboundedFollowing
-      case SqlBaseParser.FOLLOWING =>
+      case NewSqlBaseParser.FOLLOWING =>
         value
     }
   }
@@ -1764,11 +1788,11 @@ class AstBuilder(conf: SQLConf) extends SqlBaseBaseVisitor[AnyRef] with Logging 
    */
   override def visitComplexDataType(ctx: ComplexDataTypeContext): DataType = withOrigin(ctx) {
     ctx.complex.getType match {
-      case SqlBaseParser.ARRAY =>
+      case NewSqlBaseParser.ARRAY =>
         ArrayType(typedVisit(ctx.dataType(0)))
-      case SqlBaseParser.MAP =>
+      case NewSqlBaseParser.MAP =>
         MapType(typedVisit(ctx.dataType(0)), typedVisit(ctx.dataType(1)))
-      case SqlBaseParser.STRUCT =>
+      case NewSqlBaseParser.STRUCT =>
         StructType(Option(ctx.complexColTypeList).toSeq.flatMap(visitComplexColTypeList))
     }
   }

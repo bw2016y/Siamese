@@ -43,10 +43,12 @@ public class SqlTest {
 //        System.out.println(file);
 //        String absolutePath = (new File(file)).getAbsolutePath();
         Dataset<Row> dataFrame1 = sparkSession.read().json("src/test/resources/student.json");
-//        dataFrame1.createOrReplaceGlobalTempView("student");
-//
-//        Dataset<Row> result = sparkSession.sql("select * from global_temp.student");
-        dataFrame1.foreach(new ForeachFunction<Row>() {
+        dataFrame1.createOrReplaceGlobalTempView("student");
+        Dataset<Row> dataFrame2 = sparkSession.read().json("src/test/resources/teacher.json");
+        dataFrame2.createOrReplaceGlobalTempView("teacher");
+
+        Dataset<Row> result = sparkSession.sql("select *,2 from global_temp.student s join global_temp.teacher t on s.teacher=t.name where s.age >=18 ");
+        result.foreach(new ForeachFunction<Row>() {
             @Override
             public void call(Row row) throws Exception {
                 System.out.println(row);

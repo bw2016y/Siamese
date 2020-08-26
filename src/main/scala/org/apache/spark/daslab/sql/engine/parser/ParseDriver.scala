@@ -67,16 +67,16 @@ abstract class AbstractSqlParser(conf: SQLConf) extends ParserInterface with Log
   /** Get the builder (visitor) which converts a ParseTree into an AST. */
   protected def astBuilder: AstBuilder
 
-  protected def parse[T](command: String)(toResult: SqlBaseParser => T): T = {
+  protected def parse[T](command: String)(toResult: NewSqlBaseParser => T): T = {
     logDebug(s"Parsing command: $command")
 
-    val lexer = new SqlBaseLexer(new UpperCaseCharStream(CharStreams.fromString(command)))
+    val lexer = new NewSqlBaseLexer(new UpperCaseCharStream(CharStreams.fromString(command)))
     lexer.removeErrorListeners()
     lexer.addErrorListener(ParseErrorListener)
     lexer.legacy_setops_precedence_enbled = conf.setOpsPrecedenceEnforced
 
     val tokenStream = new CommonTokenStream(lexer)
-    val parser = new SqlBaseParser(tokenStream)
+    val parser = new NewSqlBaseParser(tokenStream)
     parser.addParseListener(PostProcessor)
     parser.removeErrorListeners()
     parser.addErrorListener(ParseErrorListener)
@@ -234,10 +234,10 @@ class ParseException(
 /**
  * The post-processor validates & cleans-up the parse tree during the parse process.
  */
-case object PostProcessor extends SqlBaseBaseListener {
+case object PostProcessor extends NewSqlBaseBaseListener {
 
   /** Remove the back ticks from an Identifier. */
-  override def exitQuotedIdentifier(ctx: SqlBaseParser.QuotedIdentifierContext): Unit = {
+  override def exitQuotedIdentifier(ctx: NewSqlBaseParser.QuotedIdentifierContext): Unit = {
     replaceTokenByIdentifier(ctx, 1) { token =>
       // Remove the double back ticks in the string.
       token.setText(token.getText.replace("``", "`"))
@@ -246,7 +246,7 @@ case object PostProcessor extends SqlBaseBaseListener {
   }
 
   /** Treat non-reserved keywords as Identifiers. */
-  override def exitNonReserved(ctx: SqlBaseParser.NonReservedContext): Unit = {
+  override def exitNonReserved(ctx: NewSqlBaseParser.NonReservedContext): Unit = {
     replaceTokenByIdentifier(ctx, 0)(identity)
   }
 
@@ -259,7 +259,7 @@ case object PostProcessor extends SqlBaseBaseListener {
     val token = ctx.getChild(0).getPayload.asInstanceOf[Token]
     val newToken = new CommonToken(
       new org.antlr.v4.runtime.misc.Pair(token.getTokenSource, token.getInputStream),
-      SqlBaseParser.IDENTIFIER,
+      NewSqlBaseParser.IDENTIFIER,
       token.getChannel,
       token.getStartIndex + stripMargins,
       token.getStopIndex - stripMargins)

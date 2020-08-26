@@ -196,8 +196,7 @@ object ParserUtils {
     }
 
     /**
-     * Map a [[LogicalPlan]] to another [[LogicalPlan]] if the passed context exists using the
-     * passed function. The original plan is returned when the context does not exist.
+     * 带有选择的map方法，将一个ctx和logicalplan转化为另一个logicalplan，如果ctx为空则不做改变
      */
     def optionalMap[C](ctx: C)(f: (C, LogicalPlan) => LogicalPlan): LogicalPlan = {
       if (ctx != null) {

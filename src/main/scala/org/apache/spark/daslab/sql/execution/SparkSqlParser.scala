@@ -14,7 +14,7 @@ import org.apache.spark.daslab.sql.engine.{FunctionIdentifier, TableIdentifier}
 import org.apache.spark.daslab.sql.engine.catalog._
 import org.apache.spark.daslab.sql.engine.expressions.Expression
 import org.apache.spark.daslab.sql.engine.parser._
-import org.apache.spark.daslab.sql.engine.parser.SqlBaseParser._
+import org.apache.spark.daslab.sql.engine.parser.NewSqlBaseParser._
 import org.apache.spark.daslab.sql.engine.plans.logical._
 import org.apache.spark.daslab.sql.execution.command._
 import org.apache.spark.daslab.sql.execution.datasources._
@@ -29,7 +29,7 @@ class SparkSqlParser(conf: SQLConf) extends AbstractSqlParser(conf) {
 
   private val substitutor = new VariableSubstitution(conf)
 
-  protected override def parse[T](command: String)(toResult: SqlBaseParser => T): T = {
+  protected override def parse[T](command: String)(toResult: NewSqlBaseParser => T): T = {
     super.parse(substitutor.substitute(command))(toResult)
   }
 }
@@ -1044,13 +1044,13 @@ class SparkSqlAstBuilder(conf: SQLConf) extends AstBuilder(conf) {
   override def visitManageResource(ctx: ManageResourceContext): LogicalPlan = withOrigin(ctx) {
     val mayebePaths = remainder(ctx.identifier).trim
     ctx.op.getType match {
-      case SqlBaseParser.ADD =>
+      case NewSqlBaseParser.ADD =>
         ctx.identifier.getText.toLowerCase(Locale.ROOT) match {
           case "file" => AddFileCommand(mayebePaths)
           case "jar" => AddJarCommand(mayebePaths)
           case other => operationNotAllowed(s"ADD with resource type '$other'", ctx)
         }
-      case SqlBaseParser.LIST =>
+      case NewSqlBaseParser.LIST =>
         ctx.identifier.getText.toLowerCase(Locale.ROOT) match {
           case "files" | "file" =>
             if (mayebePaths.length > 0) {

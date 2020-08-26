@@ -974,6 +974,7 @@ case class RepartitionByExpression(
 
 /**
  * A relation with one row. This is used in "SELECT ..." without a from clause.
+ * 一般作为构造逻辑算子树的起点
  */
 case class OneRowRelation() extends LeafNode {
   override def maxRows: Option[Long] = Some(1)

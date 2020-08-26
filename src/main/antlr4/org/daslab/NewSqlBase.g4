@@ -342,8 +342,8 @@ resource
     ;
 
 queryNoWith
-    : insertInto? queryTerm queryOrganization aqp?                                         #singleInsertQuery
-    | fromClause multiInsertQueryBody+                                                     #multiInsertQuery
+    : insertInto? queryTerm queryOrganization aqp?    #singleInsertQuery   // AQP
+    | fromClause multiInsertQueryBody+                #multiInsertQuery
     ;
 
 queryOrganization
