@@ -14,7 +14,9 @@ import org.junit.Test;
 //import org.daslab.sql.engine.plans.logical.LogicalPlan;
 //import org.daslab.sql.engine.plans.logical.unary.Project;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 
 public class SqlTest {
@@ -47,6 +49,17 @@ public class SqlTest {
         Dataset<Row> dataFrame2 = sparkSession.read().json("src/test/resources/teacher.json");
         dataFrame2.createOrReplaceGlobalTempView("teacher");
 
+        //AQP Sample
+        Dataset<Row> resultTt = sparkSession.sql("SELECT SUM(AGE) FROM global_temp.student ERROR WITHIN 5% AT CONFIDENCE 95%");
+        //sparksql原生sample
+        Dataset<Row> resultt = sparkSession.sql("SELECT * FROM global_temp.student TABLESAMPLE (50 PERCENT)");
+        resultt.foreach(new ForeachFunction<Row>() {
+            @Override
+            public void call(Row row) throws Exception {
+                System.out.println(row);
+            }
+        });
+        // normal sql
         Dataset<Row> result = sparkSession.sql("select *,2 from global_temp.student s join global_temp.teacher t on s.teacher=t.name where s.age >=18 ");
         result.foreach(new ForeachFunction<Row>() {
             @Override

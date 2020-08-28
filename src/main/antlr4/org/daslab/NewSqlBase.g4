@@ -173,12 +173,17 @@ statement
     | SET ROLE .*?                                                     #failNativeCommand
     | SET .*?                                                          #setConfiguration
     | RESET                                                            #resetConfiguration
-    | CREATE INDEX identifier ON relation USE indexType                #createIndexCommand       //SPACIAL CREATE INDEX
-    | SHOW INDEX FROM relation                                         #showIndexOnRelation      //SPACIAL SHOW   INDEX
-    | DROP INDEX identifier ON relation                                #dropIndexOnRelation      //SPACIAL DROP   INDEX
+    | CREATE INDEX identifier ON relation USE indexType                #createIndexCommand       //SPATIAL CREATE INDEX
+    | SHOW INDEX FROM relation                                         #showIndexOnRelation      //SPATIAL SHOW   INDEX
+    | DROP INDEX identifier ON relation                                #dropIndexOnRelation      //SPATIAL DROP   INDEX
     | unsupportedHiveNativeCommands .*?                                #failNativeCommand
     ;
 
+indexType            // SPATIAL INDEX TYPE
+    : RTREE
+    | HASHMAP
+    | TREEMAP
+    ;
 
 unsupportedHiveNativeCommands
     : kw1=CREATE kw2=ROLE
@@ -342,7 +347,7 @@ resource
     ;
 
 queryNoWith
-    : insertInto? queryTerm queryOrganization aqp?    #singleInsertQuery   // AQP
+    : insertInto? queryTerm queryOrganization         #singleInsertQuery
     | fromClause multiInsertQueryBody+                #multiInsertQuery
     ;
 
@@ -401,8 +406,7 @@ querySpecification
        aggregation?
        (HAVING having=booleanExpression)?
        windows?
- //      error?       //AQP
- //      confidence?  //AQP
+       aqp?       //AQP
        )
     ;
 aqp:                            //AQP
@@ -480,8 +484,8 @@ joinType
     | RIGHT OUTER?
     | FULL OUTER?
     | LEFT? ANTI
-    | DISTANCE      //SPACIAL
-    | KNN         //SPACIAL, SIMBA设计有问题，KNN应该是个关键字，不能再作为方法名
+    | DISTANCE      //SPATIAL
+    | KNN         //SPATIAL, SIMBA设计有问题，KNN应该是个关键字，不能再作为方法名
     ;
 
 joinCriteria
@@ -586,7 +590,7 @@ booleanExpression
 predicate
     : NOT? kind=BETWEEN lower=valueExpression AND upper=valueExpression
     | NOT? kind=IN '(' expression (',' expression)* ')'
-    | NOT? kind=IN qualifiedName '(' (argument+=expression ',' argument+=expression) ')'     //SPACIAL
+    | NOT? kind=IN qualifiedName '(' (argument+=expression ',' argument+=expression) ')'     //SPATIAL
     | NOT? kind=IN '(' query ')'
     | NOT? kind=(RLIKE | LIKE) pattern=valueExpression
     | IS NOT? kind=NULL
@@ -735,12 +739,6 @@ qualifiedName
     : identifier ('.' identifier)*
     ;
 
-indexType            // SPACIAL INDEX TYPE
-    : RTREE
-    | HASHMAP
-    | TREEMAP
-    ;
-
 identifier
     : strictIdentifier
     | ANTI | FULL | INNER | LEFT | SEMI | RIGHT | NATURAL | JOIN | CROSS | ON
@@ -873,11 +871,11 @@ WITH: 'WITH';
 ERROR: 'ERROR';     //AQP
 WITHIN: 'WITHIN';   //AQP
 CONFIDENCE: 'CONFIDENCE';   //AQP
-DISTANCE: 'DISTANCE';   //SPACIAL
-RTREE: 'RTREE';     //SPACIAL  RTREE INDEX
-KNN: 'KNN';     //SPACIAL
-HASHMAP: 'HASHMAP'; //SPACIAL HASHMAP INDEX
-TREEMAP: 'TREEMAP';  //SPACIAL TREEMAP INDEX
+DISTANCE: 'DISTANCE';   //SPATIAL
+RTREE: 'RTREE';     //SPATIAL  RTREE INDEX
+KNN: 'KNN';     //SPATIAL
+HASHMAP: 'HASHMAP'; //SPATIAL HASHMAP INDEX
+TREEMAP: 'TREEMAP';  //SPATIAL TREEMAP INDEX
 VALUES: 'VALUES';
 CREATE: 'CREATE';
 TABLE: 'TABLE';

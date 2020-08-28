@@ -907,6 +907,26 @@ case class Sample(
 }
 
 /**
+ * aqp Sample logicalplan. 模仿Sample而写
+ *
+ * @param seed the random seed
+ * @param child the LogicalPlan
+ */
+case class AqpSample(
+                      seed: Long,
+                      errorRate: Double,
+                      confidence: Double,
+                      child: LogicalPlan) extends UnaryNode {
+  val eps = RandomSampler.roundingEpsilon
+  require(
+    confidence >= 0.0 - eps && confidence <= 1.0 + eps,
+    s"Sampling fraction ($confidence) must be on interval [0, 1] without replacement")
+
+  override def output: Seq[Attribute] = child.output
+
+}
+
+/**
  * Returns a new logical plan that dedups input rows.
  */
 case class Distinct(child: LogicalPlan) extends UnaryNode {

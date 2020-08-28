@@ -168,6 +168,14 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
       optionalMap(ctx.insertInto())(withInsertInto)
   }
 
+  private def withAqp(
+                              ctx: AqpContext,
+                              query: LogicalPlan): LogicalPlan = withOrigin(ctx) {
+    val errorRate: Double = ctx.error.PERCENTAGE.getText.replaceAll("%","").toDouble/100
+    val confidence: Double = ctx.confidence.PERCENTAGE.getText.replaceAll("%","").toDouble/100
+    AqpSample((math.random * 1000).toInt, errorRate, confidence, query)
+  }
+
   /**
    * Parameters used for writing query to a table:
    *   (tableIdentifier, partitionKeys, exists).
@@ -442,7 +450,10 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
 
         // 在逻辑算子树加上filter节点
         val withFilter = withLateralView.optionalMap(where)(filter)
-        
+
+        // 添加aqp sample节点
+        val withAqpSample: LogicalPlan = withFilter.optionalMap(ctx.aqp())(withAqp)
+
         // 将expressions都转化为NamedExpression类型
         val namedExpressions = expressions.map {
           case e: NamedExpression => e
@@ -451,9 +462,9 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
 
         // 创建project节点的方法
         def createProject() = if (namedExpressions.nonEmpty) {
-          Project(namedExpressions, withFilter)
+          Project(namedExpressions, withAqpSample)
         } else {
-          withFilter
+          withAqpSample
         }
 
         // 创建Project节点
@@ -464,10 +475,10 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
             withHaving(having, createProject())
           } else {
             // According to SQL standard, HAVING without GROUP BY means global aggregate.
-            withHaving(having, Aggregate(Nil, namedExpressions, withFilter))
+            withHaving(having, Aggregate(Nil, namedExpressions, withAqpSample))
           }
         } else if (aggregation != null) {
-          val aggregate = withAggregation(aggregation, namedExpressions, withFilter)
+          val aggregate = withAggregation(aggregation, namedExpressions, withAqpSample)
           aggregate.optionalMap(having)(withHaving)
         } else {
           // When hitting this branch, `having` must be null.
