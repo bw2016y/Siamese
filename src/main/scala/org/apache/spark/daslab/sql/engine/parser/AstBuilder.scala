@@ -49,6 +49,8 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
    * Override the default behavior for all visit methods. This will only return a non-null result
    * when the context has only one child. This is done because there is no generic method to
    * combine the results of the context children. In all other cases null is returned.
+   * 通用的visit方法，因为需要根据待访问的类型来选择visit方法，没有可以组合所有子节点的通用方法，所以当
+   * 子节点的数量不为1的时候就返回null
    */
   override def visitChildren(node: RuleNode): AnyRef = {
     if (node.getChildCount == 1) {
@@ -168,12 +170,17 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
       optionalMap(ctx.insertInto())(withInsertInto)
   }
 
-  private def withAqp(
-                              ctx: AqpContext,
-                              query: LogicalPlan): LogicalPlan = withOrigin(ctx) {
+
+  //todo
+  private def withAqp(ctx: AqpContext,
+                      query: LogicalPlan): LogicalPlan =  {
+
     val errorRate: Double = ctx.error.PERCENTAGE.getText.replaceAll("%","").toDouble/100
     val confidence: Double = ctx.confidence.PERCENTAGE.getText.replaceAll("%","").toDouble/100
+
+
     AqpSample((math.random * 1000).toInt, errorRate, confidence, query)
+
   }
 
   /**
@@ -366,6 +373,7 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
 
   /**
    * Create a logical plan using a query specification.
+   *
    */
   override def visitQuerySpecification(
                                         ctx: QuerySpecificationContext): LogicalPlan = withOrigin(ctx) {
@@ -441,7 +449,7 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
           withFilter,
           withScriptIOSchema(
             ctx, inRowFormat, recordWriter, outRowFormat, recordReader, schemaLess))
-
+      //sql其余部分
       case NewSqlBaseParser.SELECT =>
         // Regular select
 
@@ -460,8 +468,15 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
           case e: Expression => UnresolvedAlias(e)
         }
 
-        // 创建project节点的方法
-        def createProject() = if (namedExpressions.nonEmpty) {
+        //用于处理有aqp但是没有聚合的情况
+        def createProject() = if(namedExpressions.nonEmpty){
+          Project(namedExpressions,withFilter)
+        }else{
+          withFilter
+        }
+
+        // 创建project节点的方法（需要近似查询处理）
+        def createProjectWithAqp() = if (namedExpressions.nonEmpty) {
           Project(namedExpressions, withAqpSample)
         } else {
           withAqpSample
@@ -472,17 +487,20 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
         val withProject = if (aggregation == null && having != null) {
           if (conf.getConf(SQLConf.LEGACY_HAVING_WITHOUT_GROUP_BY_AS_WHERE)) {
             // If the legacy conf is set, treat HAVING without GROUP BY as WHERE.
-            withHaving(having, createProject())
+            withHaving(having, createProjectWithAqp())
           } else {
             // According to SQL standard, HAVING without GROUP BY means global aggregate.
             withHaving(having, Aggregate(Nil, namedExpressions, withAqpSample))
           }
         } else if (aggregation != null) {
+         // println(aggregation)
           val aggregate = withAggregation(aggregation, namedExpressions, withAqpSample)
           aggregate.optionalMap(having)(withHaving)
         } else {
+          // println("third branch"+aggregation)
+          //todo 这时候没有aggregation 但是同样加了sampler 需要在analyzer中处理
           // When hitting this branch, `having` must be null.
-          createProject()
+          createProjectWithAqp()
         }
 
         // 如果有Distinct，则加入Distinct节点
