@@ -179,7 +179,7 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
     val confidence: Double = ctx.confidence.PERCENTAGE.getText.replaceAll("%","").toDouble/100
 
 
-    AqpSample((math.random * 1000).toInt, errorRate, confidence, query)
+    AqpSample(ErrorRate(errorRate), Confidence(confidence),(math.random * 1000).toInt, query)
 
   }
 

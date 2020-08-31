@@ -11,6 +11,7 @@ import org.apache.spark.daslab.sql.engine.plans.JoinType
 import org.apache.spark.daslab.sql.engine.plans.physical.{BroadcastMode, Partitioning}
 import org.apache.spark.daslab.sql.types.{DataType, Metadata, StructField, StructType}
 import org.apache.spark.daslab.sql.engine.ScalaReflection._
+import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 
 import scala.collection.{Map, mutable}
 import scala.reflect.ClassTag
@@ -529,6 +530,8 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
         case Some(serde) => table.identifier :: serde :: Nil
         case _ => table.identifier :: Nil
       }
+    case error: ErrorRate => (error.simpleString+":"+error.errorRate)::Nil
+    case confidence :Confidence => (confidence.simpleString+":"+confidence.confidence)::Nil
     case other => other :: Nil
   }.mkString(", ")
 
@@ -641,10 +644,14 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
                           addSuffix: Boolean = false): StringBuilder = {
 
     if (depth > 0) {
+
+      lastChildren.init.foreach( (isLast)=>{builder.append(if(isLast) "      " else ":     " );} )
+      builder.append("|  "+"\n")
+
       lastChildren.init.foreach { isLast =>
-        builder.append(if (isLast) "   " else ":  ")
+        builder.append(if (isLast) "      " else ":     ")
       }
-      builder.append(if (lastChildren.last) "+- " else ":- ")
+      builder.append(if (lastChildren.last) "+- " else "|- ")
     }
 
     val str = if (verbose) {
@@ -659,17 +666,17 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     if (innerChildren.nonEmpty) {
       innerChildren.init.foreach(_.generateTreeString(
         depth + 2, lastChildren :+ children.isEmpty :+ false, builder, verbose,
-        addSuffix = addSuffix))
+       "innerChildren: ", addSuffix = addSuffix))
       innerChildren.last.generateTreeString(
         depth + 2, lastChildren :+ children.isEmpty :+ true, builder, verbose,
-        addSuffix = addSuffix)
+        "innerChildren: ",addSuffix = addSuffix)
     }
 
     if (children.nonEmpty) {
       children.init.foreach(_.generateTreeString(
-        depth + 1, lastChildren :+ false, builder, verbose, prefix, addSuffix))
+        depth + 1, lastChildren :+ false, builder, verbose,"child: ", addSuffix))
       children.last.generateTreeString(
-        depth + 1, lastChildren :+ true, builder, verbose, prefix, addSuffix)
+        depth + 1, lastChildren :+ true, builder, verbose, "child: ", addSuffix)
     }
 
     builder

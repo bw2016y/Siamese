@@ -38,7 +38,7 @@ object Test{
     df.show()
     df.select(col("*"),func1(col("name")) as "temp").show()
 
-    println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical)
+    println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical.verboseString)
     println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
     println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
@@ -50,6 +50,9 @@ object Test{
     println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
     println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
+    val s:String ="as"
+    val b:Double =1.0
+    print(s+b)
   }
 
 }
