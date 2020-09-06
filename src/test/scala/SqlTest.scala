@@ -1,6 +1,6 @@
 import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._
-object Test{
+object  ScalaTest{
   def main(args: Array[String]): Unit = {
     println("ass")
 

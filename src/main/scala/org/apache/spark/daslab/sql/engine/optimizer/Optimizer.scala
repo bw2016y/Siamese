@@ -1627,3 +1627,4 @@ object UpdateNullabilityInAttributeReferences extends Rule[LogicalPlan] {
       }
   }
 }
+

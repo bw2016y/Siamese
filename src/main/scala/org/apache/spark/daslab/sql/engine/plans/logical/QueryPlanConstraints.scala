@@ -10,6 +10,7 @@ trait QueryPlanConstraints extends ConstraintHelper { self: LogicalPlan =>
    * An [[ExpressionSet]] that contains invariants about the rows output by this operator. For
    * example, if this set contains the expression `a = 2` then that expression is guaranteed to
    * evaluate to `true` for all rows produced.
+   *  对于一个算子能够输出的row一定满足的不变的 ExpressionSet
    */
   lazy val constraints: ExpressionSet = {
     if (conf.constraintPropagationEnabled) {
