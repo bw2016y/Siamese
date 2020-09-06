@@ -50,9 +50,9 @@ object  ScalaTest{
     println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
     println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
-    val s:String ="as"
-    val b:Double =1.0
-    print(s+b)
+    println(spark.sql("SELECT max(age) from data").queryExecution.logical)
+    println(spark.sql("SELECT max(age) from data").queryExecution.analyzed)
+    println(spark.sql("SELECT max(age) from data").queryExecution.optimizedPlan)
   }
 
 }

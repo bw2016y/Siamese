@@ -163,7 +163,9 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
         CollapseProject,
         RemoveRedundantProject) :+
       Batch("UpdateAttributeReferences", Once,
-        UpdateNullabilityInAttributeReferences)
+        UpdateNullabilityInAttributeReferences):+
+      //todo test
+      Batch("insertSampler",Once,insertSampler)
   }
 
   /**
