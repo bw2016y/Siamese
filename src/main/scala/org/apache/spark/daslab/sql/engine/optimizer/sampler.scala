@@ -12,15 +12,20 @@ import org.apache.spark.daslab.sql.engine.plans.logical._
   *
   */
 object insertSampler extends Rule[LogicalPlan] {
-
-
   /**
     *  todo 需要从LoggicalPlan的根部获取AQP信息
     * @param plan
     * @return
     */
-  override def apply(plan: LogicalPlan): LogicalPlan = plan transform{
-    case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
-      Aggregate(groupExps,aggExps,AqpSample(ErrorRate(1.0),Confidence(1.0),(math.random * 1000).toInt,child))
+
+  override def apply(plan: LogicalPlan): LogicalPlan = {
+    plan match{
+        case aqpinfo @ AqpInfo(errorRate:ErrorRate,confidence:Confidence,child:LogicalPlan)=> aqpinfo.child transform{
+              //AQP QUERY
+              case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
+              Aggregate(groupExps,aggExps,AqpSample(errorRate,confidence,(math.random * 1000).toInt,child))
+              }
+        case _ => plan
+    }
   }
 }

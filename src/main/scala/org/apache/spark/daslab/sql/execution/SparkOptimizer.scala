@@ -9,8 +9,7 @@ import org.apache.spark.daslab.sql.execution.datasources.PruneFileSourcePartitio
 import org.apache.spark.daslab.sql.execution.datasources.parquet.ParquetSchemaPruning
 import org.apache.spark.daslab.sql.execution.python.{ExtractPythonUDFFromAggregate, ExtractPythonUDFs}
 
-class SparkOptimizer(
-                      catalog: SessionCatalog,
+class SparkOptimizer(catalog: SessionCatalog,
                       experimentalMethods: ExperimentalMethods)
   extends Optimizer(catalog) {
 

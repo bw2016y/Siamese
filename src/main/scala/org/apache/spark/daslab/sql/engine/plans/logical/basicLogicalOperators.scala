@@ -915,6 +915,17 @@ case class Confidence(confidence:Double){
       "Confidence"
     }
 }
+case class AqpInfo(errorRate: ErrorRate,
+                   confidence: Confidence,
+                   child: LogicalPlan) extends UnaryNode{
+  val eps = RandomSampler.roundingEpsilon
+  require(confidence.confidence >= 0.0 - eps && confidence.confidence <= 1.0 + eps,
+    s"Sampling fraction ($confidence) must be on interval [0, 1] without replacement")
+  require(errorRate.errorRate >= 0.0 -eps && errorRate.errorRate <= 1.0 + eps,
+    s"Sampling fraction ($errorRate) must be on interval [0, 1] without replacement")
+
+  override def output: Seq[Attribute] = child.output
+}
 /**
  * aqp Sample logicalplan. 模仿Sample而写
  *

@@ -171,16 +171,16 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
   }
 
 
-  //todo
-  private def withAqp(ctx: AqpContext,
+
+  private def withAqpInfo(ctx: AqpContext,
                       query: LogicalPlan): LogicalPlan =  {
 
     val errorRate: Double = ctx.error.PERCENTAGE.getText.replaceAll("%","").toDouble/100
     val confidence: Double = ctx.confidence.PERCENTAGE.getText.replaceAll("%","").toDouble/100
 
 
-    AqpSample(ErrorRate(errorRate), Confidence(confidence),(math.random * 1000).toInt, query)
 
+    AqpInfo(ErrorRate(errorRate), Confidence(confidence),query)
   }
 
   /**
@@ -460,7 +460,7 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
         val withFilter = withLateralView.optionalMap(where)(filter)
 
         // 添加aqp sample节点
-        val withAqpSample: LogicalPlan = withFilter.optionalMap(ctx.aqp())(withAqp)
+        //val withAqpSample: LogicalPlan = withFilter.optionalMap(ctx.aqp())(withAqp)
 
         // 将expressions都转化为NamedExpression类型
         val namedExpressions = expressions.map {
@@ -476,31 +476,31 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
         }
 
         // 创建project节点的方法（需要近似查询处理）
-        def createProjectWithAqp() = if (namedExpressions.nonEmpty) {
+      /*  def createProjectWithAqp() = if (namedExpressions.nonEmpty) {
           Project(namedExpressions, withAqpSample)
         } else {
           withAqpSample
-        }
+        }*/
 
         // 创建Project节点
         // 如果有agg或having，则要考虑几种不同的情况，创建agg节点和having节点
         val withProject = if (aggregation == null && having != null) {
           if (conf.getConf(SQLConf.LEGACY_HAVING_WITHOUT_GROUP_BY_AS_WHERE)) {
             // If the legacy conf is set, treat HAVING without GROUP BY as WHERE.
-            withHaving(having, createProjectWithAqp())
+            withHaving(having, createProject())
           } else {
             // According to SQL standard, HAVING without GROUP BY means global aggregate.
-            withHaving(having, Aggregate(Nil, namedExpressions, withAqpSample))
+            withHaving(having, Aggregate(Nil, namedExpressions, withFilter))
           }
         } else if (aggregation != null) {
          // println(aggregation)
-          val aggregate = withAggregation(aggregation, namedExpressions, withAqpSample)
+          val aggregate = withAggregation(aggregation, namedExpressions, withFilter)
           aggregate.optionalMap(having)(withHaving)
         } else {
           // println("third branch"+aggregation)
           //todo 这时候没有aggregation 但是同样加了sampler 需要在analyzer中处理
           // When hitting this branch, `having` must be null.
-          createProjectWithAqp()
+          createProject()
         }
 
         // 如果有Distinct，则加入Distinct节点
@@ -514,7 +514,11 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
         val withWindow = withDistinct.optionalMap(windows)(withWindows)
 
         // 如果有Hint，加入Hint节点
-        hints.asScala.foldRight(withWindow)(withHints)
+        val  withHint = hints.asScala.foldRight(withWindow)(withHints)
+
+        // 在根节点添加AQPInfo
+        withHint.optionalMap(ctx.aqp())(withAqpInfo)
+
     }
   }
 
