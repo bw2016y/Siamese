@@ -2,7 +2,6 @@ import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._
 object  ScalaTest{
   def main(args: Array[String]): Unit = {
-    println("ass")
 
     val spark: SparkSession = SparkSession.builder().master("local[*]")
       .appName("test")
@@ -39,19 +38,27 @@ object  ScalaTest{
     df.select(col("*"),func1(col("name")) as "temp").show()
 
     println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical.verboseString)
+    println("====resolved logicalplan====")
     println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
+    println("====optimized logicalplan====")
     println(spark.sql("SELECT SUM(AGE),strlen(name) FROM data group by name ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
     println(spark.sql("SELECT data.name FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical)
+    println("====resolved logicalplan====")
     println(spark.sql("SELECT data.name FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
+    println("====optimized logicalplan====")
     println(spark.sql("SELECT data.name FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
-    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical)
-    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
-    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
+    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data where age < 100 ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.logical)
+    println("====resolved logicalplan====")
+    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data where age < 100 ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.analyzed)
+    println("====optimized logicalplan====")
+    println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data where age < 100 ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
     println(spark.sql("SELECT max(age) from data").queryExecution.logical)
+    println("====resolved logicalplan====")
     println(spark.sql("SELECT max(age) from data").queryExecution.analyzed)
+    println("====optimized logicalplan====")
     println(spark.sql("SELECT max(age) from data").queryExecution.optimizedPlan)
   }
 

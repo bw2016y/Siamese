@@ -11,6 +11,9 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.junit.Test;
+import scala.Tuple4;
+import scala.collection.Seq;
+import scala.collection.immutable.List;
 //import org.daslab.sql.engine.plans.logical.LogicalPlan;
 //import org.daslab.sql.engine.plans.logical.unary.Project;
 

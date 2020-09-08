@@ -165,7 +165,9 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
       Batch("UpdateAttributeReferences", Once,
         UpdateNullabilityInAttributeReferences):+
       //todo test
-      Batch("insertSampler",Once,insertSampler)
+      Batch("Sampler Optimization",Once,
+        InsertSampler,
+        PushDownSampler)
   }
 
   /**
@@ -675,18 +677,17 @@ object CollapseProject extends Rule[LogicalPlan] {
   private def buildCleanedProjectList(
                                        upper: Seq[NamedExpression],
                                        lower: Seq[NamedExpression]): Seq[NamedExpression] = {
-    // Create a map of Aliases to their values from the lower projection.
+    // 创建一个别名名称到别名节点的映射
     // e.g., 'SELECT ... FROM (SELECT a + b AS c, d ...)' produces Map(c -> Alias(a + b, c)).
     val aliases = collectAliases(lower)
 
-    // Substitute any attributes that are produced by the lower projection, so that we safely
-    // eliminate it.
+    // 如果上层节点的属性名是下层节点创建的别名，根据映射将属性名替换为Alias节点
     // e.g., 'SELECT c + 1 FROM (SELECT a + b AS C ...' produces 'SELECT a + b + 1 ...'
     // Use transformUp to prevent infinite recursion.
     val rewrittenUpper = upper.map(_.transformUp {
       case a: Attribute => aliases.getOrElse(a, a)
     })
-    // collapse upper and lower Projects may introduce unnecessary Aliases, trim them here.
+    // 删去Alias节点，完成别名替换
     rewrittenUpper.map { p =>
       CleanupAliases.trimNonTopLevelAliases(p).asInstanceOf[NamedExpression]
     }
@@ -874,7 +875,7 @@ object RemoveRedundantSorts extends Rule[LogicalPlan] {
   def apply(plan: LogicalPlan): LogicalPlan = plan transformDown {
     case Sort(orders, true, child) if SortOrder.orderingSatisfies(child.outputOrdering, orders) =>
       child
-    case s @ Sort(_, _, child) => s.copy(child = recursiveRemoveSort(child))
+    case s @ Sort(_, _, child) => s.copy(child = recursiveRemoveSort(child))  //递归消除sort子节点
   }
 
   def recursiveRemoveSort(plan: LogicalPlan): LogicalPlan = plan match {

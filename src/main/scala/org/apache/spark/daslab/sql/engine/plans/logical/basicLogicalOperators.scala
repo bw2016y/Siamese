@@ -927,7 +927,7 @@ case class AqpInfo(errorRate: ErrorRate,
   override def output: Seq[Attribute] = child.output
 }
 /**
- * aqp Sample logicalplan. 模仿Sample而写
+ * aqp Sample logicalplan. 模仿[[Sample]]而写
  *
  * @param seed the random seed
  * @param child the LogicalPlan

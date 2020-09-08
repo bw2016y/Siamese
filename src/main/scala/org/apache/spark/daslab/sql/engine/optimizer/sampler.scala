@@ -11,7 +11,7 @@ import org.apache.spark.daslab.sql.engine.plans.logical._
   *   在Aggregator算子下插入采样器
   *
   */
-object insertSampler extends Rule[LogicalPlan] {
+object InsertSampler extends Rule[LogicalPlan] {
   /**
     *  todo 需要从LoggicalPlan的根部获取AQP信息
     * @param plan
@@ -28,4 +28,23 @@ object insertSampler extends Rule[LogicalPlan] {
         case _ => plan
     }
   }
+}
+
+object PushDownSampler extends Rule[LogicalPlan] {
+  override def apply(plan: LogicalPlan): LogicalPlan = plan transform{
+    // TODO 对Filter有特殊处理
+    case aqp @ AqpSample(errorRate, confidence, seed, filter @ Filter(_, grandChild )) =>
+      println("Pushing down Sampler through Filter")
+      filter.copy(child = AqpSample(errorRate, confidence, seed, grandChild))
+    // TODO 对Join有特殊处理
+    case aqp @ AqpSample(errorRate, confidence, seed, join @ Join(left,right,joinType,condition)) =>
+      println("Pushing down Sampler through Join")
+      join.copy (
+        left = AqpSample(errorRate, confidence, seed, left),
+        right = AqpSample(errorRate, confidence, seed, right)
+      )
+    case aqp @ AqpSample(errorRate, confidence, seed, logicalPlan ) =>
+      logicalPlan.mapChildren(child => AqpSample(errorRate, confidence, seed, child))
+  }
+
 }
