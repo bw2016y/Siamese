@@ -55,11 +55,9 @@ object  ScalaTest{
     println("====optimized logicalplan====")
     println(spark.sql("SELECT SUM(AGE),MIN(AGE) FROM data where age < 100 ERROR WITHIN 5% AT CONFIDENCE 95%").queryExecution.optimizedPlan)
 
-    println(spark.sql("SELECT max(age) from data").queryExecution.logical)
-    println("====resolved logicalplan====")
-    println(spark.sql("SELECT max(age) from data").queryExecution.analyzed)
-    println("====optimized logicalplan====")
-    println(spark.sql("SELECT max(age) from data").queryExecution.optimizedPlan)
+    println(spark.sql("SELECT max(age) from data").queryExecution.originLogicalPlan)
+    println(spark.sql("SELECT max(age) from data").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("SELECT max(age) from data").queryExecution.optimizedLogicalPlan)
   }
 
 }

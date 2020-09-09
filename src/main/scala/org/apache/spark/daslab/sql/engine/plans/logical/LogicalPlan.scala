@@ -11,7 +11,7 @@ import org.apache.spark.daslab.sql.engine.plans.logical.statsEstimation.LogicalP
 //todo spark core
 import org.apache.spark.internal.Logging
 
-//todo predicates
+
 //逻辑计划
 abstract class LogicalPlan
   extends QueryPlan[LogicalPlan]
@@ -19,7 +19,6 @@ abstract class LogicalPlan
     with LogicalPlanStats
     with QueryPlanConstraints
     with Logging {
-
 
    /**
    *   如果子树中有流数据源的数据 就返回true

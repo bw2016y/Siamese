@@ -13,7 +13,6 @@ import org.apache.spark.daslab.sql.engine.plans.logical._
   */
 object InsertSampler extends Rule[LogicalPlan] {
   /**
-    *  todo 需要从LoggicalPlan的根部获取AQP信息
     * @param plan
     * @return
     */
@@ -32,19 +31,26 @@ object InsertSampler extends Rule[LogicalPlan] {
 
 object PushDownSampler extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = plan transform{
-    // TODO 对Filter有特殊处理
-    case aqp @ AqpSample(errorRate, confidence, seed, filter @ Filter(_, grandChild )) =>
-      println("Pushing down Sampler through Filter")
-      filter.copy(child = AqpSample(errorRate, confidence, seed, grandChild))
-    // TODO 对Join有特殊处理
-    case aqp @ AqpSample(errorRate, confidence, seed, join @ Join(left,right,joinType,condition)) =>
-      println("Pushing down Sampler through Join")
-      join.copy (
-        left = AqpSample(errorRate, confidence, seed, left),
-        right = AqpSample(errorRate, confidence, seed, right)
-      )
-    case aqp @ AqpSample(errorRate, confidence, seed, logicalPlan ) =>
-      logicalPlan.mapChildren(child => AqpSample(errorRate, confidence, seed, child))
-  }
+    case aqp @ AqpSample(errorRate,confidence,seed,child) =>
+      child match{
+        // TODO 对Filter有特殊处理
+        case filter @ Filter (_,grandChild) =>
+          println("Pushing down Sampler through Filter")
+          filter.copy(child=AqpSample(errorRate,confidence,seed,grandChild))
+        // TODO 对Join有特殊处理
+        case join @ Join(left,right,joinType,condition) =>
+          println("Pushing down Sampler through Join")
+          join.copy(left=AqpSample(errorRate,confidence,seed,left),
+            right=AqpSample(errorRate,confidence,seed,right)
+          )
+          // TODO 下推Project
+        case project @ Project(projectList:Seq[NamedExpression],grandchild:LogicalPlan) =>
+            println("Pushing down Sampler through Project")
+            project.copy(projectList,child=AqpSample(errorRate,confidence,seed,grandchild))
+        case _ => aqp
+      }
+   /* case aqp @ AqpSample(errorRate, confidence, seed, logicalPlan ) =>
+      logicalPlan.mapChildren(child => AqpSample(errorRate, confidence, seed, child))*/
 
+  }
 }

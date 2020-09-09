@@ -45,6 +45,11 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     SparkSession.setActiveSession(sparkSession)
     sparkSession.sessionState.analyzer.executeAndCheck(logical)
   }
+  //todo 打印流程信息
+  def analyzedLogicalPlan = "==========Analyzed Logical Plan==========\n"+analyzed
+  def originLogicalPlan = "==========Origin Logical Plan==========\n"+logical
+  def optimizedLogicalPlan = "==========Optimized Logical Plan==========\n"+optimizedPlan
+
 
   lazy val withCachedData: LogicalPlan = {
     assertAnalyzed()

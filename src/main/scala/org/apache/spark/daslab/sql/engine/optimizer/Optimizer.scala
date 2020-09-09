@@ -165,9 +165,8 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
       Batch("UpdateAttributeReferences", Once,
         UpdateNullabilityInAttributeReferences):+
       //todo test
-      Batch("Sampler Optimization",Once,
-        InsertSampler,
-        PushDownSampler)
+      Batch("Insert Sampler",Once,InsertSampler) :+
+      Batch("Sampler Optimization",fixedPoint, PushDownSampler)
   }
 
   /**
