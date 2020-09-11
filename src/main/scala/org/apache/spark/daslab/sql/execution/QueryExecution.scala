@@ -31,6 +31,7 @@ import org.apache.spark.rdd.RDD
 class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   // TODO: Move the planner an optimizer into here from SessionState.
+  // TODO: 这里的planner用于生成 [[SparkPlan]]
   protected def planner = sparkSession.sessionState.planner
 
   def assertAnalyzed(): Unit = analyzed
@@ -63,6 +64,8 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     SparkSession.setActiveSession(sparkSession)
     // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
     //       but we will implement to choose the best plan.
+    //  直接返回第一个可行的SparkPlan，后续会挑选最优的计划
+    //  planner是SparkPlanner类型 ， plan方法继承于QueryPlanner类，可以返回Iterator[PhysicalPlan]
     planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
 

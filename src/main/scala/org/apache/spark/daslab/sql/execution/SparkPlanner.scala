@@ -47,8 +47,7 @@ class SparkPlanner(
   }
 
   override protected def prunePlans(plans: Iterator[SparkPlan]): Iterator[SparkPlan] = {
-    // TODO: We will need to prune bad plans when we improve plan space exploration
-    //       to prevent combinatorial explosion.
+    //TODO： 在探索计划空间的时候，需要去掉糟糕的计划来防止组合空间的爆炸
     plans
   }
 

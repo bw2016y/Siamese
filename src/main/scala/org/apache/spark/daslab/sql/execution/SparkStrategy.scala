@@ -27,17 +27,20 @@ import org.apache.spark.daslab.sql.execution.aggregate.AggUtils
 import org.apache.spark.rdd.RDD
 
 
-/**
- * Converts a logical plan into zero or more SparkPlans.  This API is exposed for experimenting
- * with the query planner and is not designed to be stable across spark releases.  Developers
- * writing libraries should instead consider using the stable APIs provided in
- * [[org.apache.spark.daslab.sql.sources]]
- */
+
+/**  TODO　将Logical plan转换成SparkPlan
+  * 　　该API只用于测试Query Planner，后续可能会修改
+  *     Stable API in[[org.apache.spark.daslab.sql.sources]]
+  */
 abstract class SparkStrategy extends GenericStrategy[SparkPlan] {
 
   override protected def planLater(plan: LogicalPlan): SparkPlan = PlanLater(plan)
 }
 
+/**
+  *  这个用于标识需要替换的PlaceHolder，不可实际执行
+  * @param plan
+  */
 case class PlanLater(plan: LogicalPlan) extends LeafExecNode {
 
   override def output: Seq[Attribute] = plan.output
@@ -46,7 +49,7 @@ case class PlanLater(plan: LogicalPlan) extends LeafExecNode {
     throw new UnsupportedOperationException()
   }
 }
-
+//todo
 abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   self: SparkPlanner =>
 

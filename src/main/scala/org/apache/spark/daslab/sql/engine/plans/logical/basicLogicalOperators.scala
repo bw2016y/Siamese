@@ -20,6 +20,13 @@ import org.apache.spark.util.random.RandomSampler
  * Rules can pattern-match on this node in order to apply transformations that only take effect
  * at the top of the logical query plan.
  */
+/**
+  *  当在planning阶段有 take()或者 collect() 操作的时候，  这个特殊的节点就会在[query planner]开始工作前直接插入到逻辑计划的顶部
+  *
+  *   Rules 可以模式匹配到这个节点来应用那些只能在logical query plan阶段应用的变换规则
+  *
+  * @param child
+  */
 case class ReturnAnswer(child: LogicalPlan) extends UnaryNode {
   override def output: Seq[Attribute] = child.output
 }
