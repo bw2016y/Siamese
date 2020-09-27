@@ -85,7 +85,7 @@ object  ScalaTest{
     println(spark.sql(sql2).queryExecution.originLogicalPlan)
     println(spark.sql(sql2).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql2).queryExecution.optimizedLogicalPlan)
-    spark.sql(sql2).show
+    //spark.sql(sql2).show
 
     val sql3 = "SELECT data.name FROM data ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sql3).queryExecution.originLogicalPlan)
@@ -101,6 +101,13 @@ object  ScalaTest{
     println(spark.sql(sql5).queryExecution.originLogicalPlan)
     println(spark.sql(sql5).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql5).queryExecution.optimizedLogicalPlan)
+
+    val sql6 = "SELECT * from data"
+    println(spark.sql(sql6).sample(false,0.5).queryExecution.originLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).show())
+    println(spark.sql(sql6).sample(false,0.5).queryExecution)
   }
 
 }

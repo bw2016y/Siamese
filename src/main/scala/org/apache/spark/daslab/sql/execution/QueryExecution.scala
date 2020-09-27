@@ -69,8 +69,9 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
 
-  // executedPlan should not be used to initialize any SparkPlan. It should be
-  // only used for execution.
+  /**
+    * executedPlan 类型同样是SparkPlan，是可以直接执行的物理计划，不应当用于初始化其他任何SparkPlan
+    */
   lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
 
   /** Internal version of the RDD. Avoids copies and has no schema */

@@ -35,9 +35,10 @@ class SparkPlanner(
         BasicOperators :: Nil)
 
   /**
-   * Override to add extra planning strategies to the planner. These strategies are tried after
-   * the strategies defined in [[ExperimentalMethods]], and before the regular strategies.
-   */
+    *  可以通过重写这个方法为planner添加额外的strategies,这些策略在[[ExperimentalMethods]]方法中定义的策略之后执行，
+    *  在常规的策略之前执行
+    * @return
+    */
   def extraPlanningStrategies: Seq[Strategy] = Nil
 
   override protected def collectPlaceholders(plan: SparkPlan): Seq[(SparkPlan, LogicalPlan)] = {

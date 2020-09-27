@@ -16,8 +16,8 @@ import org.apache.spark.daslab.sql.sources.v2.reader.streaming.ContinuousReader
 object DataSourceV2Strategy extends Strategy {
 
   /**
-   * Pushes down filters to the data source reader
-   *
+    * 将filters下推到data source reader
+    *
    * @return pushed filter and post-scan filters.
    */
   private def pushFilters(
@@ -53,7 +53,7 @@ object DataSourceV2Strategy extends Strategy {
   }
 
   /**
-   * Applies column pruning to the data source, w.r.t. the references of the given expressions.
+    *  对data source应用列裁剪规则，关于 给定的表达式的引用
    *
    * @return new output attributes after column pruning.
    */
