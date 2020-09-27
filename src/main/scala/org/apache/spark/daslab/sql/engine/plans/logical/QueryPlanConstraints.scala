@@ -65,21 +65,20 @@ trait ConstraintHelper {
   })
 
   /**
-   * Infers a set of `isNotNull` constraints from null intolerant expressions as well as
-   * non-nullable attributes. For e.g., if an expression is of the form (`a > 5`), this
-   * returns a constraint of the form `isNotNull(a)`
+    *  从所有不可为空的表达式和属性中推导出不可为控的限制（IsNotNull）
+    *  例如表达式 a > 5 ,就返回a不可为空的约束
    */
   def constructIsNotNullConstraints(
                                      constraints: Set[Expression],
                                      output: Seq[Attribute]): Set[Expression] = {
-    // First, we propagate constraints from the null intolerant expressions.
+
+    // 第一步，从所有不可为空的表达式中生成所有的约束
     var isNotNullConstraints: Set[Expression] = constraints.flatMap(inferIsNotNullConstraints)
 
-    // Second, we infer additional constraints from non-nullable attributes that are part of the
-    // operator's output
+    // 第二步，从所有不可为空的属性中推导出该算子输出不为空的约束
     val nonNullableAttributes = output.filterNot(_.nullable)
     isNotNullConstraints ++= nonNullableAttributes.map(IsNotNull).toSet
-
+    //去掉已经存在的约束
     isNotNullConstraints -- constraints
   }
 

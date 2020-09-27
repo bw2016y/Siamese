@@ -12,6 +12,9 @@ object  ScalaTest{
 
     val dataset=spark.read.json("src/test/resources/student.json").toDF();
     dataset.createTempView("data")
+    dataset.createTempView("data1")
+    val dataset1=spark.read.json("src/test/resources/grade.json").toDF();
+    dataset1.createTempView("gradetable")
 
     val df: DataFrame = spark.sql("select data.name from data");
 
@@ -58,6 +61,29 @@ object  ScalaTest{
     println(spark.sql("SELECT max(age) from data").queryExecution.originLogicalPlan)
     println(spark.sql("SELECT max(age) from data").queryExecution.analyzedLogicalPlan)
     println(spark.sql("SELECT max(age) from data").queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select * from data join gradetable  on data.age = gradetable.age  where data.name='zzz'").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select *  from data join gradetable  on data.age = gradetable.age  where data.name='zzz'" ).queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select * from data").repartition(50).coalesce(100).filter("data.age >10").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select * from data").repartition(50).coalesce(100).filter("data.age >10").queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select data.* ,(select max(g.grade) from gradetable g where g.age=data.age) as grade from data").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select data.* ,(select max(g.grade) from gradetable g where g.age=data.age) as grade from data").queryExecution.optimizedLogicalPlan)
+
+    val frame = spark.sql("select data.age,gradetable.grade from data join gradetable on data.age=gradetable.age")
+    println(frame.queryExecution.originLogicalPlan)
+    println(frame.queryExecution.analyzedLogicalPlan)
+    println(frame.queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select data.sex from data full outer join gradetable on data.age = gradetable.age where data.name = 'zzz' and gradetable.grade >2 ").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select data.sex from data full outer join gradetable on data.age = gradetable.age where data.name = 'zzz' and gradetable.grade >2 ").queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select name from (select * from data)").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select name from (select * from data)").queryExecution.optimizedLogicalPlan)
+
+    println(spark.sql("select max(data.age) from data error within 5% at confidence 70%").queryExecution.analyzedLogicalPlan)
+    println(spark.sql("select max(data.age) from data error within 5% at confidence 70%").queryExecution.optimizedLogicalPlan)
   }
 
 }

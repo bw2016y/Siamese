@@ -49,12 +49,12 @@ case class PlanLater(plan: LogicalPlan) extends LeafExecNode {
     throw new UnsupportedOperationException()
   }
 }
-//todo
+//todo 里面有很多对流数据的处理
 abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   self: SparkPlanner =>
 
   /**
-   * Plans special cases of limit operators.
+    *  对于limit操作符进行特别的处理
    */
   object SpecialLimits extends Strategy {
     override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
@@ -80,61 +80,56 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   }
 
   /**
-   * Select the proper physical plan for join based on joining keys and size of logical plan.
-   *
+   *        根据join key和logical plan的大小来为join选择合适的物理计划
+    *
+    *
    * At first, uses the [[ExtractEquiJoinKeys]] pattern to find joins where at least some of the
    * predicates can be evaluated by matching join keys. If found, join implementations are chosen
    * with the following precedence:
    *
    * - Broadcast hash join (BHJ):
-   *     BHJ is not supported for full outer join. For right outer join, we only can broadcast the
-   *     left side. For left outer, left semi, left anti and the internal join type ExistenceJoin,
-   *     we only can broadcast the right side. For inner like join, we can broadcast both sides.
-   *     Normally, BHJ can perform faster than the other join algorithms when the broadcast side is
-   *     small. However, broadcasting tables is a network-intensive operation. It could cause OOM
-   *     or perform worse than the other join algorithms, especially when the build/broadcast side
-   *     is big.
+    *    BHJ不支持full outer join.对于right outer join，我们只能广播左侧的表。
+    *    对于Left outer,left semi,left anti和internal join type ExistenceJoin我们都只能广播右侧的表
+    *    对于Inner like join可以广播两侧的表
+   *     通常来说，当需要广播的表比较小的时候BHJ可以表现的比其他join算发更快，然而广播一张表是网络密集（network-intensive）操作。
+    *    有可能导致OOM或者表现的比其他的join算发更加糟糕，尤其是当build/broadcast side比较大的时候
    *
-   *     For the supported cases, users can specify the broadcast hint (e.g. the user applied the
-   *     [[org.apache.spark.daslab.sql.functions.broadcast()]] function to a DataFrame) and session-based
-   *     [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]] threshold to adjust whether BHJ is used and
-   *     which join side is broadcast.
+    *     对于一些案例来说，用于可以指定broadcast hint(用户对DataFrame应用org.apache.spark.daslab.sql.functions.broadcast()函数)
+    *     和指定SQLConf.AUTO_BROADCASTJOIN_ThRESHOLD 的阈值来调整是否应用BHJ和广播哪一侧
+    *
+   *      1. 可以使用hint指示广播哪一侧，即便这一侧的大小大于[[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]].
+    *      如果两侧都有这样的hint（只有是inner like join类型），预估物理大小更小的一侧会被广播。
+    *     2. 优先遵循[[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]这个阈值，永远广播小于这一阈值的一侧。
+    *     如果两侧都低于这个阈值，就广播更小的一侧，如果两侧都没有更小，就不使用BHJ
    *
-   *     1) Broadcast the join side with the broadcast hint, even if the size is larger than
-   *     [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]. If both sides have the hint (only when the type
-   *     is inner like join), the side with a smaller estimated physical size will be broadcast.
-   *     2) Respect the [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]] threshold and broadcast the side
-   *     whose estimated physical size is smaller than the threshold. If both sides are below the
-   *     threshold, broadcast the smaller side. If neither is smaller, BHJ is not used.
    *
-   * - Shuffle hash join: if the average size of a single partition is small enough to build a hash
-   *     table.
+   * - Shuffle hash join:
+    *   如果单个分区的平均大小都小到可以构造一个内存中的哈希表（Hash table）则应用
    *
-   * - Sort merge: if the matching join keys are sortable.
+   * - Sort merge:
+    *  如果需要匹配的join keys是可排序的
    *
-   * If there is no joining keys, Join implementations are chosen with the following precedence:
+    * 如果没有join key,就使用如下的优先级来选择join的实现
    * - BroadcastNestedLoopJoin (BNLJ):
-   *     BNLJ supports all the join types but the impl is OPTIMIZED for the following scenarios:
-   *     For right outer join, the left side is broadcast. For left outer, left semi, left anti
-   *     and the internal join type ExistenceJoin, the right side is broadcast. For inner like
-   *     joins, either side is broadcast.
+    *   BNLJ支持所有join类型，但是其实现对于如下的场景做了优化：
+    *   对于right outer join,广播左侧
+    *   left outer,left semi,left anti,internal join type exsitenceJoin， 广播右侧
+    *   inner like join,两侧都被广播
+    *
+    *   同 BHJ一样，用户可以指定broadcast hint和session-based的参数[[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]来决定广播哪一侧
    *
-   *     Like BHJ, users still can specify the broadcast hint and session-based
-   *     [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]] threshold to impact which side is broadcast.
+    *    1)  广播有hint的那一侧，即使大小超过了[[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]的阈值。
+    *    如果两侧都有hint(比如 对于inner-like join),预计物理大小更小的那一侧会被广播
+    *    2)优先遵循[[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]这个阈值，永远广播小于这一阈值的一侧。
+    *     如果两侧都低于这个阈值，就广播更小的一侧，如果两侧都没有更小，就不使用BNLJ
    *
-   *     1) Broadcast the join side with the broadcast hint, even if the size is larger than
-   *     [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]]. If both sides have the hint (i.e., just for
-   *     inner-like join), the side with a smaller estimated physical size will be broadcast.
-   *     2) Respect the [[SQLConf.AUTO_BROADCASTJOIN_THRESHOLD]] threshold and broadcast the side
-   *     whose estimated physical size is smaller than the threshold. If both sides are below the
-   *     threshold, broadcast the smaller side. If neither is smaller, BNLJ is not used.
-   *
-   * - CartesianProduct: for inner like join, CartesianProduct is the fallback option.
+   * - CartesianProduct:
+    *   对于inner like join，CartesianProduct是失败备选
+    *   for inner like join, CartesianProduct is the fallback option.
    *
    * - BroadcastNestedLoopJoin (BNLJ):
-   *     For the other join types, BNLJ is the fallback option. Here, we just pick the broadcast
-   *     side with the broadcast hint. If neither side has a hint, we broadcast the side with
-   *     the smaller estimated physical size.
+    *   对于其他join类型，BNLJ是失败备选。这里我们按照hint选择需要广播的那一侧。
+    *   如果两侧都没有，就广播预计物理大小更小的那一侧
    */
   object JoinSelection extends Strategy with PredicateHelper {
 
@@ -387,7 +382,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   }
 
   /**
-   * Used to plan the aggregate operator for expressions based on the AggregateFunction2 interface.
+    *  用来处理使用了AggregateFunction2接口的表达式的聚合算子
    */
   object Aggregation extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
@@ -459,7 +454,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   }
 
   protected lazy val singleRowRdd = sparkContext.parallelize(Seq(InternalRow()), 1)
-
+  //todo PhysicalOperation
   object InMemoryScans extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case PhysicalOperation(projectList, filters, mem: InMemoryRelation) =>
@@ -510,7 +505,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
   }
 
   /**
-   * Strategy to convert EvalPython logical operator to physical operator.
+    *  将EvalPython的逻辑算子转换成物理算子的策略
    */
   object PythonEvals extends Strategy {
     override def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
@@ -522,9 +517,10 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         Nil
     }
   }
-
+// 对于基本算子的处理
   object BasicOperators extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+
       case d: DataWritingCommand => DataWritingCommandExec(d, planLater(d.query)) :: Nil
       case r: RunnableCommand => ExecutedCommandExec(r) :: Nil
 

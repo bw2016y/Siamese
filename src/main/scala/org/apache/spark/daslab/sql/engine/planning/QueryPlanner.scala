@@ -59,8 +59,9 @@ abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
         Iterator(candidate)
       } else {
         // 处理那些被标记为[[PlanLater]]的逻辑计划 ，并将placeholders替换掉
-        //todo
+        // 这里的placeholders类型 Seq[(PhysicalPlan, LogicalPlan)]
         placeholders.iterator.foldLeft(Iterator(candidate)) {
+          //  左操作变量cadidate  ，  右操作变量 (PhysicalPlan , LogicalPlan)
           case (candidatesWithPlaceholders, (placeholder, logicalPlan)) =>
 
             // 为placeholder来生成物理计划
@@ -68,7 +69,8 @@ abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
 
             candidatesWithPlaceholders.flatMap { candidateWithPlaceholders =>
               childPlans.map { childPlan =>
-                // Replace the placeholder by the child plan
+
+                // 用生成的child plan替换placeholder
                 candidateWithPlaceholders.transformUp {
                   case p if p.eq(placeholder) => childPlan
                 }
@@ -84,12 +86,16 @@ abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
   }
 
   /**
-   * Collects placeholders marked using [[GenericStrategy#planLater planLater]]
-   * by [[strategies]].
+    * 收集在[[strategies]]使用[[GenericStrategy#planLater planLater]]标记的placeholders
    */
   protected def collectPlaceholders(plan: PhysicalPlan): Seq[(PhysicalPlan, LogicalPlan)]
 
-  /** Prunes bad plans to prevent combinatorial explosion. */
+
+  /**
+    * 通过剪枝裁剪掉糟糕的计划来防止组合空间爆炸
+    * @param plans
+    * @return
+    */
   protected def prunePlans(plans: Iterator[PhysicalPlan]): Iterator[PhysicalPlan]
 }
 
