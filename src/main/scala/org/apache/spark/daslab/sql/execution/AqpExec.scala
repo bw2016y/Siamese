@@ -46,6 +46,6 @@ case class  AqpSampleExec(errorRate: ErrorRate,
     */
   override protected def doExecute(): RDD[InternalRow] = ???
 
-  override def output: Seq[Attribute] = ???
+  override def output: Seq[Attribute] = child.output
 }
 

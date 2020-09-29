@@ -517,7 +517,10 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         Nil
     }
   }
-// 对于基本算子的处理
+
+  /**
+   * 对于基本算子的处理，一般一对一的映射为物理计划算子，如 Sort -> SortExec。
+   */
   object BasicOperators extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
 
