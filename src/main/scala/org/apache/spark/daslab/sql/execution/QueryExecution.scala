@@ -50,7 +50,8 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   def analyzedLogicalPlan = "==========Analyzed Logical Plan==========\n"+analyzed
   def originLogicalPlan = "==========Origin Logical Plan==========\n"+logical
   def optimizedLogicalPlan = "==========Optimized Logical Plan==========\n"+optimizedPlan
-
+  def physicalPlan: String = "==========Physical Plan==========\n"+sparkPlan
+  def toexecutePlan: String = "==========Executed Plan==========\n"+executedPlan
 
   lazy val withCachedData: LogicalPlan = {
     assertAnalyzed()
@@ -71,6 +72,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   /**
     * executedPlan 类型同样是SparkPlan，是可以直接执行的物理计划，不应当用于初始化其他任何SparkPlan
+    * 这个可以正常打印
     */
   lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
 

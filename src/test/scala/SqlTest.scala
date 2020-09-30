@@ -103,11 +103,21 @@ object  ScalaTest{
     println(spark.sql(sql5).queryExecution.optimizedLogicalPlan)
 
     val sql6 = "SELECT * from data"
-    println(spark.sql(sql6).sample(false,0.5).queryExecution.originLogicalPlan)
-    println(spark.sql(sql6).sample(false,0.5).queryExecution.analyzedLogicalPlan)
-    println(spark.sql(sql6).sample(false,0.5).queryExecution.optimizedLogicalPlan)
-    println(spark.sql(sql6).sample(false,0.5).show())
-    println(spark.sql(sql6).sample(false,0.5).queryExecution)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.originLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.physicalPlan)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.toexecutePlan)
+    spark.sql(sql6).sample(false,0.2).agg(max("age")).show()
+
+    val sql7 = "select max(age) from data ERROR WITHIN 5% AT CONFIDENCE 95%"
+    println(spark.sql(sql7).queryExecution.originLogicalPlan)
+    println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql7).queryExecution.physicalPlan)
+    println(spark.sql(sql7).queryExecution.toexecutePlan)
+    spark.sql(sql7).show()
+
   }
 
 }

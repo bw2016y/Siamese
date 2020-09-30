@@ -81,6 +81,7 @@ abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
     }
     //实际上没有剪枝
     val pruned = prunePlans(plans)
+    //todo 这里报错？
     assert(pruned.hasNext, s"No plan for $plan")
     pruned
   }
