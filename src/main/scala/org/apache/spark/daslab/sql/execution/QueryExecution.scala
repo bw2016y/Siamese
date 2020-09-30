@@ -34,6 +34,13 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   // TODO: 这里的planner用于生成 [[SparkPlan]]
   protected def planner = sparkSession.sessionState.planner
 
+  //todo 打印流程信息
+  def originLogicalPlan = "==========Origin Logical Plan==========\n"+logical
+  def analyzedLogicalPlan = "==========Analyzed Logical Plan==========\n"+analyzed
+  def optimizedLogicalPlan = "==========Optimized Logical Plan==========\n"+optimizedPlan
+  def physicalPlan = "========== Physical Plan==========\n"+sparkPlan
+  def executedPhysicalPlan = "==========Executed Physical Plan==========\n"+executedPlan
+
   def assertAnalyzed(): Unit = analyzed
 
   def assertSupported(): Unit = {
@@ -46,12 +53,9 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     SparkSession.setActiveSession(sparkSession)
     sparkSession.sessionState.analyzer.executeAndCheck(logical)
   }
-  //todo 打印流程信息
-  def analyzedLogicalPlan = "==========Analyzed Logical Plan==========\n"+analyzed
-  def originLogicalPlan = "==========Origin Logical Plan==========\n"+logical
-  def optimizedLogicalPlan = "==========Optimized Logical Plan==========\n"+optimizedPlan
-  def physicalPlan: String = "==========Physical Plan==========\n"+sparkPlan
-  def toexecutePlan: String = "==========Executed Plan==========\n"+executedPlan
+
+
+
 
   lazy val withCachedData: LogicalPlan = {
     assertAnalyzed()

@@ -912,6 +912,7 @@ case class Sample(
 
   override def output: Seq[Attribute] = child.output
 }
+
 case class ErrorRate(errorRate:Double){
     def simpleString:String={
       "ErrorRate"
