@@ -93,7 +93,9 @@ abstract class Optimizer(sessionCatalog: SessionCatalog)
           rulesWithoutInferFiltersFromConstraints: _*) :: Nil
     }
 
-    (Batch("Eliminate Distinct", Once, EliminateDistinct) ::
+    (
+      Batch("Fix AQP Info node",Once,FindAQPInfo) ::
+      Batch("Eliminate Distinct", Once, EliminateDistinct) ::
       // Technically some of the rules in Finish Analysis are not optimizer rules and belong more
       // in the analyzer, because they are needed for correctness (e.g. ComputeCurrentTime).
       // However, because we also use the analyzer to canonicalized queries (for view definition),
