@@ -54,3 +54,27 @@ object PushDownSampler extends Rule[LogicalPlan] {
 
   }
 }
+
+
+/**
+  * 修改AQPInfo节点的位置
+  */
+object FindAQPInfo extends Rule[LogicalPlan] {
+  /**
+    * @param plan
+    * @return
+    */
+  override def apply(plan: LogicalPlan): LogicalPlan ={
+    var infoNode:AqpInfo=null
+    var after=plan.transform{
+      case aqp @ AqpInfo(errorRate,confidence,child) =>
+        infoNode=aqp
+        child
+    }
+    if(infoNode!=null){
+       AqpInfo(infoNode.errorRate,infoNode.confidence,after)
+    }else{
+      plan
+    }
+  }
+}
