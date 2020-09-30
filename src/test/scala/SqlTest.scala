@@ -92,7 +92,7 @@ object  ScalaTest{
     println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.physicalPlan)
-    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.toexecutePlan)
+    println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.executedPhysicalPlan)
     spark.sql(sql6).sample(false,0.2).agg(max("age")).show()
 
     val sql7 = "select max(age) from data ERROR WITHIN 5% AT CONFIDENCE 95%"
@@ -100,7 +100,7 @@ object  ScalaTest{
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql7).queryExecution.physicalPlan)
-    println(spark.sql(sql7).queryExecution.toexecutePlan)
+    println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
     spark.sql(sql7).show()
 
   }
