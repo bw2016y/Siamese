@@ -621,7 +621,7 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
     val rdds = child.asInstanceOf[CodegenSupport].inputRDDs()
     assert(rdds.size <= 2, "Up to two input RDDs can be supported")
     if (rdds.length == 1) {
-      rdds.head.mapPartitionsWithIndex { (index, iter) =>
+      val result: RDD[InternalRow] = rdds.head.mapPartitionsWithIndex { (index, iter) =>
         val (clazz, _) = CodeGenerator.compile(cleanedSource)
         val buffer = clazz.generate(references).asInstanceOf[BufferedRowIterator]
         buffer.init(index, Array(iter))
@@ -634,6 +634,7 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
           override def next: InternalRow = buffer.next()
         }
       }
+      result
     } else {
       // Right now, we support up to two input RDDs.
       rdds.head.zipPartitions(rdds(1)) { (leftIter, rightIter) =>

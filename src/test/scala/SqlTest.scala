@@ -59,6 +59,8 @@ object  ScalaTest{
     println(spark.sql(sql4).queryExecution.originLogicalPlan)
     println(spark.sql(sql4).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql4).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql4).queryExecution.sparkPlan)
+    println(spark.sql(sql4).queryExecution.executedPlan)
 
     val sql5 = "SELECT name,max(age) from data group by name"
     println(spark.sql(sql5).queryExecution.originLogicalPlan)
@@ -116,7 +118,6 @@ object  ScalaTest{
     println(spark.sql(sql8).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql8).queryExecution.physicalPlan)
     println(spark.sql(sql8).queryExecution.executedPhysicalPlan)
-
   }
 
 }
