@@ -73,10 +73,12 @@ trait CodegenSupport extends SparkPlan {
   final def produce(ctx: CodegenContext, parent: CodegenSupport): String = executeQuery {
     this.parent = parent
     ctx.freshNamePrefix = variablePrefix
-    s"""
-       |${ctx.registerComment(s"PRODUCE: ${this.simpleString}")}
-       |${doProduce(ctx)}
+    val result: String =
+      s"""
+         |${ctx.registerComment(s"PRODUCE: ${this.simpleString}")}
+         |${doProduce(ctx)}
      """.stripMargin
+    result
   }
 
   /**
@@ -176,11 +178,13 @@ trait CodegenSupport extends SparkPlan {
     } else {
       parent.doConsume(ctx, inputVars, rowVar)
     }
-    s"""
-       |${ctx.registerComment(s"CONSUME: ${parent.simpleString}")}
-       |$evaluated
-       |$consumeFunc
+    val result: String =
+      s"""
+         |${ctx.registerComment(s"CONSUME: ${parent.simpleString}")}
+         |$evaluated
+         |$consumeFunc
      """.stripMargin
+    result
   }
 
   /**
@@ -385,13 +389,15 @@ case class InputAdapter(child: SparkPlan) extends UnaryExecNode with CodegenSupp
     val input = ctx.addMutableState("scala.collection.Iterator", "input", v => s"$v = inputs[0];",
       forceInline = true)
     val row = ctx.freshName("row")
-    s"""
-       | while ($input.hasNext() && !stopEarly()) {
-       |   InternalRow $row = (InternalRow) $input.next();
-       |   ${consume(ctx, null, row).trim}
-       |   if (shouldStop()) return;
-       | }
+    val result: String =
+      s"""
+         | while ($input.hasNext() && !stopEarly()) {
+         |   InternalRow $row = (InternalRow) $input.next();
+         |   ${consume(ctx, null, row).trim}
+         |   if (shouldStop()) return;
+         | }
      """.stripMargin
+    result
   }
 
   override def generateTreeString(
@@ -615,7 +621,7 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
     val rdds = child.asInstanceOf[CodegenSupport].inputRDDs()
     assert(rdds.size <= 2, "Up to two input RDDs can be supported")
     if (rdds.length == 1) {
-      rdds.head.mapPartitionsWithIndex { (index, iter) =>
+      val result: RDD[InternalRow] = rdds.head.mapPartitionsWithIndex { (index, iter) =>
         val (clazz, _) = CodeGenerator.compile(cleanedSource)
         val buffer = clazz.generate(references).asInstanceOf[BufferedRowIterator]
         buffer.init(index, Array(iter))
@@ -628,6 +634,7 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
           override def next: InternalRow = buffer.next()
         }
       }
+      result
     } else {
       // Right now, we support up to two input RDDs.
       rdds.head.zipPartitions(rdds(1)) { (leftIter, rightIter) =>

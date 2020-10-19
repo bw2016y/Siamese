@@ -1,5 +1,8 @@
+import org.apache.spark.daslab.sql.engine.InternalRow
+import org.apache.spark.daslab.sql.execution.SparkPlan
 import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._
+import org.apache.spark.rdd.RDD
 object  ScalaTest{
   def main(args: Array[String]): Unit = {
     //初始化上下文
@@ -56,11 +59,15 @@ object  ScalaTest{
     println(spark.sql(sql4).queryExecution.originLogicalPlan)
     println(spark.sql(sql4).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql4).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql4).queryExecution.sparkPlan)
+    println(spark.sql(sql4).queryExecution.executedPlan)
 
-    val sql5 = "SELECT max(age) from data"
+    val sql5 = "SELECT name,max(age) from data group by name"
     println(spark.sql(sql5).queryExecution.originLogicalPlan)
     println(spark.sql(sql5).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql5).queryExecution.optimizedLogicalPlan)
+    spark.sql(sql5).queryExecution.toRdd.foreach(println(_))
+    spark.sql(sql5).show()
 
     println(spark.sql("select * from data join gradetable  on data.age = gradetable.age  where data.name='zzz'").queryExecution.analyzedLogicalPlan)
     println(spark.sql("select *  from data join gradetable  on data.age = gradetable.age  where data.name='zzz'" ).queryExecution.optimizedLogicalPlan)
@@ -101,8 +108,16 @@ object  ScalaTest{
     println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql7).queryExecution.physicalPlan)
     println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
+    val executedPlan: SparkPlan = spark.sql(sql7).queryExecution.executedPlan
+    val value: RDD[InternalRow] = executedPlan.execute()
     spark.sql(sql7).show()
 
+    val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
+    println(spark.sql(sql8).queryExecution.originLogicalPlan)
+    println(spark.sql(sql8).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sql8).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sql8).queryExecution.physicalPlan)
+    println(spark.sql(sql8).queryExecution.executedPhysicalPlan)
   }
 
 }

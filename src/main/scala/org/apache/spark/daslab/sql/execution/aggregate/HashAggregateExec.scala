@@ -230,20 +230,22 @@ case class HashAggregateExec(
     val numOutput = metricTerm(ctx, "numOutputRows")
     val aggTime = metricTerm(ctx, "aggTime")
     val beforeAgg = ctx.freshName("beforeAgg")
-    s"""
-       | while (!$initAgg) {
-       |   $initAgg = true;
-       |   long $beforeAgg = System.nanoTime();
-       |   $doAggFuncName();
-       |   $aggTime.add((System.nanoTime() - $beforeAgg) / 1000000);
-       |
-       |   // output the result
-       |   ${genResult.trim}
-       |
-       |   $numOutput.add(1);
-       |   ${consume(ctx, resultVars).trim}
-       | }
+    val result: String =
+      s"""
+         | while (!$initAgg) {
+         |   $initAgg = true;
+         |   long $beforeAgg = System.nanoTime();
+         |   $doAggFuncName();
+         |   $aggTime.add((System.nanoTime() - $beforeAgg) / 1000000);
+         |
+         |   // output the result
+         |   ${genResult.trim}
+         |
+         |   $numOutput.add(1);
+         |   ${consume(ctx, resultVars).trim}
+         | }
      """.stripMargin
+    result
   }
 
   private def doConsumeWithoutKeys(ctx: CodegenContext, input: Seq[ExprCode]): String = {

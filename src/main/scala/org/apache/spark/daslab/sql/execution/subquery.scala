@@ -119,7 +119,7 @@ case class InSubquery(
 }
 
 /**
- * Plans scalar subqueries from that are present in the given [[SparkPlan]].
+ * [[SparkPlan]]中存在一些子查询表达式，该表达式中的子查询逻辑计划还未被转换成物理计划.
  */
 case class PlanSubqueries(sparkSession: SparkSession) extends Rule[SparkPlan] {
   def apply(plan: SparkPlan): SparkPlan = {
