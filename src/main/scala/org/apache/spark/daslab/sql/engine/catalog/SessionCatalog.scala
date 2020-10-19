@@ -40,16 +40,24 @@ object SessionCatalog {
  * proxy to the underlying metastore (e.g. Hive Metastore) and it also manages temporary
  * views and functions of the Spark Session that it belongs to.
  *
- * This class must be thread-safe.
+  * 这个类必须是线程安全的
+  *
+  * 被Spark Session调用的一个内部catalog实现。
+  * 这个类是底层存储（metastore,例如Hive Metastore）的一个代理，可以管理临时视图(元数据，临时表)和对应Spark Session中的函数
+  *
+  * 内部包括一个mutable类型的Hash Map用来管理临时表信息，以及currentDb成员变量用来指代当前操作所对应的数据库名称。
+  *
+  *
  */
 class SessionCatalog(
-                      externalCatalogBuilder: () => ExternalCatalog,
-                      globalTempViewManagerBuilder: () => GlobalTempViewManager,
-                      functionRegistry: FunctionRegistry,
-                      conf: SQLConf,
-                      hadoopConf: Configuration,
+                      externalCatalogBuilder: () => ExternalCatalog,   //外部系统Catalog
+                      globalTempViewManagerBuilder: () => GlobalTempViewManager,    // 全局临时视图管理
+                      functionRegistry: FunctionRegistry, // 函数注册接口
+                      conf: SQLConf,               // sql engine的配置
+                      hadoopConf: Configuration,  // hadoop配置
                       parser: ParserInterface,
-                      functionResourceLoader: FunctionResourceLoader) extends Logging {
+                      functionResourceLoader: FunctionResourceLoader  // 函数资源加载器
+                    ) extends Logging {
   import SessionCatalog._
   import CatalogTypes.TablePartitionSpec
 

@@ -144,7 +144,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
     }.toSeq
   }
 
-  //返回对应的schema信息
+  //返回对应的schema信息,output输出属性的schema信息
   lazy val schema: StructType = StructType.fromAttributes(output)
 
   /** Returns the output schema in the tree format. */
@@ -168,6 +168,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   /**
    * All the subqueries of current plan.
+    *  当前Query Plan节点中包含的所有子查询。
    */
   def subqueries: Seq[PlanType] = {
     expressions.flatMap(_.collect {
@@ -256,6 +257,7 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
 
   /**
    * All the attributes that are used for this plan.
+    *  该节点涉及的所有属性集合
    */
   lazy val allAttributes: AttributeSeq = children.flatMap(_.output)
 }

@@ -70,8 +70,12 @@ object CurrentOrigin {
  */
 case class TreeNodeTag[T](name: String)
 
-
+/**
+  * 继承了Product,因此可以通过productElement函数或productIterator迭代器对Case Class参数信息进行索引和遍历
+  * @tparam BaseType
+  */
 abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
+
   //混入子类
   self: BaseType =>
 

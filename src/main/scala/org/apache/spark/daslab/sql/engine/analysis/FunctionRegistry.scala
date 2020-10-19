@@ -24,11 +24,12 @@ import org.apache.spark.daslab.sql.types._
 
 /**
  * A catalog for looking up user defined functions, used by an [[Analyzer]].
- *
+ *   [[Analyzer]]使用这个catalog来实现对UDF的注册（Register），查找(Lookup)和删除(Drop)等功能。
  * Note:
- *   1) The implementation should be thread-safe to allow concurrent access.
- *   2) the database name is always case-sensitive here, callers are responsible to
- *      format the database name w.r.t. case-sensitive config.
+  *  1） 这个接口的实现必须是线程安全以允许并发访问
+  *  2） 数据库名必须是大小写敏感的，调用者需要负责数据库名的格式化（case-sensitive config）
+  *
+  *
  */
 trait FunctionRegistry {
 
@@ -75,6 +76,9 @@ trait FunctionRegistry {
   override def clone(): FunctionRegistry = throw new CloneNotSupportedException()
 }
 
+/**
+  *   [[FunctionRegistry]]的一个默认实现，使用Map数据结构注册各种内置的函数。
+  */
 class SimpleFunctionRegistry extends FunctionRegistry {
 
   @GuardedBy("this")

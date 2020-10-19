@@ -20,11 +20,21 @@ import org.apache.spark.daslab.sql.engine.util.StringUtils
  * Note that, the view name is always case-sensitive here, callers are responsible to format the
  * view name w.r.t. case-sensitive config.
  *
+  *  一个线程安全的类，用于对全局临时视图进行管理
+  *  提供了原子操作进行管理（例如 创建，更新，删除和重命名等）
+  *
+  *   视图名称是大小写敏感的，调用者需要负责对视图名进行格式化（format，例如控制大小写敏感的配置等）
+  *
  * @param database The system preserved virtual database that keeps all the global temporary views.
  */
 class GlobalTempViewManager(val database: String) {
 
-  /** List of view definitions, mapping from view name to logical plan. */
+  /** List of view definitions, mapping from view name to logical plan.
+    *
+    * 对视图名（String类型的视图名为Key）和数据源（LogicaPlan为Value，一般是创建该视图时生成）进行映射。
+    *
+    * */
+
   @GuardedBy("this")
   private val viewDefinitions = new mutable.HashMap[String, LogicalPlan]
 

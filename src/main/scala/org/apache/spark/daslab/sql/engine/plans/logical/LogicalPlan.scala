@@ -33,7 +33,7 @@ abstract class LogicalPlan
 
   /**
    * 返回该计划可能计算的最大的行数
-   *
+   * 常用于Limit算子
    * 任何一个可以通过限制的算子都应该重写这个函数，例如（Union）
    * 任何一个可以被下推的限制算子都应该重写这个函数 ，例如（Project）
    */
@@ -115,6 +115,8 @@ abstract class LogicalPlan
 
   /**
    * Refreshes (or invalidates) any metadata/data cached in the plan recursively.
+    *
+    *   refresh方法会递归地刷新当前计划中的元数据等信息。
    */
   def refresh(): Unit = children.foreach(_.refresh())
 

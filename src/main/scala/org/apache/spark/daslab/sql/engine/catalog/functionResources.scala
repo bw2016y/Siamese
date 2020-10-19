@@ -37,6 +37,10 @@ case class FunctionResource(resourceType: FunctionResourceType, uri: String)
  * A simple trait representing a class that can be used to load resources used by
  * a function. Because only a SQLContext can load resources, we create this trait
  * to avoid of explicitly passing SQLContext around.
+  *
+  *
+  *  可以用来加载用户自定义的函数或者Hive中的各种函数资源以提供函数的调用，这些函数一般通过Jar包或者文件类型提供。
+  *
  */
 trait FunctionResourceLoader {
   def loadResource(resource: FunctionResource): Unit

@@ -14,6 +14,12 @@ import org.apache.spark.util.Utils
 import org.apache.spark.util.random.RandomSampler
 
 /**
+  *  基本操作算子
+  */
+
+
+
+/**
  * When planning take() or collect() operations, this special node that is inserted at the top of
  * the logical plan before invoking the query planner.
  *
@@ -123,6 +129,10 @@ case class Filter(condition: Expression, child: LogicalPlan)
 
   override def maxRows: Option[Long] = child.maxRows
 
+  /**
+    *  将condition表达式中的谓词逻辑与子节点中的约束整合。
+    * @return
+    */
   override protected def validConstraints: Set[Expression] = {
     val predicates = splitConjunctivePredicates(condition)
       .filterNot(SubqueryExpression.hasCorrelatedSubquery)

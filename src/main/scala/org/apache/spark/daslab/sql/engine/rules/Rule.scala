@@ -15,6 +15,6 @@ abstract class Rule[TreeType <: TreeNode[_]] extends Logging {
     val className = getClass.getName
     if (className endsWith "$") className.dropRight(1) else className
   }
-
+  //子类需要重写以实现特定的处理逻辑
   def apply(plan: TreeType): TreeType
 }

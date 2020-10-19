@@ -5,13 +5,13 @@ import org.apache.spark.daslab.sql.engine.expressions.Expression
 import org.apache.spark.daslab.sql.types.StructType
 
 /**
- * Interface for the system catalog (of functions, partitions, tables, and databases).
- *
- * This is only used for non-temporary items, and implementations must be thread-safe as they
- * can be accessed in multiple threads. This is an external catalog because it is expected to
- * interact with external systems.
- *
- * Implementations should throw [[NoSuchDatabaseException]] when databases don't exist.
+  *
+  *  system catalog的接口（用来管理数据库Databases，数据表Tables, 数据分区Partitions，函数functions的接口）
+  *
+  *  需要与外部系统进行交互（所以称为external catalog），用于处理非临时性存储（non-temporary items），
+  *  同样需要满足线程安全以支持并发访问。
+  *
+  *  具体的实现中如果某个数据库不存在，应该抛出[[NoSuchDatabaseException]]
  */
 trait ExternalCatalog {
   import CatalogTypes.TablePartitionSpec

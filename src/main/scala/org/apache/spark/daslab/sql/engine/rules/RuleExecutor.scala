@@ -23,6 +23,10 @@ object RuleExecutor {
   }
 }
 
+/**
+  *  Rule执行的驱动类
+  * @tparam TreeType
+  */
 abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
 
   /**

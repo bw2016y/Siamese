@@ -19,8 +19,7 @@ class UnresolvedException[TreeType <: TreeNode[_]](tree: TreeType, function: Str
   extends TreeNodeException(tree, s"Invalid call to $function on unresolved object", null)
 
 /**
- * Holds the name of a relation that has yet to be looked up in a catalog.
- *
+ *  用于为还没有在catalog中解析的relation保存relation name
  * @param tableIdentifier table name
  */
 case class UnresolvedRelation(tableIdentifier: TableIdentifier)

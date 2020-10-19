@@ -7,6 +7,7 @@ import org.apache.spark.util.ListenerBus
 
 /**
  * Wraps an ExternalCatalog to provide listener events.
+  *
  */
 class ExternalCatalogWithListener(delegate: ExternalCatalog)
   extends ExternalCatalog
