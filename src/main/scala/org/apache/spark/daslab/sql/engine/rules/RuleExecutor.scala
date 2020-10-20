@@ -56,8 +56,9 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
   protected def isPlanIntegral(plan: TreeType): Boolean = true
 
   /**
-   * Executes the batches of rules defined by the subclass. The batches are executed serially
-   * using the defined execution strategy. Within each batch, rules are also executed serially.
+    *   顺序执行子类定义的batches of rules
+    *   每个batch都有对应的执行规则和策略
+    *   每个batch内的规则也是顺序执行的
    */
   def execute(plan: TreeType): TreeType = {
     var curPlan = plan

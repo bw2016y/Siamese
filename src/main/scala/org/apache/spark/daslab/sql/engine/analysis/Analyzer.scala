@@ -138,11 +138,11 @@ class Analyzer(
     Batch("Simple Sanity Check", Once,
       LookupFunctions),
     Batch("Substitution", fixedPoint,
-      CTESubstitution,
+      CTESubstitution,   //处理With语句
       WindowsSubstitution,
       EliminateUnions,
       new SubstituteUnresolvedOrdinals(conf)),
-    Batch("Resolution", fixedPoint,
+    Batch("Resolution", fixedPoint,   //常见的解析规则，例如数据源，数据类型，数据转换和处理操作等。
       ResolveTableValuedFunctions ::
         ResolveRelations ::
         ResolveReferences ::
@@ -180,17 +180,20 @@ class Analyzer(
     Batch("Nondeterministic", Once,
       PullOutNondeterministic),
     Batch("UDF", Once,
-      HandleNullInputsForUDF),
+      HandleNullInputsForUDF),  // 处理UDF的输入数据为Null的情形
     Batch("FixNullability", Once,
       FixNullability),
     Batch("Subquery", Once,
       UpdateOuterReferences),
     Batch("Cleanup", fixedPoint,
-      CleanupAliases)
+      CleanupAliases)   //  删除无用的别名
   )
 
   /**
    * Analyze cte definitions and substitute child plan with analyzed cte definitions.
+    *
+    *   处理With语句，在遍历逻辑算子树的过程中，当匹配到With(child,relations)节点时，将子LogicalPlan替换成解析后的CTE。
+    *   由于CTE的存在，对SQL语句从左向右解析后会产生多个LogicalPlan，这条规则的作用是将多个LogicalPlan合并成一个LogicalPlan。
    */
   object CTESubstitution extends Rule[LogicalPlan] {
     def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {
@@ -219,6 +222,8 @@ class Analyzer(
 
   /**
    * Substitute child plan with WindowSpecDefinitions.
+    *
+    *  处理未解析的窗口函数表达式（Unresolved-WindowExpression）,将其转换成窗口函数表达式（WindowExpression）
    */
   object WindowsSubstitution extends Rule[LogicalPlan] {
     def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {
@@ -636,6 +641,7 @@ class Analyzer(
 
   /**
    * Replaces [[UnresolvedRelation]]s with concrete relations from the catalog.
+    *  将[[UnresolvedRelation]]替换为catalog中具体的relations
    */
   object ResolveRelations extends Rule[LogicalPlan] {
 
@@ -665,6 +671,33 @@ class Analyzer(
     //
     // Note this is compatible with the views defined by older versions of Spark(before 2.2), which
     // have empty defaultDatabase and all the relations in viewText have database part defined.
+    /**
+      *  如果这个未解析的relation是直接运行在文件上，就直接返回原始未解析的relation，这个逻辑计划会在之后被
+      *  解析。否则我们就从catalog中查找这个表（如果是视图的话，就更改默认的数据库名）
+      *  我们总是直接从默认的database中查找一个表，如果这个表的标识符的数据库字段是空的，对视图来说，默认的
+      *  数据库应该是视图被创建时的当前数据库（currentDb）
+      *  如果是在解析一个嵌套的视图的时候，所引用的视图可能有不同的默认数据库（因此需要使用AnalysisContext.
+      *  defaultDatabase来跟踪记录当前默认数据库）
+      *  当我们解析的是视图，我们获取view.desc(是一个CatalogTable),并将CatalogTable.viewDefaultDatabase的值设
+      *  置为AnalysisContext.defaultDatabase，我们使用默认的数据库来查询这个视图引用的relation
+      *
+      *  例如
+      *  |- view1 (defaultDatabase = db1)
+      *    |- operator
+      *      |- table2 (defaultDatabase = db1)
+      *      |- view2 (defaultDatabase = db2)
+      *         |- view3 (defaultDatabase = db3)
+      *    |- view4 (defaultDatabase = db4)
+      *
+      *  在这个例子中，view1是一个嵌套视图，它直接引用了table2，view2，view4
+      *   view2引用了view3. 在解析这个表的过程中，我们使用db1来查询table2,view2,view4
+      *   使用db2来查询view3
+      *
+      *  注意这种处理和使用Spark（2.2之前的版本）进行定义的视图是兼容的
+      *  之前的视图有空的默认数据库（defaultDatabase）并且所有在视图中引用的relation都有定义好的database part
+      * @param plan
+      * @return
+      */
     def resolveRelation(plan: LogicalPlan): LogicalPlan = plan match {
       case u: UnresolvedRelation if !isRunningDirectlyOnFiles(u.tableIdentifier) =>
         val defaultDatabase = AnalysisContext.get.defaultDatabase
@@ -707,6 +740,16 @@ class Analyzer(
     // 2. Use defaultDatabase, if it is defined(In this case, no temporary objects can be used,
     //    and the default database is only used to look up a view);
     // 3. Use the currentDb of the SessionCatalog.
+    /**
+      *  从catalog中用给定的name查找table, 具体使用的数据库由以下规则决定：
+      *  1. 如果定义了就使用table identifier中指定的database part
+      *  2. 如果定义了defaultDatabase就使用它（在这个案例中，没有能够使用的临时对象，default database只
+      *  用来查找视图）
+      *  3. 使用SessionCatalog中的currentDb对象
+      * @param u
+      * @param defaultDatabase
+      * @return
+      */
     private def lookupTableFromCatalog(
                                         u: UnresolvedRelation,
                                         defaultDatabase: Option[String] = None): LogicalPlan = {
@@ -731,6 +774,11 @@ class Analyzer(
     // from parquet.`/path/to/query`". The plan will get resolved in the rule `ResolveDataSource`.
     // Note that we are testing (!db_exists || !table_exists) because the catalog throws
     // an exception from tableExists if the database does not exist.
+    /**
+      *
+      * @param table
+      * @return
+      */
     private def isRunningDirectlyOnFiles(table: TableIdentifier): Boolean = {
       table.database.isDefined && conf.runSQLonFile && !catalog.isTemporaryTable(table) &&
         (!catalog.databaseExists(table.database.get) || !catalog.tableExists(table))
@@ -2083,6 +2131,9 @@ class Analyzer(
   /**
    * Pulls out nondeterministic expressions from LogicalPlan which is not Project or Filter,
    * put them into an inner Project and finally project them away at the outer Project.
+    *
+    *   将LogicalPlan中非Project或非Filter算子的nondeterministic（不确定的）表达式提取出来放入内层的Project算子中，并在最终的
+    *   project算子中进行处理。
    */
   object PullOutNondeterministic extends Rule[LogicalPlan] {
     override def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {
