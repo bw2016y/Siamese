@@ -814,7 +814,7 @@ object TypeCoercion {
   }
 
   /**
-    * Casts types according to the expected input types for [[Expression]]s.
+    *  根据[[Expression]]的期望的输入类型来进行类型的转换
     */
   object ImplicitTypeCasts extends TypeCoercionRule {
     override protected def coerceTypes(

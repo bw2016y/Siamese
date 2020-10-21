@@ -149,6 +149,8 @@ object SQLConf {
     .stringConf
     .createOptional
 
+
+  // FixedPoint构造的时候传入的参数，设定可以迭代的最大轮数，对于某些嵌套较深的特殊SQL，可以适当增大
   val OPTIMIZER_MAX_ITERATIONS = buildConf("spark.sql.optimizer.maxIterations")
     .internal()
     .doc("The max number of iterations the optimizer and analyzer runs.")

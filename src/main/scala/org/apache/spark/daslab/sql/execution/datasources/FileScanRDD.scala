@@ -45,7 +45,7 @@ case class PartitionedFile(
 case class FilePartition(index: Int, files: Array[PartitionedFile]) extends RDDPartition
 
 /**
- * An RDD that scans a list of file partitions.
+  *   扫描一系列文件分区生成的RDD
  */
 class FileScanRDD(
                    @transient private val sparkSession: SparkSession,

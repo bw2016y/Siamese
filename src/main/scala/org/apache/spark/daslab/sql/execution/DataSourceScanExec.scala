@@ -33,7 +33,12 @@ trait DataSourceScanExec extends LeafExecNode with CodegenSupport {
     s"Scan $relation ${tableIdentifier.map(_.unquotedString).getOrElse("")}"
   }
 
-  // Metadata that describes more details of this scan.
+
+
+  /**
+    *  用于描述这次扫描的更多细节的元信息， 目前只有[[FileSourceScanExec]]和[[RowDataSourceScanExec]]重写了这个方法
+    * @return
+    */
   protected def metadata: Map[String, String]
 
   override def simpleString: String = {

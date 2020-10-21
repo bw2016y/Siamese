@@ -788,6 +788,7 @@ class Analyzer(
   /**
    * Replaces [[UnresolvedAttribute]]s with concrete [[AttributeReference]]s from
    * a logical plan node's children.
+    *  用某个逻辑计划节点的子节点的[[AttributeReference]]来替换所有的[[UnresolvedAttribute]]
    */
   object ResolveReferences extends Rule[LogicalPlan] {
     /**
@@ -945,6 +946,7 @@ class Analyzer(
     }
 
     def apply(plan: LogicalPlan): LogicalPlan = plan.resolveOperatorsUp {
+      // 如果子节点没有解析完毕，就先不解析，留待下一轮规则调用的时候再进行解析
       case p: LogicalPlan if !p.childrenResolved => p
 
       // If the projection list contains Stars, expand it.
@@ -1032,7 +1034,7 @@ class Analyzer(
     }
 
     /**
-     * Returns true if `exprs` contains a [[Star]].
+      * 如果exprs中包含[[Star]返回true
      */
     def containsStar(exprs: Seq[Expression]): Boolean =
       exprs.exists(_.collect { case _: Star => true }.nonEmpty)

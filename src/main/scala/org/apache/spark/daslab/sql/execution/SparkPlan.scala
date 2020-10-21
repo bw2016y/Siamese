@@ -60,7 +60,8 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   }
 
   /**
-   * @return All metrics containing metrics of this SparkPlan.
+   * @return  返回这个SparkPlan包含的所有metric
+    *          定义metric会导致额外的计算，在一定程度上会影响性能
    */
   def metrics: Map[String, SQLMetric] = Map.empty
 
@@ -77,7 +78,10 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   def longMetric(name: String): SQLMetric = metrics(name)
 
   // TODO: Move to `DistributedPlan`
-  /** Specifies how data is partitioned across different nodes in the cluster. */
+  /**
+    *    指明数据在集群上的不同节点之间是如何分区的
+    * @return
+    */
   def outputPartitioning: Partitioning = UnknownPartitioning(0) // TODO: WRONG WIDTH!
 
   /**
@@ -98,17 +102,21 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   def requiredChildDistribution: Seq[Distribution] =
     Seq.fill(children.size)(UnspecifiedDistribution)
 
-  /** Specifies how data is ordered in each partition. */
+
+  /**
+    *  指明数据在各分区上是如何排序的
+    * @return
+    */
   def outputOrdering: Seq[SortOrder] = Nil
 
   /** Specifies sort order for each partition requirements on the input data for this operator. */
   def requiredChildOrdering: Seq[Seq[SortOrder]] = Seq.fill(children.size)(Nil)
 
   /**
-   * Returns the result of this query as an RDD[InternalRow] by delegating to `doExecute` after
-   * preparations.
-   *
-   * Concrete implementations of SparkPlan should override `doExecute`.
+    *  通过在preparations之后使用doExecute函数来返回RDD[InternalRow]格式的查询结果
+    *
+    *  具体的SparkPlan的实现类需要重写doExecute
+    *
    */
   final def execute(): RDD[InternalRow] = executeQuery {
     if (isCanonicalizedPlan) {
@@ -118,10 +126,9 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
   }
 
   /**
-   * Returns the result of this query as a broadcast variable by delegating to `doExecuteBroadcast`
-   * after preparations.
-   *
-   * Concrete implementations of SparkPlan should override `doExecuteBroadcast`.
+    *  在preparations之后通过调用 doExecuteBroadcast方法来将这个查询的结果以广播变量（broadcast variable）的格式返回
+    *
+    *  具体的实现类应该重写doExecuteBroadcast方法。
    */
   final def executeBroadcast[T](): broadcast.Broadcast[T] = executeQuery {
     if (isCanonicalizedPlan) {
@@ -423,6 +430,9 @@ object SparkPlan {
     ThreadUtils.newDaemonCachedThreadPool("subquery", 16))
 }
 
+/**
+  *  叶子类型的SparkPlan节点负责“从无到有”的创建RDD
+  */
 trait LeafExecNode extends SparkPlan {
   override final def children: Seq[SparkPlan] = Nil
   override def producedAttributes: AttributeSet = outputSet
@@ -435,6 +445,10 @@ object UnaryExecNode {
   }
 }
 
+/**
+  *  非叶子类型的sparkPlan节点等价于在RDD上进行一次Transformation
+  *
+  */
 trait UnaryExecNode extends SparkPlan {
   def child: SparkPlan
 

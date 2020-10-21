@@ -4,16 +4,18 @@ package org.apache.spark.daslab.sql.engine.plans.physical
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.types.{DataType, IntegerType}
 
+
 /**
- * Specifies how tuples that share common expressions will be distributed when a query is executed
- * in parallel on many machines.  Distribution can be used to refer to two distinct physical
- * properties:
- *  - Inter-node partitioning of data: In this case the distribution describes how tuples are
- *    partitioned across physical machines in a cluster.  Knowing this property allows some
- *    operators (e.g., Aggregate) to perform partition local operations instead of global ones.
- *  - Intra-partition ordering of data: In this case the distribution describes guarantees made
- *    about how tuples are distributed within a single partition.
- */
+  *  当一个查询在许多机器上并行的执行时，指明这些相同表达式所代表的tuple将会如何分布
+  *  具体来讲，Distribution可以用来描述以下两种不同粒度的数据（物理）特征
+  *
+  *   1. Inter-node （节点间）数据分区信息：
+  *      在集群的不同物理节点上tuples是如何分布的
+  *      知道这些特性，可以用来判断某些算子例如（Aggregate）能否进行局部计算（Partial operation），避免
+  *      全局操作
+  *   2. Intra-partition ordering of data(分区内数据排序信息): 单个分区（single partition）内数据是如何的分布
+  *
+  */
 sealed trait Distribution {
   /**
    * The required number of partitions for this distribution. If it's None, then any number of
@@ -29,7 +31,7 @@ sealed trait Distribution {
 }
 
 /**
- * Represents a distribution where no promises are made about co-location of data.
+  *  分区内的数据元组没有保证（no promises），即未指定分布，无需确定的位置关系。
  */
 case object UnspecifiedDistribution extends Distribution {
   override def requiredNumPartitions: Option[Int] = None
@@ -40,8 +42,9 @@ case object UnspecifiedDistribution extends Distribution {
 }
 
 /**
- * Represents a distribution that only has a single partition and all tuples of the dataset
- * are co-located.
+  *  只有一个分区，所有的数据元组存放在一起（Co-located）的分布情况。
+  *   例如Global Limit算子在选取前K条数据的时候，这个算子的requiredChildDistribution得到的列表就是AllTuples，
+  *   表示执行该算子需要全部的数据参与。
  */
 case object AllTuples extends Distribution {
   override def requiredNumPartitions: Option[Int] = Some(1)
@@ -52,12 +55,18 @@ case object AllTuples extends Distribution {
   }
 }
 
+
 /**
- * Represents data where tuples that share the same values for the `clustering`
- * [[Expression Expressions]] will be co-located. Based on the context, this
- * can mean such tuples are either co-located in the same partition or they will be contiguous
- * within a single partition.
- */
+  *   表示在聚类表达式计算后（clustering，这里起到了哈希函数的效果）有相同值的tuple需要存放在一起（Co-located）
+  *   如果是多个分区的情况，则相同的数据会被存放在同一个分区中
+  *   如果只能是单个分区，则相同的数据会在分区内连续存放
+  *
+  *    SortMerge类型的Join操作中，分布的需要就是[ClusteredDistribution(leftKeys),ClusteredDistribution(rightKeys)]
+  *    左表数据需要根据leftKeys表达式计算分区，右表同理
+  *
+  * @param clustering   Seq[Expression]
+  * @param requiredNumPartitions
+  */
 case class ClusteredDistribution(
                                   clustering: Seq[Expression],
                                   requiredNumPartitions: Option[Int] = None) extends Distribution {
@@ -100,13 +109,16 @@ case class HashClusteredDistribution(
   }
 }
 
+
 /**
- * Represents data where tuples have been ordered according to the `ordering`
- * [[Expression Expressions]].  This is a strictly stronger guarantee than
- * [[ClusteredDistribution]] as an ordering will ensure that tuples that share the
- * same value for the ordering expressions are contiguous and will never be split across
- * partitions.
- */
+  *  表示根据ordering排序表达式计算的结果对tuple进行排序。
+  *
+  *  这个的保证（guarantee）严格的强于[[ClusteredDistribution]]
+  *  这个分布可以保证具有相同排序表达式计算结果value的数据是连续存放的，而且绝不会被划分到两个不同的分区（一定是在相同的分区中）
+  *
+  *
+  * @param ordering
+  */
 case class OrderedDistribution(ordering: Seq[SortOrder]) extends Distribution {
   require(
     ordering != Nil,
@@ -121,10 +133,16 @@ case class OrderedDistribution(ordering: Seq[SortOrder]) extends Distribution {
   }
 }
 
+
 /**
- * Represents data where tuples are broadcasted to every node. It is quite common that the
- * entire set of tuples is transformed into different data structure.
- */
+  *        广播分布， 代表数据会被广播到所有节点上，这个模式下所有的tuples被转换为另一种数据结构也是很常见的
+  *
+  *        如果是Broadcast类型的Join操作，假设左表做广播，那么requiredChildDistribution得到的分布要求就是
+  *        [BroadcastDrstribution(mode),UnspecifiedDistribution],表示左表为广播分布
+  *
+  * @param mode 广播模式：  1. IdentityBroadcastMode 原始数据模式
+  *                         2. HashedRelationBroadcastMode 原始数据转换为HashedRelation对象
+  */
 case class BroadcastDistribution(mode: BroadcastMode) extends Distribution {
   override def requiredNumPartitions: Option[Int] = Some(1)
 
@@ -135,13 +153,18 @@ case class BroadcastDistribution(mode: BroadcastMode) extends Distribution {
   }
 }
 
+
 /**
- * Describes how an operator's output is split across partitions. It has 2 major properties:
- *   1. number of partitions.
- *   2. if it can satisfy a given distribution.
- */
+  *  描述一个物理算子的数据输出是如何分区的，具体包括子partitionging之间，目标partitioning和Distribution之间的关系
+  *
+  *   主要包括了两个属性
+  *   1. 分区的数量
+  *   2. 判断它是否可以满足某个给定的分布
+  *
+  */
 trait Partitioning {
   /** Returns the number of partitions that the data is split across */
+  // 指定该SparkPlan输出RDD的分区数目
   val numPartitions: Int
 
   /**

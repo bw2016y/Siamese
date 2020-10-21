@@ -103,6 +103,9 @@ case class FilterExec(condition: Expression, child: SparkPlan)
     }
   }
 
+  /**
+    *  记录输出的数据数目
+    */
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
 

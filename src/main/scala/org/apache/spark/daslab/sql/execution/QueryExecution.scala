@@ -97,7 +97,11 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     preparations.foldLeft(plan) { case (sp, rule) => rule.apply(sp) }
   }
 
-  /** A sequence of rules that will be applied in order to the physical plan before execution. */
+
+  /**
+    *  在执行前需要在physical plan上应用的一系列规则
+    * @return
+    */
   protected def preparations: Seq[Rule[SparkPlan]] = Seq(
     PlanSubqueries(sparkSession),
     EnsureRequirements(sparkSession.sessionState.conf),

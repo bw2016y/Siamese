@@ -216,6 +216,10 @@ object UnresolvedFunction {
 /**
  * Represents all of the input attributes to a given relational operator, for example in
  * "SELECT * FROM ...". A [[Star]] gets automatically expanded during analysis.
+  *
+  *  这个*就是Sql中某个关系（relational operator）中所有输入属性的标识符
+  *
+  *  例如 "SELECT * FROM ..." 一个[[Star]]就可以在解析阶段自动扩展
  */
 abstract class Star extends LeafExpression with NamedExpression {
 

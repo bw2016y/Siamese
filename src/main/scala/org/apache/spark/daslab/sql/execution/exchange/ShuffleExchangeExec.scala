@@ -32,7 +32,9 @@ case class ShuffleExchangeExec(
 
   // NOTE: coordinator can be null after serialization/deserialization,
   //       e.g. it can be null on the Executor side
-
+  /**
+    *  记录进行重新分区操作过程中的数据总量
+    */
   override lazy val metrics = Map(
     "dataSize" -> SQLMetrics.createSizeMetric(sparkContext, "data size"))
 
