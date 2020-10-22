@@ -694,8 +694,10 @@ case class WholeStageCodegenExec(child: SparkPlan)(val codegenStageId: Int)
 
 
 /**
- * Find the chained plans that support codegen, collapse them together as WholeStageCodegen.
- */
+  *  Find the chained plans that support codegen, collapse them together as WholeStageCodegen.
+  *  代码生成相关
+  * @param conf
+  */
 case class CollapseCodegenStages(conf: SQLConf) extends Rule[SparkPlan] {
 
   private def supportCodegen(e: Expression): Boolean = e match {

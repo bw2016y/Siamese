@@ -77,6 +77,8 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   /**
     * executedPlan 类型同样是SparkPlan，是可以直接执行的物理计划，不应当用于初始化其他任何SparkPlan
     * 这个可以正常打印
+    *
+    *  从Spark系统本身的角度来考虑代码的正确性和高效性，对树型结构的物理计划进行全局的整合处理或者优化
     */
   lazy val executedPlan: SparkPlan = prepareForExecution(sparkPlan)
 

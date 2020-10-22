@@ -70,6 +70,8 @@ case class ReusedExchangeExec(override val output: Seq[Attribute], child: Exchan
 /**
  * Find out duplicated exchanges in the spark plan, then use the same exchange for all the
  * references.
+  *
+  *  Exchange 节点重用
  */
 case class ReuseExchange(conf: SQLConf) extends Rule[SparkPlan] {
 

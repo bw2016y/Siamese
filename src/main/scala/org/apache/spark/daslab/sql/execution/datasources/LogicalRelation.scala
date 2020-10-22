@@ -13,7 +13,9 @@ import org.apache.spark.daslab.sql.sources.BaseRelation
 import org.apache.spark.util.Utils
 
 /**
- * Used to link a [[BaseRelation]] in to a logical query plan.
+  *
+  *  用来链接一个[[BaseRelation]]到逻辑查询计划中
+  *
  */
 case class LogicalRelation(
                             relation: BaseRelation,

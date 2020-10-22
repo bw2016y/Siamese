@@ -13,11 +13,13 @@ import org.apache.spark.internal.Logging
 
 
 /**
- * A pattern that matches any number of project or filter operations on top of another relational
- * operator.  All filter operators are collected and their conditions are broken up and returned
- * together with the top project operator.
- * [[org.apache.spark.daslab.sql.engine.expressions.Alias Aliases]] are in-lined/substituted if
- * necessary.
+  *  匹配逻辑算子树中的Project和Filter等节点，返回投影列，过滤条件集合和子节点
+  *
+  *  这个模式可以匹配到relational算子上的任意数量的Project或者Filter算子.
+  *  所有filter算子都被收集起来，并且他们的条件被打碎然后组合后放在top project operator上
+  *
+  * [[org.apache.spark.daslab.sql.engine.expressions.Alias Aliases]] are in-lined/substituted if necessary.
+  *
  */
 object PhysicalOperation extends PredicateHelper {
   type ReturnType = (Seq[NamedExpression], Seq[Expression], LogicalPlan)
@@ -77,6 +79,7 @@ object PhysicalOperation extends PredicateHelper {
 }
 
 /**
+  *  针对具有相等条件的Join操作的算子集合，提取其中的Join条件，左子节点和右子节点等信息
  * A pattern that finds joins with equality conditions that can be evaluated using equi-join.
  *
  * Null-safe equality will be transformed into equality as joining key (replace null with default
@@ -127,6 +130,7 @@ object ExtractEquiJoinKeys extends Logging with PredicateHelper {
 }
 
 /**
+  *  收集Inner类型Join操作中的过滤条件，目前仅支持对左子树进行处理
  * A pattern that collects the filter and inner joins.
  *
  *          Filter
@@ -173,6 +177,7 @@ object ExtractFiltersAndInnerJoins extends PredicateHelper {
 }
 
 /**
+  *  针对聚合操作，提取出聚合算子中的各个部分，并对一些表达式进行初步的转换
  * An extractor used when planning the physical execution of an aggregation. Compared with a logical
  * aggregation, the following transformations are performed:
  *  - Unnamed grouping expressions are named so that they can be referred to across phases of

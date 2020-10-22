@@ -16,6 +16,9 @@ import org.apache.spark.daslab.sql.internal.SQLConf
  * [[org.apache.spark.daslab.sql.engine.plans.physical.Distribution Distribution]] requirements for
  * each operator by inserting [[ShuffleExchangeExec]] Operators where required.  Also ensure that
  * the input partition ordering requirements are met.
+  *
+  *
+  *  确保执行计划分区与排序正确性
  */
 case class EnsureRequirements(conf: SQLConf) extends Rule[SparkPlan] {
   private def defaultNumPreShufflePartitions: Int = conf.numShufflePartitions

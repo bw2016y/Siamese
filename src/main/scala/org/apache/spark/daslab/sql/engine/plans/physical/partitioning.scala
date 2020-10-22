@@ -167,15 +167,17 @@ trait Partitioning {
   // 指定该SparkPlan输出RDD的分区数目
   val numPartitions: Int
 
+
   /**
-   * Returns true iff the guarantees made by this [[Partitioning]] are sufficient
-   * to satisfy the partitioning scheme mandated by the `required` [[Distribution]],
-   * i.e. the current dataset does not need to be re-partitioned for the `required`
-   * Distribution (it is possible that tuples within a partition need to be reorganized).
-   *
-   * A [[Partitioning]] can never satisfy a [[Distribution]] if its `numPartitions` does't match
-   * [[Distribution.requiredNumPartitions]].
-   */
+    *  当前的partitioning操作提供的(guarentee)能否得到所需的数据分布(required[[Distribution]])
+    *  当不满足的时候就是false，一般需要进行repartition操作，对数据进行重新组织;否则返回true
+    *
+    *  满足的情况： 当前的数据集不需要re-partitioned为要求的分布（但是单个partition中的数据需要重新组织（reorganized））
+    *
+    *  如果numPartitions不能匹配[[Distribution.requiredNumPartitions]]则该[[Partitioning ]]就定义为不能满足该[[Distribution]]
+    * @param required
+    * @return
+    */
   final def satisfies(required: Distribution): Boolean = {
     required.requiredNumPartitions.forall(_ == numPartitions) && satisfies0(required)
   }
@@ -194,14 +196,16 @@ trait Partitioning {
     case _ => false
   }
 }
-
+// 不进行分区
 case class UnknownPartitioning(numPartitions: Int) extends Partitioning
 
+
 /**
- * Represents a partitioning where rows are distributed evenly across output partitions
- * by starting from a random target partition number and distributing rows in a round-robin
- * fashion. This partitioning is used when implementing the DataFrame.repartition() operator.
- */
+  *  表示一种数据平均分配到各个分区的分区策略
+  *  一般来说是从随机的某个target partition开始，然后以轮询的方式在1-numPartitions内分配
+  *  DataFrame.repartition()算子就使用了这种分区实现
+  * @param numPartitions
+  */
 case class RoundRobinPartitioning(numPartitions: Int) extends Partitioning
 
 case object SinglePartition extends Partitioning {
@@ -214,6 +218,7 @@ case object SinglePartition extends Partitioning {
 }
 
 /**
+  *  基于哈希的分区方式
  * Represents a partitioning where rows are split up across partitions based on the hash
  * of `expressions`.  All rows where `expressions` evaluate to the same values are guaranteed to be
  * in the same partition.
@@ -247,6 +252,7 @@ case class HashPartitioning(expressions: Seq[Expression], numPartitions: Int)
 }
 
 /**
+  *  基于范围的分区方式
  * Represents a partitioning where rows are split across partitions based on some total ordering of
  * the expressions specified in `ordering`.  When data is partitioned in this manner the following
  * two conditions are guaranteed to hold:
@@ -280,6 +286,7 @@ case class RangePartitioning(ordering: Seq[SortOrder], numPartitions: Int)
 }
 
 /**
+  *  分区方式的集合，描述物理算子的输出
  * A collection of [[Partitioning]]s that can be used to describe the partitioning
  * scheme of the output of a physical operator. It is usually used for an operator
  * that has multiple children. In this case, a [[Partitioning]] in this collection

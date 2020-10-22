@@ -123,6 +123,14 @@ object FileSourceStrategy extends Strategy with Logging {
   }
 
   def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
+    /**
+      *  使用PhysicalOperation模式匹配规则 ， 将LogicalRelation节点以上
+      *  存在的多个过滤算子与投影算子，经过规则会整合为一个， [[FileSourceStrategy]]
+      *  策略会根据数据文件信息构建FileSourceScanExec这样的物理执行计划，并在此物理执行计划后添加
+      *  过程（FilterExec） 与列裁剪（ProjectExec）物理计划。
+      *
+      *
+      */
     case PhysicalOperation(projects, filters,
     l @ LogicalRelation(fsRelation: HadoopFsRelation, _, table, _)) =>
       // Filters on this relation fall into four categories based on where we can use them to avoid
@@ -184,6 +192,8 @@ object FileSourceStrategy extends Strategy with Logging {
 
       val outputAttributes = readDataColumns ++ partitionColumns
 
+
+      // 开始构造扫描策略
       val scan =
         FileSourceScanExec(
           fsRelation,

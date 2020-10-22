@@ -24,15 +24,15 @@ class SparkPlanner(
     experimentalMethods.extraStrategies ++
       extraPlanningStrategies ++ (
         PythonEvals ::
-        DataSourceV2Strategy ::
-        FileSourceStrategy ::
+        DataSourceV2Strategy ::         // 各种数据源相关的计划
+        FileSourceStrategy ::           // 数据文件扫描计划
         DataSourceStrategy(conf) ::
         SpecialLimits ::
-        Aggregation ::
+        Aggregation ::           //聚合算子相关
         Window ::
-        JoinSelection ::
-        InMemoryScans ::
-        BasicOperators :: Nil)
+        JoinSelection ::        // Join操作相关
+        InMemoryScans ::        // 内存数据表扫描计划
+        BasicOperators :: Nil)      // 基本算子生成的执行计划
 
   /**
     *  可以通过重写这个方法为planner添加额外的strategies,这些策略在[[ExperimentalMethods]]方法中定义的策略之后执行，

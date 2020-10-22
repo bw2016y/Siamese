@@ -120,6 +120,8 @@ case class InSubquery(
 
 /**
  * [[SparkPlan]]中存在一些子查询表达式，该表达式中的子查询逻辑计划还未被转换成物理计划.
+  *
+  *  特殊子查询物理计划处理
  */
 case class PlanSubqueries(sparkSession: SparkSession) extends Rule[SparkPlan] {
   def apply(plan: SparkPlan): SparkPlan = {
@@ -137,6 +139,8 @@ case class PlanSubqueries(sparkSession: SparkSession) extends Rule[SparkPlan] {
 /**
  * Find out duplicated subqueries in the spark plan, then use the same subquery result for all the
  * references.
+  *
+  *  子查询重用
  */
 case class ReuseSubquery(conf: SQLConf) extends Rule[SparkPlan] {
 

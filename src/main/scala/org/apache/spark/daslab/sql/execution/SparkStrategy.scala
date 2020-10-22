@@ -455,6 +455,9 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
   protected lazy val singleRowRdd = sparkContext.parallelize(Seq(InternalRow()), 1)
   //todo PhysicalOperation
+  /**
+    *  针对InMemoryRelation这个LogicalPlan节点
+    */
   object InMemoryScans extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case PhysicalOperation(projectList, filters, mem: InMemoryRelation) =>

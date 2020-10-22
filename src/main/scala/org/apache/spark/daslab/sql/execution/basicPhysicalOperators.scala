@@ -216,9 +216,9 @@ case class FilterExec(condition: Expression, child: SparkPlan)
       }
     }
   }
-
+  //过滤执行算子，排序的方式仍然沿用其子节点的方式
   override def outputOrdering: Seq[SortOrder] = child.outputOrdering
-
+  //分区方式也继续沿用，即不对RDD的分区和排序操作进行任何的重新操作
   override def outputPartitioning: Partitioning = child.outputPartitioning
 }
 

@@ -186,6 +186,9 @@ case class FileSourceScanExec(
     ret
     }.toArray
 
+  /**
+    *  分区和排序信息
+    */
   override lazy val (outputPartitioning, outputOrdering): (Partitioning, Seq[SortOrder]) = {
     val bucketSpec = if (relation.sparkSession.sessionState.conf.bucketingEnabled) {
       relation.bucketSpec
