@@ -11,12 +11,12 @@ import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate._
 
 /**
- * The base class of [[SortBasedAggregationIterator]] and [[TungstenAggregationIterator]].
- * It mainly contains two parts:
- * 1. It initializes aggregate functions.
- * 2. It creates two functions, `processRow` and `generateOutput` based on [[AggregateMode]] of
- *    its aggregate functions. `processRow` is the function to handle an input. `generateOutput`
- *    is used to generate result.
+ * [[SortBasedAggregationIterator]] 和 [[TungstenAggregationIterator]]的基类
+ * 主要包含两个部分：
+  * 1. 初始化聚合函数（aggregate functions）
+ *  2. 生成两个函数: 基于聚合函数的模式生成processRow函数和generateOutput函数
+  *   processRow函数用于处理输入
+  *   generateOutput用于生成结果
  */
 abstract class AggregationIterator(
                                     partIndex: Int,

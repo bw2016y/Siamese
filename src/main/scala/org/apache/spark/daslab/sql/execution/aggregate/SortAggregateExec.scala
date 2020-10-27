@@ -13,7 +13,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.Utils
 
 /**
- * Sort-based aggregate operator.
+  * 基于排序的聚合算子实现
  */
 case class SortAggregateExec(
                               requiredChildDistributionExpressions: Option[Seq[Expression]],
@@ -22,7 +22,7 @@ case class SortAggregateExec(
                               aggregateAttributes: Seq[Attribute],
                               initialInputBufferOffset: Int,
                               resultExpressions: Seq[NamedExpression],
-                              child: SparkPlan)
+                              child: SparkPlan )
   extends UnaryExecNode {
 
   private[this] val aggregateBufferAttributes = {

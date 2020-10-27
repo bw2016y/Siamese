@@ -1316,6 +1316,7 @@ class AstBuilder(conf: SQLConf) extends NewSqlBaseBaseVisitor[AnyRef] with Loggi
 
   /**
    * Create a (windowed) Function expression.
+    *  todo 后续解析Aggregation需要修改或者Range Query需要进一步的修改
    */
   override def visitFunctionCall(ctx: FunctionCallContext): Expression = withOrigin(ctx) {
     def replaceFunctions(

@@ -23,7 +23,7 @@ import org.apache.spark.util.Utils
 
 //todo const 609
 /**
- * Hash-based aggregate operator that can also fallback to sorting when data exceeds memory size.
+  *  基于Hash的聚合算子物理实现（当数据超过内存大小限制时就fallback到sort模式）
  */
 case class HashAggregateExec(
                               requiredChildDistributionExpressions: Option[Seq[Expression]],

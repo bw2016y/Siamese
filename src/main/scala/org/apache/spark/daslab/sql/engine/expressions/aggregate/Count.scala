@@ -14,14 +14,17 @@ abstract class CountLike extends DeclarativeAggregate {
   // Return data type.
   override def dataType: DataType = LongType
 
+
   protected lazy val count = AttributeReference("count", LongType, nullable = false)()
 
+  // 这些属性有可能在updateExpressions等各种表达式中用到
   override lazy val aggBufferAttributes = count :: Nil
 
+  // 设定函数的初始值，这里count函数的初始值就为0
   override lazy val initialValues = Seq(
     /* count = */ Literal(0L)
   )
-
+  // merge逻辑
   override lazy val mergeExpressions = Seq(
     /* count = */ count.left + count.right
   )

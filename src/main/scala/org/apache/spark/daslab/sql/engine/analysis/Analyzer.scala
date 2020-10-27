@@ -157,7 +157,7 @@ class Analyzer(
         ResolveMissingReferences ::
         ExtractGenerator ::
         ResolveGenerate ::
-        ResolveFunctions ::
+        ResolveFunctions ::     // 解析聚合函数，Range语法
         ResolveAliases ::
         ResolveSubquery ::
         ResolveSubqueryColumnAliases ::
@@ -1375,6 +1375,7 @@ class Analyzer(
             }
           case u @ UnresolvedFunction(funcId, children, isDistinct) =>
             withPosition(u) {
+              //在catalog中查找对应的函数
               catalog.lookupFunction(funcId, children) match {
                 // AggregateWindowFunctions are AggregateFunctions that can only be evaluated within
                 // the context of a Window clause. They do not need to be wrapped in an

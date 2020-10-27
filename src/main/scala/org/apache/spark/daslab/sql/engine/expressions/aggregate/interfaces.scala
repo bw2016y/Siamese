@@ -7,38 +7,42 @@ import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.codegen.CodegenFallback
 import org.apache.spark.daslab.sql.types._
 
-/** The mode of an [[AggregateFunction]]. */
+/**
+  *  一个[[AggregateFunction]]的模式
+  */
 sealed trait AggregateMode
 
+
 /**
- * An [[AggregateFunction]] with [[Partial]] mode is used for partial aggregation.
- * This function updates the given aggregation buffer with the original input of this
- * function. When it has processed all input rows, the aggregation buffer is returned.
- */
+  *  使用[[Partial]]模式的[[AggregateFunction]]就是partial aggregation
+  *  这个模式使用偏函数（含有这个聚合的语义）的原始输入来更新指定的 aggregation buffer（可以理解为局部数据的聚合）
+  *  当处理完所有的input rows就直接返回aggregation buffer
+  */
 case object Partial extends AggregateMode
 
 /**
- * An [[AggregateFunction]] with [[PartialMerge]] mode is used to merge aggregation buffers
- * containing intermediate results for this function.
- * This function updates the given aggregation buffer by merging multiple aggregation buffers.
- * When it has processed all input rows, the aggregation buffer is returned.
- */
+  *  使用[[PartialMerge]]的[[AggregateFunction]]用于合并包含中间结果的aggregation buffers
+  *  这个函数通过合并多个aggregation buffers来更新指定的aggregation buffer
+  *  当处理完所有的input rows，就返回这个aggregation buffer
+  *
+  *  一般来说合并的结果仍然不是最终的结果，需要进一步的处理（主要应用在distinct语句中）
+  */
 case object PartialMerge extends AggregateMode
 
-/**
- * An [[AggregateFunction]] with [[Final]] mode is used to merge aggregation buffers
- * containing intermediate results for this function and then generate final result.
- * This function updates the given aggregation buffer by merging multiple aggregation buffers.
- * When it has processed all input rows, the final result of this function is returned.
- */
-case object Final extends AggregateMode
 
 /**
- * An [[AggregateFunction]] with [[Complete]] mode is used to evaluate this function directly
- * from original input rows without any partial aggregation.
- * This function updates the given aggregation buffer with the original input of this
- * function. When it has processed all input rows, the final result of this function is returned.
- */
+  *   使用[[Final]]模式的[[AggregateFunction]]主要用于merge aggregation buffers中的中间结果
+  *   并生成最终的结果。
+  *   这个函数通过合并多个aggregate buffers来更新aggregate buffer
+  *   当处理完所有的input rows，就返回最终的结果
+  */
+case object Final extends AggregateMode
+
+
+/**
+  *  使用[[Complete]]模式的[[AggregateFunction]]意味着不进行局部聚合的情况下直接根据原始的input rows来计算结果
+  *  这个函数使用原始的输入来更新给定的aggregation buffer，当处理完所有的input rows，就返回最终的结果
+  */
 case object Complete extends AggregateMode
 
 /**
@@ -75,7 +79,7 @@ case class AggregateExpression(
                                 resultId: ExprId)
   extends Expression
     with Unevaluable {
-
+  // 表示聚合的结果
   lazy val resultAttribute: Attribute = if (aggregateFunction.resolved) {
     AttributeReference(
       aggregateFunction.toString,
@@ -153,9 +157,11 @@ abstract class AggregateFunction extends Expression {
   final override def foldable: Boolean = false
 
   /** The schema of the aggregation buffer. */
+  // 聚合缓冲区的Schema信息
   def aggBufferSchema: StructType
 
   /** Attributes of fields in aggBufferSchema. */
+  // 聚合缓冲区的数据列信息
   def aggBufferAttributes: Seq[AttributeReference]
 
   /**
@@ -163,6 +169,10 @@ abstract class AggregateFunction extends Expression {
    * merged with mutable aggregation buffers in the merge() function or merge expressions).
    * These attributes are created automatically by cloning the [[aggBufferAttributes]].
    */
+  /**
+    *  聚合函数处理新的数据行时，数据行的列构成信息
+    * @return
+    */
   def inputAggBufferAttributes: Seq[AttributeReference]
 
   /**
@@ -219,6 +229,9 @@ abstract class AggregateFunction extends Expression {
  * Correct ImperativeAggregate evaluation depends on the correctness of `mutableAggBufferOffset` and
  * `inputAggBufferOffset`, but not on the correctness of the attribute ids in `aggBufferAttributes`
  * and `inputAggBufferAttributes`.
+  *
+  *  需要显式实现initialize，update和merge方法来操作聚合缓冲区中的数据
+  *  这类聚合函数所处理的聚合缓冲区的本质是基于行（InternalRow类型的）
  */
 abstract class ImperativeAggregate extends AggregateFunction with CodegenFallback {
 
@@ -312,18 +325,21 @@ abstract class ImperativeAggregate extends AggregateFunction with CodegenFallbac
    *
    * Note that, the input row may be produced by unsafe projection and it may not be safe to cache
    * some fields of the input row, as the values can be changed unexpectedly.
+    *
+    *
+    *  这里引入InputAggBuffer(输入聚合缓冲区)的概念，这个缓冲区是不可变的，处理聚合的过程中进行合并的时候的实现
+    *  就是将输入聚合缓冲区的值更新到可变的聚合缓冲区中。
    */
   def merge(mutableAggBuffer: InternalRow, inputAggBuffer: InternalRow): Unit
 }
 
 /**
- * API for aggregation functions that are expressed in terms of Catalyst expressions.
+ *  这类聚合函数是直接由engine中Expression类型构建的聚合函数
  *
- * When implementing a new expression-based aggregate function, start by implementing
- * `bufferAttributes`, defining attributes for the fields of the mutable aggregation buffer. You
- * can then use these attributes when defining `updateExpressions`, `mergeExpressions`, and
- * `evaluateExpressions`.
- *
+ *  当实现一个新的基于表达式构建的聚合函数时，需要首先实现 `bufferAttributes` (定义mutable aggregation buffer
+  * 涉及的attributes for the fields，需要聚合的属性，这里应该是 `aggBufferAttributes` ). 然后就可以使用这些attributes来定义`updateExpressions`, `mergeExpressions`, and
+  * `evaluateExpressions`.
+  *
  * Please note that children of an aggregate function can be unresolved (it will happen when
  * we create this function in DataFrame API). So, if there is any fields in
  * the implemented class that need to access fields of its children, please make
@@ -384,7 +400,7 @@ abstract class DeclarativeAggregate
 /**
  * Aggregation function which allows **arbitrary** user-defined java object to be used as internal
  * aggregation buffer.
- *
+ *  这种聚合允许使用用户自定义的Java对象T作为内部的聚合缓冲区，因此这种类型的聚合函数是最灵活的。
  * {{{
  *  aggregation buffer for normal aggregation function `avg`            aggregate buffer for `sum`
  *            |                                                                  |

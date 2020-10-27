@@ -589,13 +589,19 @@ case class Range(
     output.map(a => SortOrder(a, order))
   }
 }
-
+//todo
 case class Aggregate(
                       groupingExpressions: Seq[Expression],
                       aggregateExpressions: Seq[NamedExpression],
                       child: LogicalPlan)
   extends UnaryNode {
 
+  /**
+    *  判断一个Aggregate是否被解析过，需要满足以下三个条件
+    *  - 该算子中的所有表达式都已经被解析过了
+    *  - 其子节点已经被解析过了
+    *  - 该节点中不包含窗口（Window）函数表达式
+    */
   override lazy val resolved: Boolean = {
     val hasWindowExpressions = aggregateExpressions.exists ( _.collect {
       case window: WindowExpression => window

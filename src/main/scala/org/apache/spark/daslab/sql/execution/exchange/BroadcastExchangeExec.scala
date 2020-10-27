@@ -24,8 +24,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.util.{SparkFatalException, ThreadUtils}
 
 /**
- * A [[BroadcastExchangeExec]] collects, transforms and finally broadcasts the result of
- * a transformed SparkPlan.
+  *    [[BroadcastExchangeExec]]可以收集数据，进行transforms，并且最终将结果进行广播
  */
 case class BroadcastExchangeExec(
                                   mode: BroadcastMode,

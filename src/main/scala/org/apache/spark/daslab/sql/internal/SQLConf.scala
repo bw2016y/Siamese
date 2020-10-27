@@ -1668,6 +1668,7 @@ class SQLConf extends Serializable with Logging {
 
   def cacheVectorizedReaderEnabled: Boolean = getConf(CACHE_VECTORIZED_READER_ENABLED)
 
+  //Shuffle操作过程中默认的分区数目， 默认是200
   def numShufflePartitions: Int = getConf(SHUFFLE_PARTITIONS)
 
   def targetPostShuffleInputSize: Long =

@@ -23,7 +23,7 @@ import org.apache.spark.util.MutablePair
 import org.apache.spark.util.collection.unsafe.sort.{PrefixComparators, RecordComparator}
 
 /**
- * Performs a shuffle that will result in the desired `newPartitioning`.
+  * 为了满足所需的''newPartitioning''需要进行一次shuffle
  */
 case class ShuffleExchangeExec(
                                 var newPartitioning: Partitioning,
@@ -108,6 +108,7 @@ case class ShuffleExchangeExec(
     // Returns the same ShuffleRowRDD if this plan is used by multiple plans.
     if (cachedShuffleRDD == null) {
       cachedShuffleRDD = coordinator match {
+          //有coordinator的情况
         case Some(exchangeCoordinator) =>
           val shuffleRDD = exchangeCoordinator.postShuffleRDD(this)
           assert(shuffleRDD.partitions.length == newPartitioning.numPartitions)
@@ -192,6 +193,7 @@ object ShuffleExchangeExec {
                                 outputAttributes: Seq[Attribute],
                                 newPartitioning: Partitioning,
                                 serializer: Serializer): ShuffleDependency[Int, InternalRow, InternalRow] = {
+    // 根据传入的newPartitioning信息构造对应的partitioner
     val part: Partitioner = newPartitioning match {
       case RoundRobinPartitioning(numPartitions) => new HashPartitioner(numPartitions)
       case HashPartitioning(_, n) =>
@@ -240,7 +242,8 @@ object ShuffleExchangeExec {
 
     val isRoundRobin = newPartitioning.isInstanceOf[RoundRobinPartitioning] &&
       newPartitioning.numPartitions > 1
-
+    // 根据partitioner生成rddWithPartitionIds, 其中[Int,InternalRow]代表某行数据
+    // 及其所在分区的partitionId，取值范围是[0,numPartitions-1]
     val rddWithPartitionIds: RDD[Product2[Int, InternalRow]] = {
       // [SPARK-23207] Have to make sure the generated RoundRobinPartitioning is deterministic,
       // otherwise a retry task may output different rows and thus lead to data loss.
