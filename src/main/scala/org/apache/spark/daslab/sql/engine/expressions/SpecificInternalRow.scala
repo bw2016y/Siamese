@@ -169,9 +169,8 @@ final class MutableAny extends MutableValue {
 }
 
 /**
-  * A row type that holds an array specialized container objects, of type [[MutableValue]], chosen
-  * based on the dataTypes of each column.  The intent is to decrease garbage when modifying the
-  * values of primitive columns.
+ *  一种底层存储是专门的容器对象（[[MutableValue]]元素的数组）的行类型，这些[[MutableValue]]的类型取决于各个列的具体数据类型
+ *  这样的目的是减少在修改基本列时的垃圾回收
   */
 final class SpecificInternalRow(val values: Array[MutableValue]) extends BaseGenericInternalRow {
 

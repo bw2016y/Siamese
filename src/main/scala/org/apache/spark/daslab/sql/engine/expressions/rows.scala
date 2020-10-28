@@ -171,9 +171,8 @@ class GenericRowWithSchema(values: Array[Any], override val schema: StructType)
 }
 
 /**
-  * An internal row implementation that uses an array of objects as the underlying storage.
-  * Note that, while the array is not copied, and thus could technically be mutated after creation,
-  * this is not allowed.
+ *   一个internal row的实现，使用一个object数组作为底层的存储
+ *   需要注意的是，这个数组中的成员不是深拷贝构造的，因此有可能在创建后被修改，这是不允许的
   */
 class GenericInternalRow(val values: Array[Any]) extends BaseGenericInternalRow {
   /** No-arg constructor for serialization. */
