@@ -1,10 +1,28 @@
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.execution.SparkPlan
+import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._
+import org.apache.spark.daslab.sql.types.LongType
 import org.apache.spark.rdd.RDD
+
+import scala.collection.mutable
 object  ScalaTest{
   def main(args: Array[String]): Unit = {
+//    val listToInt: mutable.HashMap[List[Any], Int] = scala.collection.mutable.HashMap.empty[List[Any], Int]
+//    val l1: Long = 1234567891011121314L
+//    val l2: Long = 1234567891011121314L
+//    val s1: String = "hello"
+//    val s2: String = "hello"
+//    val list1: List[Any] = l1 :: s1 :: Nil
+//    val list2: List[Any] = l2 :: s2 :: Nil
+//    listToInt += (list1 -> 1)
+//    println(listToInt.get(list2))
+//    listToInt.put(list2,2)
+//    println(listToInt.get(list1))
+//    println(list1.equals(list2))
+//    println(list1 == list2)
+//    println(list1.eq(list2))
+
     //初始化上下文
     val spark: SparkSession = SparkSession.builder().master("local[*]")
       .appName("test")
@@ -101,15 +119,25 @@ object  ScalaTest{
     println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.physicalPlan)
     println(spark.sql(sql6).sample(false,0.5).agg(max("age")).queryExecution.executedPhysicalPlan)
     spark.sql(sql6).sample(false,0.2).agg(max("age")).show()
+    val executedPlan6: SparkPlan = spark.sql(sql6).queryExecution.executedPlan
+    val value6: RDD[InternalRow] = executedPlan6.execute()
+    value6.foreach(a =>{
+      println(a)
+    })
 
     val sql7 = "select max(age) from data ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
+    val execution: QueryExecution = spark.sql(sql7).queryExecution
     println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql7).queryExecution.physicalPlan)
     println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
     val executedPlan: SparkPlan = spark.sql(sql7).queryExecution.executedPlan
     val value: RDD[InternalRow] = executedPlan.execute()
+    value.foreach(a => {
+      println(a)
+      a.getString(0)
+    })
     spark.sql(sql7).show()
 
     val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
