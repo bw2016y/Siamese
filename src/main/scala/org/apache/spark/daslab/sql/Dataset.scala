@@ -2213,6 +2213,7 @@ class Dataset[T] private[sql](
   /**
    * Returns a new Dataset by adding columns or replacing the existing columns that has
    * the same names.
+   * todo 可以参考一下
    */
   private[spark] def withColumns(colNames: Seq[String], cols: Seq[Column]): DataFrame = {
     require(colNames.size == cols.size,

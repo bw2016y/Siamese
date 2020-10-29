@@ -929,7 +929,7 @@ class Column(val expr: Expression) extends Logging {
   def alias(alias: String): Column = name(alias)
 
   /**
-   * Gives the column an alias.
+   * 给Column起一个别名
    * {{{
    *   // Renames colA to colB in select output.
    *   df.select($"colA".as("colB"))

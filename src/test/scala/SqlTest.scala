@@ -146,6 +146,20 @@ object  ScalaTest{
     println(spark.sql(sql8).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql8).queryExecution.physicalPlan)
     println(spark.sql(sql8).queryExecution.executedPhysicalPlan)
+
+
+    val a:Seq[String]=Seq("1","2","3")
+    val b:Seq[String]=Seq("4","5","6")
+    val strings: Seq[String] = a++b
+    print(strings)
+
+
+    // aaa
+    def sss(s: String*)={
+      print("yes")
+    }
+    sss(strings : _*)
+
   }
 
 }
