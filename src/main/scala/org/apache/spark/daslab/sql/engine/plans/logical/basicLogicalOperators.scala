@@ -1,8 +1,9 @@
 package org.apache.spark.daslab.sql.engine.plans.logical
 
+import org.apache.spark.daslab.sql.Column
 import org.apache.spark.daslab.sql.engine.AliasIdentifier
 import org.apache.spark.daslab.sql.engine.analysis.{MultiInstanceRelation, NamedRelation}
-import org.apache.spark.daslab.sql.engine.catalog.{CatalogStorageFormat,CatalogTable}
+import org.apache.spark.daslab.sql.engine.catalog.{CatalogStorageFormat, CatalogTable}
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.AggregateExpression
 import org.apache.spark.daslab.sql.engine.plans._
@@ -47,7 +48,17 @@ case class Subquery(child: LogicalPlan) extends OrderPreservingUnaryNode {
 
 case class Project(projectList: Seq[NamedExpression], child: LogicalPlan)
   extends OrderPreservingUnaryNode {
-  override def output: Seq[Attribute] = projectList.map(_.toAttribute)
+  //todo exec
+  // 设置为Lazy来防止子查询报错
+  lazy val afterAppendList: Seq[NamedExpression]=projectList ++ child.output.filter(
+    _.name == "_weight"
+  )
+
+  //todo 这里需要让weight参数通过
+  override def output: Seq[Attribute] = projectList.map(_.toAttribute) ++ child.output.filter(
+      _.name=="_weight"
+  )
+
   override def maxRows: Option[Long] = child.maxRows
 
   override lazy val resolved: Boolean = {
@@ -63,6 +74,12 @@ case class Project(projectList: Seq[NamedExpression], child: LogicalPlan)
 
   override def validConstraints: Set[Expression] =
     child.constraints.union(getAliasedConstraints(projectList))
+
+
+  // todo test weight
+  // 当存在子查询的时候，有可能会报错
+  // val message=child.output
+
 }
 
 /**
@@ -618,6 +635,9 @@ case class Aggregate(
     val nonAgg = aggregateExpressions.filter(_.find(_.isInstanceOf[AggregateExpression]).isEmpty)
     child.constraints.union(getAliasedConstraints(nonAgg))
   }
+
+  //todo test weight
+  // val message = child.output
 }
 
 case class Window(
@@ -960,14 +980,26 @@ case class AqpInfo(errorRate: ErrorRate,
 case class AqpSample(errorRate: ErrorRate,
                      confidence: Confidence,
                      seed: Long,
-                     child: LogicalPlan) extends UnaryNode {
+                     child: LogicalPlan
+                     ) extends UnaryNode {
   val eps = RandomSampler.roundingEpsilon
   require(confidence.confidence >= 0.0 - eps && confidence.confidence <= 1.0 + eps,
     s"Sampling fraction ($confidence) must be on interval [0, 1] without replacement")
   require(errorRate.errorRate >= 0.0 -eps && errorRate.errorRate <= 1.0 + eps,
     s"Sampling fraction ($errorRate) must be on interval [0, 1] without replacement")
 
-  override def output: Seq[Attribute] = child.output
+
+  //todo 添加weight信息
+  val weight=Column(Literal.create(1.0))
+  val weightName="_weight"
+  val newColumn=weight.as(weightName)  // Column With Alias
+  val nameE: NamedExpression = newColumn.named
+  val newAtt: Attribute = nameE.toAttribute
+
+  override def output: Seq[Attribute] = child.output :+ newAtt
+
+  // todo remove this
+  // val printmess=output
 }
 
 /**

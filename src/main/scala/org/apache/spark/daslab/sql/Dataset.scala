@@ -2228,7 +2228,7 @@ class Dataset[T] private[sql](
     val output = queryExecution.analyzed.output
 
     val columnMap = colNames.zip(cols).toMap
-
+    // 替换的部分
     val replacedAndExistingColumns = output.map { field =>
       columnMap.find { case (colName, _) =>
         resolver(field.name, colName)

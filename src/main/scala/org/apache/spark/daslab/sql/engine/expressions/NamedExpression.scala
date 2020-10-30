@@ -56,7 +56,7 @@ object ExprId {
 }
 
 /**
-  * An [[Expression]] that is named.
+  *  被命名过的[[Expression]]对象
   */
 trait NamedExpression extends Expression {
 

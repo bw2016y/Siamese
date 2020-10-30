@@ -4,8 +4,9 @@ import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._
 import org.apache.spark.daslab.sql.types.LongType
 import org.apache.spark.rdd.RDD
-
 import scala.collection.mutable
+
+
 object  ScalaTest{
   def main(args: Array[String]): Unit = {
 //    val listToInt: mutable.HashMap[List[Any], Int] = scala.collection.mutable.HashMap.empty[List[Any], Int]
@@ -148,18 +149,14 @@ object  ScalaTest{
     println(spark.sql(sql8).queryExecution.executedPhysicalPlan)
 
 
-    val a:Seq[String]=Seq("1","2","3")
-    val b:Seq[String]=Seq("4","5","6")
-    val strings: Seq[String] = a++b
-    print(strings)
 
-
-    // aaa
-    def sss(s: String*)={
-      print("yes")
-    }
-    sss(strings : _*)
-
+    val lll=dataset1.withColumn("const",lit(1))
+    val qeee=lll.queryExecution
+    println(lll.queryExecution.originLogicalPlan)
+    println(lll.queryExecution.analyzedLogicalPlan)
+    println(lll.queryExecution.optimizedLogicalPlan)
+    println(lll.queryExecution.physicalPlan)
+    println(lll.queryExecution.executedPhysicalPlan)
   }
 
 }

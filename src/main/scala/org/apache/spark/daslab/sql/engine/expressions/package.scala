@@ -49,10 +49,15 @@ package object expressions  {
    */
   val EmptyRow: InternalRow = null
 
+  /*abstract class Append extends ()*/
   /**
    * Converts a [[InternalRow]] to another Row given a sequence of expression that define each
    * column of the new row. If the schema of the input row is specified, then the given expression
    * will be bound to that schema.
+    *
+    *  根据定义了新行每个列信息的表达式来将[[InternalRow]]转换到另一个Row
+    *  如果input row的schema信息被指定了，那么给定的表达式就会被绑定到对应的schema
+    *  TODO  catalog
    */
   abstract class Projection extends (InternalRow => InternalRow) {
 
@@ -60,12 +65,16 @@ package object expressions  {
      * Initializes internal states given the current partition index.
      * This is used by nondeterministic expressions to set initial states.
      * The default implementation does nothing.
+      *
+      *  用当前给定的partition index来初始化内部状态.
+      *  一般是nondeterministic表达式用来设置一些初始状态
+      *  默认的实现什么也没做
      */
     def initialize(partitionIndex: Int): Unit = {}
   }
 
   /**
-   * An identity projection. This returns the input row.
+    * 一个identity投影，可以直接返回input row
    */
   object IdentityProjection extends Projection {
     override def apply(row: InternalRow): InternalRow = row
@@ -81,6 +90,7 @@ package object expressions  {
    * projection, but means that it is not safe to hold on to a reference to a [[InternalRow]] after
    * `next()` has been called on the [[Iterator]] that produced it. Instead, the user must call
    * `InternalRow.copy()` and hold on to the returned [[InternalRow]] before calling `next()`.
+    *
    */
   abstract class MutableProjection extends Projection {
     def currentValue: InternalRow

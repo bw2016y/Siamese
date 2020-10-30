@@ -62,7 +62,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     //////////////////////////////////////////////////////////////////////////////
     // Static methods
     //////////////////////////////////////////////////////////////////////////////
-
+    // 用于计算BitSet需要几个字节
     public static int calculateBitSetWidthInBytes(int numFields) {
         return ((numFields + 63)/ 64) * 8;
     }
@@ -118,10 +118,14 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     /** The width of the null tracking bit set, in bytes */
     private int bitSetWidthInBytes;
 
+    // 获得列的偏移
     private long getFieldOffset(int ordinal) {
         return baseOffset + bitSetWidthInBytes + ordinal * 8L;
     }
 
+    /**
+     * @param index index是这一行的列的下标范围是[0,numFields)
+     */
     private void assertIndexIsValid(int index) {
         assert index >= 0 : "index (" + index + ") should >= 0";
         assert index < numFields : "index (" + index + ") should < " + numFields;
@@ -132,9 +136,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     //////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Construct a new UnsafeRow. The resulting row won't be usable until `pointTo()` has been called,
-     * since the value returned by this constructor is equivalent to a null pointer.
-     *
+     * 构造一个新的UnsafeRow, 得到的row仍是不可用的直到'pointTo()'被调用，因为该构造器返回的值等同为null pointer
      * @param numFields the number of fields in this row
      */
     public UnsafeRow(int numFields) {
@@ -168,8 +170,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
     }
 
     /**
-     * Update this UnsafeRow to point to the underlying byte array.
-     *
+     * 让这个UnsafeRow指向底层的byte array
      * @param buf byte array to point to
      * @param sizeInBytes the number of bytes valid in the byte array
      */
@@ -194,6 +195,9 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
         // To preserve row equality, zero out the value when setting the column to null.
         // Since this row does not currently support updates to variable-length values, we don't
         // have to worry about zeroing out that data.
+        /**
+         *  为了保证row等价性，当设置一列为null的时候需要将对应的值清零
+         */
         Platform.putLong(baseObject, getFieldOffset(i), 0);
     }
 
