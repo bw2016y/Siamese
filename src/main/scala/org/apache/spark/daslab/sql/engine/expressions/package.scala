@@ -101,17 +101,21 @@ package object expressions  {
 
 
   /**
-   * Helper functions for working with `Seq[Attribute]`.
+    *  用于处理Seq[Attribute]的Helper functions
    */
   implicit class AttributeSeq(val attrs: Seq[Attribute]) extends Serializable {
-    /** Creates a StructType with a schema matching this `Seq[Attribute]`. */
+    /**
+      *  根据Seq[Attribute]来构造一个StructType类型的schema
+      * @return
+      */
     def toStructType: StructType = {
       StructType(attrs.map(a => StructField(a.name, a.dataType, a.nullable, a.metadata)))
     }
 
-    // It's possible that `attrs` is a linked list, which can lead to bad O(n^2) loops when
-    // accessing attributes by their ordinals. To avoid this performance penalty, convert the input
-    // to an array.
+    /**
+      *    构造函数中的attrs可能是链表，这可能会在使用下标访问attributes时导致一个O（n^2）的时间复杂度
+      *    因此为了避免这个性能开销，将其转换为array
+      */
     @transient private lazy val attrsArray = attrs.toArray
 
     @transient private lazy val exprIdToOrdinal = {
@@ -128,12 +132,13 @@ package object expressions  {
     }
 
     /**
-     * Returns the attribute at the given index.
+      *  给定一个下标返回对应的attribute
      */
     def apply(ordinal: Int): Attribute = attrsArray(ordinal)
 
     /**
      * Returns the index of first attribute with a matching expression id, or -1 if no match exists.
+      *
      */
     def indexOf(exprId: ExprId): Int = {
       Option(exprIdToOrdinal.get(exprId)).getOrElse(-1)

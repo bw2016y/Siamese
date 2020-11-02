@@ -80,7 +80,7 @@ abstract class Expression extends TreeNode[Expression] {
   /**
     * Returns an [[ExprCode]], that contains the Java source code to generate the result of
     * evaluating the expression on an input row.
-    *
+    *   返回一个[[ExprCode]]对象，这个对象包含一段可以根据input row生成expression表达式eval结果的Java源码
     * @param ctx a [[CodegenContext]]
     * @return [[ExprCode]]
     */

@@ -2,7 +2,7 @@ package org.apache.spark.daslab.sql.execution
 
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.expressions.codegen.{CodegenContext, ExprCode}
-import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, NamedExpression, UnsafeRow}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, NamedExpression, UnsafeProjection, UnsafeRow}
 import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.plans.physical.Partitioning
 import org.apache.spark.daslab.sql.execution.metric.{SQLMetric, SQLMetrics}
@@ -38,15 +38,23 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     * Produces the result of the query as an `RDD[InternalRow]`
     *
     * Overridden by concrete implementations of SparkPlan.
+    *
+    * todo  rewrite this method to add physical weight column
     */
   override protected def doExecute(): RDD[InternalRow] = {
     val numPartitions: Int = child.outputPartitioning.numPartitions
-    SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
+    val res=SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
 
+    res
 
-    /*child.execute().mapPartitionsWithIndexInternal{
-      (index,iter) =>
-        val
+    //todo add weight
+
+   /* res.mapPartitionsWithIndexInternal{
+      (index,iter) => {
+        val append = UnsafeProjection.create(weight,child.output, subexpressionEliminationEnabled )
+        append.initialize(index)
+        iter.map(append)
+      }
     }*/
 
   }

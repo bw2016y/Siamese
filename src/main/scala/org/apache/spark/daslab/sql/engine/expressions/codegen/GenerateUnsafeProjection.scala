@@ -22,11 +22,10 @@ import org.apache.spark.daslab.sql.engine.expressions.codegen.Block._
 import org.apache.spark.daslab.sql.types._
 
 /**
- * Generates a [[Projection]] that returns an [[UnsafeRow]].
- *
- * It generates the code for all the expressions, computes the total length for all the columns
- * (can be accessed via variables), and then copies the data into a scratch buffer space in the
- * form of UnsafeRow (the scratch buffer will grow as needed).
+ *   可以生成一个返回[[UnsafeRow]]的[[Projection]]
+  *
+  * 为所有表达式都生成对应的code,可以计算所有列（通过变量获取）的总长度，然后将数据拷贝到一个
+  * 暂存缓冲区（scratch buffer）中，按照UnsafeRow的格式来存储（如果需要，这个缓冲区的大小会继续增长）
  *
  * @note The returned UnsafeRow will be pointed to a scratch buffer inside the projection.
  */
@@ -34,7 +33,12 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
 
   case class Schema(dataType: DataType, nullable: Boolean)
 
-  /** Returns true iff we support this data type. */
+
+  /**
+    *  如果我们支持这个数据类型返回true
+    * @param dataType
+    * @return
+    */
   def canSupport(dataType: DataType): Boolean = UserDefinedType.sqlType(dataType) match {
     case NullType => true
     case _: AtomicType => true
@@ -52,6 +56,7 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
       schemas: Seq[Schema],
       rowWriter: String): String = {
     // Puts `input` in a local variable to avoid to re-evaluate it if it's a statement.
+    // 将'input'放入一个本地的变量中来避免如果他是一个statement的导致的重新evaluate
     val tmpInput = ctx.freshName("tmpInput")
     val fieldEvals = schemas.zipWithIndex.map { case (Schema(dt, nullable), i) =>
       val isNull = if (nullable) {
@@ -62,7 +67,9 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
       ExprCode(isNull, JavaCode.expression(CodeGenerator.getValue(tmpInput, dt, i.toString), dt))
     }
 
+    // 获取UnsafeRowWriter的类名
     val rowWriterClass = classOf[UnsafeRowWriter].getName
+    // 注册到ctx
     val structRowWriter = ctx.addMutableState(rowWriterClass, "rowWriter",
       v => s"$v = new $rowWriterClass($rowWriter, ${fieldEvals.length});")
     val previousCursor = ctx.freshName("previousCursor")

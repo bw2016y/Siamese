@@ -105,6 +105,9 @@ object InternalRow {
     * Returns an accessor for an `InternalRow` with given data type. The returned accessor
     * actually takes a `SpecializedGetters` input because it can be generalized to other classes
     * that implements `SpecializedGetters` (e.g., `ArrayData`) too.
+    *
+    *  根据给定的数据类型从InternalRow中获取accessor
+    *  返回的accessor实际上是在input上调用SpecializedGetters接口
     */
   def getAccessor(dataType: DataType): (SpecializedGetters, Int) => Any = dataType match {
     case BooleanType => (input, ordinal) => input.getBoolean(ordinal)

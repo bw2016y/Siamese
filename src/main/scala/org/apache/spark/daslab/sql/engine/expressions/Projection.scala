@@ -7,8 +7,7 @@ import org.apache.spark.daslab.sql.engine.expressions.codegen.{GenerateSafeProje
 import org.apache.spark.daslab.sql.types.{DataType, StructType}
 
 /**
-  * A [[Projection]] that is calculated by calling the `eval` of each of the specified expressions.
-  *
+  *   一个通过调用每个指定的expressions的eval方法来计算[[Projection]]的投影实现
   * @param expressions a sequence of expressions that determine the value of each column of the
   *                    output row.
   */
@@ -23,8 +22,9 @@ class InterpretedProjection(expressions: Seq[Expression]) extends Projection {
     })
   }
 
-  // null check is required for when Kryo invokes the no-arg constructor.
-  protected val exprArray = if (expressions != null) expressions.toArray else null
+
+  // 当Kryo（序列化机制）调用无参的构造器的时候，null check是需要的
+  protected val exprArray = if ( expressions != null )  expressions.toArray else null
 
   def apply(input: InternalRow): InternalRow = {
     val outputArray = new Array[Any](exprArray.length)
@@ -85,7 +85,7 @@ case class InterpretedMutableProjection(expressions: Seq[Expression]) extends Mu
 }
 
 /**
-  * A projection that returns UnsafeRow.
+  *  返回UnsafeRow的projection
   *
   * CAUTION: the returned projection object should *not* be assumed to be thread-safe.
   */
@@ -94,7 +94,7 @@ abstract class UnsafeProjection extends Projection {
 }
 
 /**
-  * The factory object for `UnsafeProjection`.
+  *  UnsafeProjection的工厂对象
   */
 object UnsafeProjection
   extends CodeGeneratorWithInterpretedFallback[Seq[Expression], UnsafeProjection] {
@@ -107,11 +107,14 @@ object UnsafeProjection
     InterpretedUnsafeProjection.createProjection(in)
   }
 
+
+  // 和schema进行绑定
   protected def toBoundExprs(
                               exprs: Seq[Expression],
                               inputSchema: Seq[Attribute]): Seq[Expression] = {
     exprs.map(BindReferences.bindReference(_, inputSchema))
   }
+
 
   protected def toUnsafeExprs(exprs: Seq[Expression]): Seq[Expression] = {
     exprs.map(_ transform {
@@ -120,15 +123,13 @@ object UnsafeProjection
   }
 
   /**
-    * Returns an UnsafeProjection for given StructType.
-    *
+    * 根据给定的StructType来返回一个UnsafeProjection
     * CAUTION: the returned projection object is *not* thread-safe.
     */
   def create(schema: StructType): UnsafeProjection = create(schema.fields.map(_.dataType))
 
   /**
-    * Returns an UnsafeProjection for given Array of DataTypes.
-    *
+    * 根据给定的DataTypes数组来返回UnsafeProjection
     * CAUTION: the returned projection object is *not* thread-safe.
     */
   def create(fields: Array[DataType]): UnsafeProjection = {
@@ -136,7 +137,8 @@ object UnsafeProjection
   }
 
   /**
-    * Returns an UnsafeProjection for given sequence of bound Expressions.
+    *  根据给定的bound Expression序列来返回UnsafeProjection
+    *  todo
     */
   def create(exprs: Seq[Expression]): UnsafeProjection = {
     createObject(toUnsafeExprs(exprs))
@@ -147,15 +149,16 @@ object UnsafeProjection
   /**
     * Returns an UnsafeProjection for given sequence of Expressions, which will be bound to
     * `inputSchema`.
+    *  根据给定的Expression序列和inputSchema来构造UnsafeProjection
     */
   def create(exprs: Seq[Expression], inputSchema: Seq[Attribute]): UnsafeProjection = {
     create(toBoundExprs(exprs, inputSchema))
   }
 
   /**
-    * Same as other create()'s but allowing enabling/disabling subexpression elimination.
-    * The param `subexpressionEliminationEnabled` doesn't guarantee to work. For example,
-    * when fallbacking to interpreted execution, it is not supported.
+    *  和其他的工厂方法一样，但是允许开启/关闭 subexpression 消除
+    *  subexpressionEliminationEnabled参数不能保证一定可以执行
+    *  当执行遇到异常退回到 interpreted执行的时候，就不再支持
     */
   def create(
               exprs: Seq[Expression],
