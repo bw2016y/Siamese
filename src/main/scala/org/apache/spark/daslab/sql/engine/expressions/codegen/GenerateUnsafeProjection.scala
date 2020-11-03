@@ -299,7 +299,9 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
       case Schema(dt, _) => !UnsafeRow.isFixedLength(dt)
       // TODO: consider large decimal and interval type
     }
-
+    /**
+      *  [[UnsafeRowWriter]]类型的rowWriter变量，用于执行写数据操作
+      */
     val rowWriterClass = classOf[UnsafeRowWriter].getName
     val rowWriter = ctx.addMutableState(rowWriterClass, "rowWriter",
       v => s"$v = new $rowWriterClass(${expressions.length}, ${numVarLenFields * 32});")
@@ -342,6 +344,11 @@ object GenerateUnsafeProjection extends CodeGenerator[Seq[Expression], UnsafePro
     val ctx = newCodeGenContext()
     val eval = createCode(ctx, expressions, subexpressionEliminationEnabled)
 
+
+    /**
+      *  底层其实生成了一个SpecificUnsafeProjection类
+      *
+      */
     val codeBody =
       s"""
          |public java.lang.Object generate(Object[] references) {

@@ -134,14 +134,14 @@ object  ScalaTest{
     println(spark.sql(sql7).queryExecution.physicalPlan)
     println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
     val executedPlan: SparkPlan = spark.sql(sql7).queryExecution.executedPlan
-    val value: RDD[InternalRow] = executedPlan.execute()
-    value.foreach(a => {
+  //  val value: RDD[InternalRow] = executedPlan.execute()
+   /* value.foreach(a => {
       println(a)
       a.getString(0)
-    })
+    })*/
     spark.sql(sql7).show()
 
-    val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
+  /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
     println(spark.sql(sql8).queryExecution.originLogicalPlan)
     println(spark.sql(sql8).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sql8).queryExecution.optimizedLogicalPlan)
@@ -158,6 +158,14 @@ object  ScalaTest{
     println(lll.queryExecution.physicalPlan)
     println(lll.queryExecution.executedPhysicalPlan)
 
+
+    val sqlproject = "select  age  from data"
+    println(spark.sql(sqlproject).queryExecution.originLogicalPlan)
+    println(spark.sql(sqlproject).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sqlproject).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sqlproject).queryExecution.physicalPlan)
+    println(spark.sql(sqlproject).queryExecution.executedPhysicalPlan)
+    spark.sql(sqlproject).show();*/
 
   }
 

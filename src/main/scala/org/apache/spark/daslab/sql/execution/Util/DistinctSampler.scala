@@ -41,6 +41,8 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
    */
   override def sample(items: Iterator[InternalRow]): Iterator[InternalRow] = {
     items.filter(item => {
+      /*println("internalrow")
+      println(item.numFields)*/
       var distinctValue: List[Any] = List()
       S.foreach(s => {
         distinctValue = distinctValue ::: item.get(s.ordinal, s.datatype) :: Nil

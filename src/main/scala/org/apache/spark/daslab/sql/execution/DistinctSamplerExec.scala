@@ -7,6 +7,7 @@ import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.plans.physical.Partitioning
 import org.apache.spark.daslab.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.daslab.sql.execution.util.{DistinctColumn, SampleUtils}
+import org.apache.spark.daslab.sql.types.DoubleType
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.BernoulliCellSampler
 
@@ -45,10 +46,41 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     val numPartitions: Int = child.outputPartitioning.numPartitions
     val res=SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
 
-    res
-
     //todo add weight
+    println("todo")
+    def trans(row:InternalRow):InternalRow={
+      println(row.asInstanceOf[UnsafeRow].toString)
+       val  preRowByteSize=UnsafeRow.calculateBitSetWidthInBytes(row.numFields+1) + row.asInstanceOf[UnsafeRow].getSizeInBytes + DoubleType.defaultSize
+       val  newRow= UnsafeRow.createFromByteArray(preRowByteSize,row.numFields+1)
+       newRow.copyFrom(row.asInstanceOf[UnsafeRow])
+       newRow.setDouble(row.numFields+1,1.0)
+       newRow
+    }
 
+    val temp: RDD[InternalRow] = res.mapPartitionsWithIndex(
+      {(index, iter) => {
+        // iter.foreach(row => println(row.numFields))
+
+           iter.map(trans)
+
+      }}, isOrderSensitive=true,preservesPartitioning = true
+    )
+    println(temp.count())
+    val work: RDD[InternalRow] = temp.mapPartitionsWithIndex(
+      (index, iter) => {
+        iter.filter((row)=>{
+          println(row.asInstanceOf[UnsafeRow].numFields())
+          println(row.asInstanceOf[UnsafeRow].toString)
+          true
+        })
+      }
+    )
+
+
+    println(work.count())
+    println("return ")
+    // return
+    res
    /* res.mapPartitionsWithIndexInternal{
       (index,iter) => {
         val append = UnsafeProjection.create(weight,child.output, subexpressionEliminationEnabled )
