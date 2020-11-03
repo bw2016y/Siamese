@@ -26,7 +26,7 @@ object  ScalaTest{
 
     //初始化上下文
     val spark: SparkSession = SparkSession.builder().master("local[*]")
-      .appName("test")
+      .appName("test").config("spark.sql.codegen.wholeStage",false)    //考察基本的代码生成功能，关闭了全阶段代码生成
       .getOrCreate()
     spark.sparkContext.setLogLevel("FATAL")
 
@@ -157,6 +157,8 @@ object  ScalaTest{
     println(lll.queryExecution.optimizedLogicalPlan)
     println(lll.queryExecution.physicalPlan)
     println(lll.queryExecution.executedPhysicalPlan)
+
+
   }
 
 }
