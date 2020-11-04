@@ -38,6 +38,14 @@ object  ScalaTest{
     val dataset1=spark.read.json("src/test/resources/grade.json").toDF();
     dataset1.createTempView("gradetable")
 
+    val testinput ="select data.age from data"
+    println(spark.sql(testinput).queryExecution.originLogicalPlan)
+    println(spark.sql(testinput).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(testinput).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(testinput).queryExecution.physicalPlan)
+    spark.sql(testinput).show()
+
+
     val sql1 = "select data.name from data"
     val df: DataFrame = spark.sql(sql1);
     println(df.queryExecution.physicalPlan)
@@ -133,12 +141,13 @@ object  ScalaTest{
     println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql7).queryExecution.physicalPlan)
     println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
-    val executedPlan: SparkPlan = spark.sql(sql7).queryExecution.executedPlan
+   // val executedPlan: SparkPlan = spark.sql(sql7).queryExecution.executedPlan
   //  val value: RDD[InternalRow] = executedPlan.execute()
    /* value.foreach(a => {
       println(a)
       a.getString(0)
     })*/
+
     spark.sql(sql7).show()
 
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"

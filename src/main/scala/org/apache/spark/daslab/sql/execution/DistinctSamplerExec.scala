@@ -47,13 +47,31 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     val res=SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
 
     //todo add weight
-    println("todo")
+    (child.output:+weight).foreach(println)
+    val temp = res.mapPartitionsWithIndexInternal {
+      (index, iter) =>
+        val append = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+        append.initialize(index)
+        iter.map(append).filter(row => {
+         //  row.setDouble(row.numFields,0.7)
+          // row.asInstanceOf[UnsafeRow].setDouble(row.numFields,0.8)
+       //    row.setDouble(4,0.5)
+        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+        //   row.setDouble(4,0.1)
+          (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+          true
+        })
+    }
+    println(temp.count())
+  /*  println("todo")
+    println(child.output.length)
+    child.output.foreach(println)
     def trans(row:InternalRow):InternalRow={
-      println(row.asInstanceOf[UnsafeRow].toString)
+
        val  preRowByteSize=UnsafeRow.calculateBitSetWidthInBytes(row.numFields+1) + row.asInstanceOf[UnsafeRow].getSizeInBytes + DoubleType.defaultSize
        val  newRow= UnsafeRow.createFromByteArray(preRowByteSize,row.numFields+1)
        newRow.copyFrom(row.asInstanceOf[UnsafeRow])
-       newRow.setDouble(row.numFields+1,1.0)
+      // newRow.setDouble(row.numFields,1.00)
        newRow
     }
 
@@ -61,7 +79,10 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
       {(index, iter) => {
         // iter.foreach(row => println(row.numFields))
 
-           iter.map(trans)
+           iter.map(trans).filter(row=>{
+              println(row.getInt(0))
+             true
+           })
 
       }}, isOrderSensitive=true,preservesPartitioning = true
     )
@@ -69,8 +90,13 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     val work: RDD[InternalRow] = temp.mapPartitionsWithIndex(
       (index, iter) => {
         iter.filter((row)=>{
+
+
           println(row.asInstanceOf[UnsafeRow].numFields())
+
+
           println(row.asInstanceOf[UnsafeRow].toString)
+
           true
         })
       }
@@ -79,8 +105,10 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
 
     println(work.count())
     println("return ")
+    */
     // return
-    res
+    //res
+    temp
    /* res.mapPartitionsWithIndexInternal{
       (index,iter) => {
         val append = UnsafeProjection.create(weight,child.output, subexpressionEliminationEnabled )
