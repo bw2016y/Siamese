@@ -53,8 +53,8 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
         val append = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
         append.initialize(index)
         iter.map(append).filter(row => {
-         //  row.setDouble(row.numFields,0.7)
-          // row.asInstanceOf[UnsafeRow].setDouble(row.numFields,0.8)
+          // row.setDouble(row.numFields-1,0.7)
+           row.asInstanceOf[UnsafeRow].setDouble(row.numFields-1,0.8)
        //    row.setDouble(4,0.5)
         //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
         //   row.setDouble(4,0.1)
