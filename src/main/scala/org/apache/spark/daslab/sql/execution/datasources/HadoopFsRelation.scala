@@ -15,7 +15,9 @@ import org.apache.spark.daslab.sql.types.{StructField, StructType}
 
 
 /**
- * Acts as a container for all of the metadata required to read from a datasource. All discovery,
+ *
+  *
+  * Acts as a container for all of the metadata required to read from a datasource. All discovery,
  * resolution and merging logic for schemas and partitions has been removed.
  *
  * @param location A [[FileIndex]] that can enumerate the locations of all the files that

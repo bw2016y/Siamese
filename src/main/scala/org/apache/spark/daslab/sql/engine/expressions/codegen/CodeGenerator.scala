@@ -32,6 +32,8 @@ import org.apache.spark.unsafe.types._
 import org.apache.spark.util.{ParentClassLoader, Utils}
 
 /**
+ *
+ *  给定一个[[InternalRow]]作为输入用于evaluating一个[[Expression]]的Java代码
  * Java source for evaluating an [[Expression]] given a [[InternalRow]] of input.
  *
  * @param code The sequence of statements required to evaluate the expression.
@@ -96,6 +98,7 @@ private[codegen] case class NewFunctionSpec(
 /**
  * A context for codegen, tracking a list of objects that could be passed into generated Java
  * function.
+ *  codegen的上下文类，记录保存了将要生成的Java函数代码中的一系列对象
  */
 class CodegenContext {
 
@@ -103,6 +106,7 @@ class CodegenContext {
 
   /**
    * Holding a list of objects that could be used passed into generated class.
+   * 用于保存生成代码中的对象（objects）
    */
   val references: mutable.ArrayBuffer[Any] = new mutable.ArrayBuffer[Any]()
 
@@ -133,7 +137,9 @@ class CodegenContext {
   var INPUT_ROW = "i"
 
   /**
-   * Holding a list of generated columns as input of current operator, will be used by
+   * 保存生成的各列作为当前算子的输入
+   * 在代码生成的时候会通过BoundReference使用
+   * Holding a list of generated columns（？） as input of current operator, will be used by
    * BoundReference to generate code.
    */
   var currentVars: Seq[ExprCode] = null
@@ -166,10 +172,12 @@ class CodegenContext {
 
   // An array holds the code that will initialize each state
   // Exposed for tests only.
+  // InitCode是mutableState的初始化代码
   private[engine] val mutableStateInitCode: mutable.ArrayBuffer[String] =
     mutable.ArrayBuffer.empty[String]
 
   // Tracks the names of all the mutable states.
+  // mutable states的变量名
   private val mutableStateNames: mutable.HashSet[String] = mutable.HashSet.empty
 
   /**
@@ -213,11 +221,13 @@ class CodegenContext {
    * A map containing the mutable states which have been defined so far using
    * `addImmutableStateIfNotExists`. Each entry contains the name of the mutable state as key and
    * its Java type and init code as value.
+   *
    */
   private val immutableStates: mutable.Map[String, (String, String)] =
     mutable.Map.empty[String, (String, String)]
 
   /**
+   * 在生成的类中添加一个mutable state作为一个成员变量（field）
    * Add a mutable state as a field to the generated class. c.f. the comments above.
    *
    * @param javaType Java type of the field. Note that short names can be used for some types,
@@ -308,6 +318,8 @@ class CodegenContext {
   }
 
   /**
+   * 添加缓冲变量，缓冲变量一般用来储存来自internalRow中的数据，例如一行数据的某些列
+   * 这些变量仅仅在类中声明，但是不会在初始化函数中执行
    * Add buffer variable which stores data coming from an [[InternalRow]]. This methods guarantees
    * that the variable is safely stored, which is important for (potentially) byte array backed
    * data types like: UTF8String, ArrayData, MapData & InternalRow.
@@ -322,6 +334,10 @@ class CodegenContext {
     ExprCode(code, FalseLiteral, JavaCode.global(value, dataType))
   }
 
+  /**
+   *  用来在生成的Java类中声明这些变量（默认均为private类型）
+   * @return
+   */
   def declareMutableStates(): String = {
     // It's possible that we add same mutable state twice, e.g. the `mergeExpressions` in
     // `TypedAggregateExpression`, we should call `distinct` here to remove the duplicated ones.
@@ -351,6 +367,10 @@ class CodegenContext {
     (inlinedStates ++ arrayStates).mkString("\n")
   }
 
+  /**
+   *  用来在类的初始化函数中生成变量的初始化代码
+   * @return
+   */
   def initMutableStates(): String = {
     // It's possible that we add same mutable state twice, e.g. the `mergeExpressions` in
     // `TypedAggregateExpression`, we should call `distinct` here to remove the duplicated ones.
@@ -432,6 +452,7 @@ class CodegenContext {
   }
 
   /**
+   *  添加函数
    * Adds a function to the generated class. If the code for the `OuterClass` grows too large, the
    * function will be inlined into a new private, inner class, and a class-qualified name for the
    * function will be returned. Otherwise, the function will be inlined to the `OuterClass` the
@@ -495,6 +516,7 @@ class CodegenContext {
   }
 
   /**
+   * 声明函数
    * Declares all function code. If the added functions are too many, split them into nested
    * sub-classes to avoid hitting Java compiler constant pool limitation.
    */
@@ -552,6 +574,7 @@ class CodegenContext {
   private val placeHolderToComments = new mutable.HashMap[String, String]
 
   /**
+   * 用于生成具有唯一ID的变量名
    * Returns a term name that is unique within this instance of a `CodegenContext`.
    */
   def freshName(name: String): String = synchronized {
@@ -1146,6 +1169,7 @@ class CodeAndComment(val body: String, val comment: collection.Map[String, Strin
 }
 
 /**
+ * 一个用于生成字节码（来做表达式计算）的基类
  * A base class for generators of byte code to perform expression evaluation.  Includes a set of
  * helpers for referring to Catalyst types and building trees that perform evaluation of individual
  * expressions.
@@ -1214,6 +1238,7 @@ object CodeGenerator extends Logging {
   final val MUTABLESTATEARRAY_SIZE_LIMIT = 32768
 
   /**
+   * 使用Janino来将Java代码编译为Java class
    * Compile the Java source code into a Java class, using Janino.
    *
    * @return a pair of a generated class and the max bytecode size of generated functions.

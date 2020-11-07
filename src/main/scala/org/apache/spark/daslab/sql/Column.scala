@@ -103,7 +103,7 @@ class TypedColumn[-T, U](
  *   $"a" + 1
  *   $"a" === $"b"
  * }}}
- *
+ *   一般来说通过[[expr]]来访问内部的表达式对象(算是一种封装)
  * @note The internal Catalyst expression can be accessed via [[expr]], but this method is for
  * debugging purposes only and can change in any future Spark releases.
  *
@@ -116,7 +116,7 @@ class TypedColumn[-T, U](
  */
 @InterfaceStability.Stable
 class Column(val expr: Expression) extends Logging {
-
+  //根据列名初始化一个列
   def this(name: String) = this(name match {
     case "*" => UnresolvedStar(None)
     case _ if name.endsWith(".*") =>
@@ -139,6 +139,7 @@ class Column(val expr: Expression) extends Logging {
 
   /**
    * Returns the expression for this column either with an existing or auto assigned name.
+    *  返回这个column存在的或者自动分配的名称表达式
    */
   private[sql] def named: NamedExpression = expr match {
     // Wrap UnresolvedAttribute with UnresolvedAlias, as when we resolve UnresolvedAttribute, we
@@ -929,7 +930,7 @@ class Column(val expr: Expression) extends Logging {
   def alias(alias: String): Column = name(alias)
 
   /**
-   * Gives the column an alias.
+   * 给Column起一个别名
    * {{{
    *   // Renames colA to colB in select output.
    *   df.select($"colA".as("colB"))

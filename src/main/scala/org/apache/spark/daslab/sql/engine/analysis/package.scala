@@ -13,8 +13,8 @@ import org.apache.spark.daslab.sql.engine.trees.TreeNode
 package object analysis {
 
   /**
-   * Resolver should return true if the first string refers to the same entity as the second string.
-   * For example, by using case insensitive equality.
+   *  Resolver应该在函数第一个参数的string与第二个string指示同一个实体的时候返回true
+   *  例如，可以是大小写不敏感的等价关系
    */
   type Resolver = (String, String) => Boolean
 

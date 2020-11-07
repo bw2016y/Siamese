@@ -19,7 +19,7 @@ abstract class ColumnarIterator extends Iterator[InternalRow] {
 }
 
 /**
- * An helper class to update the fields of UnsafeRow, used by ColumnAccessor
+  *  一个用于更新UnsafeRow中fields的辅助类，在ColumnAccessor中使用
  *
  * WARNING: These setter MUST be called in increasing order of ordinals.
  */

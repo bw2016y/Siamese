@@ -2,11 +2,12 @@ package org.apache.spark.daslab.sql.execution
 
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.expressions.codegen.{CodegenContext, ExprCode}
-import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, UnsafeRow}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, NamedExpression, UnsafeProjection, UnsafeRow}
 import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.plans.physical.Partitioning
 import org.apache.spark.daslab.sql.execution.metric.{SQLMetric, SQLMetrics}
 import org.apache.spark.daslab.sql.execution.util.{DistinctColumn, SampleUtils}
+import org.apache.spark.daslab.sql.types.DoubleType
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.BernoulliCellSampler
 
@@ -22,7 +23,8 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
                                 seed : Long,
                                 child: SparkPlan,
                                 S: Seq[DistinctColumn],
-                                delta: Int
+                                delta: Int,
+                                weight: NamedExpression
                             )extends UnaryExecNode
 //  with CodegenSupport
 {
@@ -37,10 +39,84 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     * Produces the result of the query as an `RDD[InternalRow]`
     *
     * Overridden by concrete implementations of SparkPlan.
+    *
+    * todo  rewrite this method to add physical weight column
     */
   override protected def doExecute(): RDD[InternalRow] = {
     val numPartitions: Int = child.outputPartitioning.numPartitions
-    SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
+    val res=SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
+
+    //todo add weight
+    (child.output:+weight).foreach(println)
+    val temp = res.mapPartitionsWithIndexInternal {
+      (index, iter) =>
+        val append = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+        append.initialize(index)
+        iter.map(append).filter(row => {
+          // row.setDouble(row.numFields-1,0.7)
+           row.asInstanceOf[UnsafeRow].setDouble(row.numFields-1,0.8)
+       //    row.setDouble(4,0.5)
+        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+        //   row.setDouble(4,0.1)
+          (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+          true
+        })
+    }
+    println(temp.count())
+  /*  println("todo")
+    println(child.output.length)
+    child.output.foreach(println)
+    def trans(row:InternalRow):InternalRow={
+
+       val  preRowByteSize=UnsafeRow.calculateBitSetWidthInBytes(row.numFields+1) + row.asInstanceOf[UnsafeRow].getSizeInBytes + DoubleType.defaultSize
+       val  newRow= UnsafeRow.createFromByteArray(preRowByteSize,row.numFields+1)
+       newRow.copyFrom(row.asInstanceOf[UnsafeRow])
+      // newRow.setDouble(row.numFields,1.00)
+       newRow
+    }
+
+    val temp: RDD[InternalRow] = res.mapPartitionsWithIndex(
+      {(index, iter) => {
+        // iter.foreach(row => println(row.numFields))
+
+           iter.map(trans).filter(row=>{
+              println(row.getInt(0))
+             true
+           })
+
+      }}, isOrderSensitive=true,preservesPartitioning = true
+    )
+    println(temp.count())
+    val work: RDD[InternalRow] = temp.mapPartitionsWithIndex(
+      (index, iter) => {
+        iter.filter((row)=>{
+
+
+          println(row.asInstanceOf[UnsafeRow].numFields())
+
+
+          println(row.asInstanceOf[UnsafeRow].toString)
+
+          true
+        })
+      }
+    )
+
+
+    println(work.count())
+    println("return ")
+    */
+    // return
+    //res
+    temp
+   /* res.mapPartitionsWithIndexInternal{
+      (index,iter) => {
+        val append = UnsafeProjection.create(weight,child.output, subexpressionEliminationEnabled )
+        append.initialize(index)
+        iter.map(append)
+      }
+    }*/
+
   }
 
 
@@ -52,52 +128,6 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     */
 //  override def usedInputs: AttributeSet = AttributeSet.empty
 
-
-
-  /**
-    * Returns all the RDDs of InternalRow which generates the input rows.
-    *
-    * @note Right now we support up to two RDDs
-    */
-//  override def inputRDDs(): Seq[RDD[InternalRow]] = {
-//    child.asInstanceOf[CodegenSupport].inputRDDs()
-//  }
-
-  /**
-    * Whether or not the result rows of this operator should be copied before putting into a buffer.
-    *
-    * If any operator inside WholeStageCodegen generate multiple rows from a single row (for
-    * example, Join), this should be true.
-    *
-    * If an operator starts a new pipeline, this should be false.
-    */
-//  override def needCopyResult: Boolean = {
-//    child.asInstanceOf[CodegenSupport].needCopyResult
-//  }
-
-  /**
-    * Generate the Java source code to process, should be overridden by subclass to support codegen.
-    *
-    * doProduce() usually generate the framework, for example, aggregation could generate this:
-    *
-    * if (!initialized) {
-    * # create a hash map, then build the aggregation hash map
-    * # call child.produce()
-    * initialized = true;
-    * }
-    * while (hashmap.hasNext()) {
-    * row = hashmap.next();
-    * # build the aggregation results
-    * # create variables for results
-    * # call consume(), which will call parent.doConsume()
-    * if (shouldStop()) return;
-    * }
-    */
-//  override protected def doProduce(ctx: CodegenContext): String = {
-//    child.asInstanceOf[CodegenSupport].produce(ctx,this)
-//  }
-
-
   /**
     * @return All metrics containing metrics of this SparkPlan.
     */
@@ -105,50 +135,10 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext,"number of output rows")
   )
 
-  /**
-    * Generate the Java source code to process the rows from child SparkPlan. This should only be
-    * called from `consume`.
-    *
-    * This should be override by subclass to support codegen.
-    *
-    * Note: The operator should not assume the existence of an outer processing loop,
-    * which it can jump from with "continue;"!
-    *
-    * For example, filter could generate this:
-    * # code to evaluate the predicate expression, result is isNull1 and value2
-    * if (!isNull1 && value2) {
-    * # call consume(), which will call parent.doConsume()
-    * }
-    *
-    * Note: A plan can either consume the rows as UnsafeRow (row), or a list of variables (input).
-    * When consuming as a listing of variables, the code to produce the input is already
-    * generated and `CodegenContext.currentVars` is already set. When consuming as UnsafeRow,
-    * implementations need to put `row.code` in the generated code and set
-    * `CodegenContext.INPUT_ROW` manually. Some plans may need more tweaks as they have
-    * different inputs(join build side, aggregate buffer, etc.), or other special cases.
-    */
-//  override def doConsume(ctx: CodegenContext, input: Seq[ExprCode], row: ExprCode): String = {
-//     val numOutput = metricTerm(ctx,"numOutputRows")
-//
-//     val samplerClass = classOf[BernoulliCellSampler[UnsafeRow]].getName
-//     val sampler = ctx.addMutableState(s"$samplerClass<UnsafeRow>","sampler",
-//       v =>
-//         s"""
-//            | $v = new $samplerClass<UnsafeRow>(0.0,0.3,false);
-//            | $v.setSeed(${seed}L+partitionIndex);
-//          """.stripMargin.trim
-//     )
-//
-//    s"""
-//       | if($sampler.sample()!=0 ){
-//       |   $numOutput.add(1);
-//       |   ${consume(ctx,input)}
-//       | }
-//     """.stripMargin.trim
-//
-//  }
+
 
   // 输出的结构信息
-  override def output: Seq[Attribute] = child.output
+  // 这里添加了权重列
+  override def output: Seq[Attribute] = child.output :+ weight.toAttribute
 }
 

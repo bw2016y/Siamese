@@ -11,6 +11,7 @@ import org.apache.spark.rdd.RDD
 object JsonUtils {
   /**
    * Sample JSON dataset as configured by `samplingRatio`.
+    *  根据设置的samplingRatio来采样JSON dataset
    */
   def sample(json: Dataset[String], options: JSONOptions): Dataset[String] = {
     require(options.samplingRatio > 0,

@@ -2213,6 +2213,7 @@ class Dataset[T] private[sql](
   /**
    * Returns a new Dataset by adding columns or replacing the existing columns that has
    * the same names.
+   * todo 可以参考一下
    */
   private[spark] def withColumns(colNames: Seq[String], cols: Seq[Column]): DataFrame = {
     require(colNames.size == cols.size,
@@ -2227,7 +2228,7 @@ class Dataset[T] private[sql](
     val output = queryExecution.analyzed.output
 
     val columnMap = colNames.zip(cols).toMap
-
+    // 替换的部分
     val replacedAndExistingColumns = output.map { field =>
       columnMap.find { case (colName, _) =>
         resolver(field.name, colName)

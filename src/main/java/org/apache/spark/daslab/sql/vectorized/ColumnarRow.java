@@ -13,6 +13,7 @@ import org.apache.spark.unsafe.types.UTF8String;
 
 /**
  * Row abstraction in {@link ColumnVector}.
+ *  使用列存储的Row的抽象表示
  */
 @InterfaceStability.Evolving
 public final class ColumnarRow extends InternalRow {

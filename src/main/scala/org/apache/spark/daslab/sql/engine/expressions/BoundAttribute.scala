@@ -14,15 +14,21 @@ import org.apache.spark.internal.Logging
  * A bound reference points to a specific slot in the input tuple, allowing the actual value
  * to be retrieved more efficiently.  However, since operations like column pruning can change
  * the layout of intermediate tuples, BindReferences should be run after all such transformations.
+  *
+  *  因为类似列裁剪之类的操作有可能改变intermediate tuples的数据layout，BindReferences应该在所有这些
+  *  变换之后执行
  */
 case class BoundReference(ordinal: Int, dataType: DataType, nullable: Boolean)
   extends LeafExpression {
 
   override def toString: String = s"input[$ordinal, ${dataType.simpleString}, $nullable]"
 
+
+  // 第二个参数是下标，根据下标从Internal中取出具体的数据
   private val accessor: (InternalRow, Int) => Any = InternalRow.getAccessor(dataType)
 
   // Use special getter for primitive types (for UnsafeRow)
+  // 处理可以为null的情况
   override def eval(input: InternalRow): Any = {
     if (nullable && input.isNullAt(ordinal)) {
       null
@@ -32,7 +38,7 @@ case class BoundReference(ordinal: Int, dataType: DataType, nullable: Boolean)
   }
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    if (ctx.currentVars != null && ctx.currentVars(ordinal) != null) {
+    if (ctx.currentVars != null && ctx.currentVars(ordinal) != null){
       val oev = ctx.currentVars(ordinal)
       ev.isNull = oev.isNull
       ev.value = oev.value

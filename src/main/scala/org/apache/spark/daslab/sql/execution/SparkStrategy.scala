@@ -594,8 +594,8 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         }
       case logical.Sort(sortExprs, global, child) =>
         execution.SortExec(sortExprs, global, planLater(child)) :: Nil
-      case logical.Project(projectList, child) =>
-        execution.ProjectExec(projectList, planLater(child)) :: Nil
+      case p@ logical.Project(projectList, child) =>
+        execution.ProjectExec(p.afterAppendList, planLater(child)) :: Nil
       case logical.Filter(condition, child) =>
         execution.FilterExec(condition, planLater(child)) :: Nil
       case f: logical.TypedFilter =>
@@ -605,10 +605,10 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.Sample(lb, ub, withReplacement, seed, child) =>
         execution.SampleExec(lb, ub, withReplacement, seed, planLater(child)) :: Nil
         //todo add physical plan here
-      case logical.AqpSample(errorRate,confidence,seed,child) =>
+      case s @ logical.AqpSample(errorRate,confidence,seed,child) =>
 //        execution.AqpSampleExec(errorRate,confidence,seed,planLater(child))::Nil
-        execution.UniformSamplerExec(errorRate, confidence, seed, planLater(child))::Nil
-        execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(0, LongType, "age")), 2)::Nil
+        //execution.UniformSamplerExec(errorRate, confidence, seed, planLater(child))::Nil
+        execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(0, LongType, "age")), 2,s.nameE) :: Nil
       case logical.LocalRelation(output, data, _) =>
         LocalTableScanExec(output, data) :: Nil
       case logical.LocalLimit(IntegerLiteral(limit), child) =>

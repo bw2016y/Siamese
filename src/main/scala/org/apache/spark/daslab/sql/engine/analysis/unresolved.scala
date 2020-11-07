@@ -76,7 +76,7 @@ case class UnresolvedTableValuedFunction(
 }
 
 /**
- * Holds the name of an attribute that has yet to be resolved.
+ *  为一个还没有解析的attribute保存name
  */
 case class UnresolvedAttribute(nameParts: Seq[String]) extends Attribute with Unevaluable {
 
@@ -117,6 +117,7 @@ object UnresolvedAttribute {
   def quoted(name: String): UnresolvedAttribute = new UnresolvedAttribute(Seq(name))
 
   /**
+    *
    * Creates an [[UnresolvedAttribute]] from a string in an embedded language.  In this case
    * we treat it as a quoted identifier, except for '.', which must be further quoted using
    * backticks if it is part of a column name.
@@ -409,8 +410,7 @@ case class UnresolvedExtractValue(child: Expression, extraction: Expression)
 }
 
 /**
- * Holds the expression that has yet to be aliased.
- *
+ *    为还没有别名的表达式保存expression对象
  * @param child The computation that is needs to be resolved during analysis.
  * @param aliasFunc The function if specified to be called to generate an alias to associate
  *                  with the result of computing [[child]]

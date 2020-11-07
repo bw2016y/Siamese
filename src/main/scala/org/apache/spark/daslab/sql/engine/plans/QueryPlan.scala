@@ -15,6 +15,11 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
    */
   def conf: SQLConf = SQLConf.get
 
+
+  /**
+   *  返回这个逻辑计划输出的属性的集合
+   * @return
+   */
   def output: Seq[Attribute]
 
 
