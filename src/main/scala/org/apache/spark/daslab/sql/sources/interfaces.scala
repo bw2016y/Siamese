@@ -47,8 +47,8 @@ trait DataSourceRegister {
  *
  * Users may specify the fully qualified class name of a given data source.  When that class is
  * not found Spark SQL will append the class name `DefaultSource` to the path, allowing for
- * less verbose invocation.  For example, 'org.apache.spark.sql.json' would resolve to the
- * data source 'org.apache.spark.sql.json.DefaultSource'
+ * less verbose invocation.  For example, 'org.apache.daslab.spark.sql.json' would resolve to the
+ * data source 'org.apache.spark.daslab.sql.json.DefaultSource'
  *
  * A new instance of this class will be instantiated each time a DDL call is made.
  *
@@ -73,8 +73,8 @@ trait RelationProvider {
  *
  * Users may specify the fully qualified class name of a given data source.  When that class is
  * not found Spark SQL will append the class name `DefaultSource` to the path, allowing for
- * less verbose invocation.  For example, 'org.apache.spark.sql.json' would resolve to the
- * data source 'org.apache.spark.sql.json.DefaultSource'
+ * less verbose invocation.  For example, 'org.apache.spark.daslab.sql.json' would resolve to the
+ * data source 'org.apache.spark.daslab.sql.json.DefaultSource'
  *
  * A new instance of this class will be instantiated each time a DDL call is made.
  *
@@ -291,7 +291,7 @@ trait InsertableRelation {
  * ::Experimental::
  * An interface for experimenting with a more direct connection to the query planner.  Compared to
  * [[PrunedFilteredScan]], this operator receives the raw expressions from the
- * `org.apache.spark.sql.catalyst.plans.logical.LogicalPlan`.  Unlike the other APIs this
+ * `org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan`.  Unlike the other APIs this
  * interface is NOT designed to be binary compatible across releases and thus should only be used
  * for experimentation.
  *

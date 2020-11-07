@@ -28,8 +28,8 @@ import org.apache.spark.util.Utils
  *
  * Scala Example:
  * {{{
- * import org.apache.spark.sql._
- * import org.apache.spark.sql.types._
+ * import org.apache.spark.daslab.sql._
+ * import org.apache.spark.daslab.sql.types._
  *
  * val struct =
  *   StructType(
@@ -63,8 +63,8 @@ import org.apache.spark.util.Utils
  *
  * Scala Example:
  * {{{
- * import org.apache.spark.sql._
- * import org.apache.spark.sql.types._
+ * import org.apache.spark.daslab.sql._
+ * import org.apache.spark.daslab.sql.types._
  *
  * val innerStruct =
  *   StructType(

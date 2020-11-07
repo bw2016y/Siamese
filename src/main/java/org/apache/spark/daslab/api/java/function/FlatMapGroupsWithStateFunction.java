@@ -12,9 +12,9 @@ import org.apache.spark.annotation.InterfaceStability;
 /**
  * ::Experimental::
  * Base interface for a map function used in
- * {@code org.apache.spark.sql.KeyValueGroupedDataset.flatMapGroupsWithState(
- * FlatMapGroupsWithStateFunction, org.apache.spark.sql.streaming.OutputMode,
- * org.apache.spark.sql.Encoder, org.apache.spark.sql.Encoder)}
+ * {@code org.apache.spark.daslab.sql.KeyValueGroupedDataset.flatMapGroupsWithState(
+ * FlatMapGroupsWithStateFunction, org.apache.spark.daslab.sql.streaming.OutputMode,
+ * org.apache.spark.daslab.sql.Encoder, org.apache.spark.daslab.sql.Encoder)}
  * @since 2.1.1
  */
 @Experimental

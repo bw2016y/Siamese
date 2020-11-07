@@ -561,7 +561,7 @@ object DataSource extends Logging {
     val parquet = classOf[ParquetFileFormat].getCanonicalName
     val csv = classOf[CSVFileFormat].getCanonicalName
     val libsvm = "org.apache.spark.ml.source.libsvm.LibSVMFileFormat"
-    val orc = "org.apache.spark.sql.hive.orc.OrcFileFormat"
+    val orc = "org.apache.spark.daslab.sql.hive.orc.OrcFileFormat"
     val nativeOrc = classOf[OrcFileFormat].getCanonicalName
     val socket = classOf[TextSocketSourceProvider].getCanonicalName
     val rate = classOf[RateStreamProvider].getCanonicalName
@@ -579,8 +579,8 @@ object DataSource extends Logging {
       "org.apache.spark.daslab.sql.parquet.DefaultSource" -> parquet,
       "org.apache.spark.daslab.sql.execution.datasources.parquet" -> parquet,
       "org.apache.spark.daslab.sql.execution.datasources.parquet.DefaultSource" -> parquet,
-      "org.apache.spark.sql.hive.orc.DefaultSource" -> orc,
-      "org.apache.spark.sql.hive.orc" -> orc,
+      "org.apache.spark.daslab.sql.hive.orc.DefaultSource" -> orc,
+      "org.apache.spark.daslabsql.hive.orc" -> orc,
       "org.apache.spark.daslab.sql.execution.datasources.orc.DefaultSource" -> nativeOrc,
       "org.apache.spark.daslab.sql.execution.datasources.orc" -> nativeOrc,
       "org.apache.spark.ml.source.libsvm.DefaultSource" -> libsvm,
@@ -607,9 +607,9 @@ object DataSource extends Logging {
         classOf[OrcFileFormat].getCanonicalName
       case name if name.equalsIgnoreCase("orc") &&
         conf.getConf(SQLConf.ORC_IMPLEMENTATION) == "hive" =>
-        "org.apache.spark.sql.hive.orc.OrcFileFormat"
+        "org.apache.spark.daslab.sql.hive.orc.OrcFileFormat"
       case "com.databricks.spark.avro" if conf.replaceDatabricksSparkAvroEnabled =>
-        "org.apache.spark.sql.avro.AvroFileFormat"
+        "org.apache.spark.daslab.sql.avro.AvroFileFormat"
       case name => name
     }
     val provider2 = s"$provider1.DefaultSource"
@@ -626,14 +626,14 @@ object DataSource extends Logging {
                 // Found the data source using fully qualified path
                 dataSource
               case Failure(error) =>
-                if (provider1.startsWith("org.apache.spark.sql.hive.orc")) {
+                if (provider1.startsWith("org.apache.spark.daslab.sql.hive.orc")) {
                   throw new AnalysisException(
                     "Hive built-in ORC data source must be used with Hive support enabled. " +
                       "Please use the native ORC data source by setting 'spark.sql.orc.impl' to " +
                       "'native'")
                 } else if (provider1.toLowerCase(Locale.ROOT) == "avro" ||
                   provider1 == "com.databricks.spark.avro" ||
-                  provider1 == "org.apache.spark.sql.avro") {
+                  provider1 == "org.apache.spark.daslab.sql.avro") {
                   throw new AnalysisException(
                     s"Failed to find data source: $provider1. Avro is built-in but external data " +
                       "source module since Spark 2.4. Please deploy the application as per " +

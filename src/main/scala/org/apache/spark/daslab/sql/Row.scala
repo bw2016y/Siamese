@@ -14,7 +14,7 @@ object Row {
   /**
     * This method can be used to extract fields from a [[Row]] object in a pattern match. Example:
     * {{{
-    * import org.apache.spark.sql._
+    * import org.apache.spark.daslab.sql._
     *
     * val pairs = sql("SELECT key, value FROM src").rdd.map {
     *   case Row(key: Int, value: String) =>
@@ -60,7 +60,7 @@ object Row {
   *
   * A [[Row]] object can be constructed by providing field values. Example:
   * {{{
-  * import org.apache.spark.sql._
+  * import org.apache.spark.daslab.sql._
   *
   * // Create a Row from values.
   * Row(value1, value2, value3, ...)
@@ -72,7 +72,7 @@ object Row {
   * which will incur boxing overhead for primitives, as well as native primitive access.
   * An example of generic access by ordinal:
   * {{{
-  * import org.apache.spark.sql._
+  * import org.apache.spark.daslab.sql._
   *
   * val row = Row(1, true, "a string", null)
   * // row: Row = [1,true,a string,null]
@@ -96,7 +96,7 @@ object Row {
   *
   * In Scala, fields in a [[Row]] object can be extracted in a pattern match. Example:
   * {{{
-  * import org.apache.spark.sql._
+  * import org.apache.spark.daslab.sql._
   *
   * val pairs = sql("SELECT key, value FROM src").rdd.map {
   *   case Row(key: Int, value: String) =>
@@ -139,7 +139,7 @@ trait Row extends Serializable {
     *   BinaryType -> byte array
     *   ArrayType -> scala.collection.Seq (use getList for java.util.List)
     *   MapType -> scala.collection.Map (use getJavaMap for java.util.Map)
-    *   StructType -> org.apache.spark.sql.Row
+    *   StructType -> org.apache.spark.daslab.sql.Row
     * }}}
     */
   def apply(i: Int): Any = get(i)
@@ -164,7 +164,7 @@ trait Row extends Serializable {
     *   BinaryType -> byte array
     *   ArrayType -> scala.collection.Seq (use getList for java.util.List)
     *   MapType -> scala.collection.Map (use getJavaMap for java.util.Map)
-    *   StructType -> org.apache.spark.sql.Row
+    *   StructType -> org.apache.spark.daslab.sql.Row
     * }}}
     */
   def get(i: Int): Any

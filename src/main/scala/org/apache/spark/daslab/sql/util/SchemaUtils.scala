@@ -35,7 +35,7 @@ private[spark] object SchemaUtils {
       false
     } else {
       sys.error("A resolver to check if two identifiers are equal must be " +
-        "`caseSensitiveResolution` or `caseInsensitiveResolution` in o.a.s.sql.catalyst.")
+        "`caseSensitiveResolution` or `caseInsensitiveResolution` in o.a.s.sql.engine.")
     }
   }
 

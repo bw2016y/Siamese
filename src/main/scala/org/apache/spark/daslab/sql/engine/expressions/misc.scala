@@ -136,11 +136,11 @@ case class Uuid(randomSeed: Option[Long] = None) extends LeafExpression with Sta
 
   override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
     val randomGen = ctx.freshName("randomGen")
-    ctx.addMutableState("org.apache.spark.sql.catalyst.util.RandomUUIDGenerator", randomGen,
+    ctx.addMutableState("org.apache.spark.daslab.sql.engine.util.RandomUUIDGenerator", randomGen,
       forceInline = true,
       useFreshName = false)
     ctx.addPartitionInitializationStatement(s"$randomGen = " +
-      "new org.apache.spark.sql.catalyst.util.RandomUUIDGenerator(" +
+      "new org.apache.spark.daslab.sql.engine.util.RandomUUIDGenerator(" +
       s"${randomSeed.get}L + partitionIndex);")
     ev.copy(code = code"final UTF8String ${ev.value} = $randomGen.getNextUUIDUTF8String();",
       isNull = FalseLiteral)

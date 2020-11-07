@@ -1,4 +1,5 @@
 import org.apache.spark.daslab.sql.engine.InternalRow
+import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.daslab.sql.functions._

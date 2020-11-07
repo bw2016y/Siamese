@@ -395,7 +395,7 @@ case class Pmod(left: Expression, right: Expression) extends BinaryArithmetic {
         val decimalAdd = "$plus"
         s"""
           $javaType $remainder = ${eval1.value}.remainder(${eval2.value});
-          if ($remainder.compare(new org.apache.spark.sql.types.Decimal().set(0)) < 0) {
+          if ($remainder.compare(new org.apache.spark.daslab.sql.types.Decimal().set(0)) < 0) {
             ${ev.value}=($remainder.$decimalAdd(${eval2.value})).remainder(${eval2.value});
           } else {
             ${ev.value}=$remainder;

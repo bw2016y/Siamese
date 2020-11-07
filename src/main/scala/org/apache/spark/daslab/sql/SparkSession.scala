@@ -1063,7 +1063,7 @@ object SparkSession extends Logging {
   private val defaultSession = new AtomicReference[SparkSession]
 
   private val HIVE_SESSION_STATE_BUILDER_CLASS_NAME =
-    "org.apache.spark.sql.hive.HiveSessionStateBuilder"
+    "org.apache.spark.daslab.sql.hive.HiveSessionStateBuilder"
 
   private def sessionStateClassName(conf: SparkConf): String = {
     conf.get(CATALOG_IMPLEMENTATION) match {

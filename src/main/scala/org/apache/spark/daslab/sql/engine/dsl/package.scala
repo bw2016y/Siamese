@@ -22,26 +22,26 @@ import org.apache.spark.api.java.function.FilterFunction
  * A collection of implicit conversions that create a DSL for constructing catalyst data structures.
  *
  * {{{
- *  scala> import org.apache.spark.sql.catalyst.dsl.expressions._
+ *  scala> import org.apache.spark.daslab.sql.engine.dsl.expressions._
  *
  *  // Standard operators are added to expressions.
- *  scala> import org.apache.spark.sql.catalyst.expressions.Literal
+ *  scala> import org.apache.spark.daslab.sql.engine.expressions.Literal
  *  scala> Literal(1) + Literal(1)
- *  res0: org.apache.spark.sql.catalyst.expressions.Add = (1 + 1)
+ *  res0: org.apache.spark.daslab.sql.engine.expressions.Add = (1 + 1)
  *
  *  // There is a conversion from 'symbols to unresolved attributes.
  *  scala> 'a.attr
- *  res1: org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute = 'a
+ *  res1: org.apache.spark.daslab.sql.engine.analysis.UnresolvedAttribute = 'a
  *
  *  // These unresolved attributes can be used to create more complicated expressions.
  *  scala> 'a === 'b
- *  res2: org.apache.spark.sql.catalyst.expressions.EqualTo = ('a = 'b)
+ *  res2: org.apache.spark.daslab.sql.engine.expressions.EqualTo = ('a = 'b)
  *
  *  // SQL verbs can be used to construct logical query plans.
- *  scala> import org.apache.spark.sql.catalyst.plans.logical._
- *  scala> import org.apache.spark.sql.catalyst.dsl.plans._
+ *  scala> import org.apache.spark.daslab.sql.engine.plans.logical._
+ *  scala> import org.apache.spark.daslab.sql.engine.dsl.plans._
  *  scala> LocalRelation('key.int, 'value.string).where('key === 1).select('value).analyze
- *  res3: org.apache.spark.sql.catalyst.plans.logical.LogicalPlan =
+ *  res3: org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan =
  *  Project [value#3]
  *   Filter (key#2 = 1)
  *    LocalRelation [key#2,value#3], []
