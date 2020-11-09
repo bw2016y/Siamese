@@ -42,6 +42,7 @@ case object Final extends AggregateMode
 /**
   *  使用[[Complete]]模式的[[AggregateFunction]]意味着不进行局部聚合的情况下直接根据原始的input rows来计算结果
   *  这个函数使用原始的输入来更新给定的aggregation buffer，当处理完所有的input rows，就返回最终的结果
+  *  一般来说Complete模式应用在不支持Partial模式的聚合函数中
   */
 case object Complete extends AggregateMode
 
@@ -344,6 +345,10 @@ abstract class ImperativeAggregate extends AggregateFunction with CodegenFallbac
  * we create this function in DataFrame API). So, if there is any fields in
  * the implemented class that need to access fields of its children, please make
  * those fields `lazy val`s.
+  *
+  *  一个aggregate function的children节点也可能是unresolved （当我们使用DataFrame API来创建这个function的时候就会发生）
+  *  因此，如果在这个实现类中有哪些fields需要访问它的子节点的fields，需要将其标识为lazy val
+  *
  */
 abstract class DeclarativeAggregate
   extends AggregateFunction
@@ -351,16 +356,23 @@ abstract class DeclarativeAggregate
     with Unevaluable {
 
   /**
+    *  聚合缓冲区的初始化表达式
    * Expressions for initializing empty aggregation buffers.
    */
   val initialValues: Seq[Expression]
 
   /**
+    *  聚合缓冲区的更新表达式
    * Expressions for updating the mutable aggregation buffer based on an input row.
    */
   val updateExpressions: Seq[Expression]
 
   /**
+    *  聚合缓冲区的合并表达式
+    *  当定义这些表达式的时候，可以使用 attributeName.left/ attributeName.right 来指代待合并的缓存区中所涉及到的Attribute
+    *  由implicit class [[RichAttribute]]实现
+    *
+    *
    * A sequence of expressions for merging two aggregation buffers together. When defining these
    * expressions, you can use the syntax `attributeName.left` and `attributeName.right` to refer
    * to the attributes corresponding to each of the buffers being merged (this magic is enabled
@@ -369,12 +381,17 @@ abstract class DeclarativeAggregate
   val mergeExpressions: Seq[Expression]
 
   /**
+    *  最终结果生成表达式
    * An expression which returns the final value for this aggregate function. Its data type should
    * match this expression's [[dataType]].
    */
   val evaluateExpression: Expression
 
   /** An expression-based aggregate's bufferSchema is derived from bufferAttributes. */
+  /**
+    *  一个基于表达式的聚合缓冲区的bufferSchema
+    * @return
+    */
   final override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
 
   final lazy val inputAggBufferAttributes: Seq[AttributeReference] =
@@ -386,6 +403,9 @@ abstract class DeclarativeAggregate
    * we merge buffer values and then update bufferLeft. A [[RichAttribute]]
    * of an [[AttributeReference]] `a` has two functions `left` and `right`,
    * which represent `a` in `bufferLeft` and `bufferRight`, respectively.
+    *
+    *   用于在合并两个聚合缓冲区时代表attribute所使用的辅助类
+    *   当我们合并两个bufferLeft/bufferRight缓冲区时，我们合并并更新bufferLeft
    */
   implicit class RichAttribute(a: AttributeReference) {
     /** Represents this attribute at the mutable buffer side. */

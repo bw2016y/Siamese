@@ -178,6 +178,12 @@ object ExtractFiltersAndInnerJoins extends PredicateHelper {
 
 /**
   *  针对聚合操作，提取出聚合算子中的各个部分，并对一些表达式进行初步的转换
+  *
+  *   在处理聚合的物理执行实现时使用的一个extractor，相比于逻辑聚合，我们执行了以下的转换
+  *   - 未命名的grouping expression被命名，因此他们可以在聚合的不同阶段被引用
+  *   - 出现了多次的聚合进行了去重
+  *   - 将聚合本身的计算从最终结果的计算中分离开来
+  *
  * An extractor used when planning the physical execution of an aggregation. Compared with a logical
  * aggregation, the following transformations are performed:
  *  - Unnamed grouping expressions are named so that they can be referred to across phases of
@@ -194,6 +200,11 @@ object PhysicalAggregation {
 
   def unapply(a: Any): Option[ReturnType] = a match {
     case logical.Aggregate(groupingExpressions, resultExpressions, child) =>
+
+      /**
+        *  某个单个聚合表达式有可能多次出现在resultExpressions中
+        *  为了避免多次evaluating同一个聚合函数
+        */
       // A single aggregate expression might appear multiple times in resultExpressions.
       // In order to avoid evaluating an individual aggregate function multiple times, we'll
       // build a set of semantically distinct aggregate expressions and re-write expressions so

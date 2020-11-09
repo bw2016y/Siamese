@@ -12,6 +12,8 @@ import org.apache.spark.daslab.sql.types._
 
 /**
  * An expression that is evaluated to the first non-null input.
+  *
+  *  这种类型的表达式使用第一个不为null的输入来evaluate
  *
  * {{{
  *   coalesce(1, 2) => 1

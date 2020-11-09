@@ -38,7 +38,7 @@ object  ScalaTest{
     val dataset1=spark.read.json("src/test/resources/grade.json").toDF();
     dataset1.createTempView("gradetable")
 
-    val testinput ="select data.age from data"
+  /*  val testinput ="select data.age from data"
     println(spark.sql(testinput).queryExecution.originLogicalPlan)
     println(spark.sql(testinput).queryExecution.analyzedLogicalPlan)
     println(spark.sql(testinput).queryExecution.optimizedLogicalPlan)
@@ -132,9 +132,9 @@ object  ScalaTest{
     val value6: RDD[InternalRow] = executedPlan6.execute()
     value6.foreach(a =>{
       println(a)
-    })
+    })*/
 
-    val sql7 = "select max(age) from data ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sql7 = "select max(age),sum(age),avg(age),count(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
     val execution: QueryExecution = spark.sql(sql7).queryExecution

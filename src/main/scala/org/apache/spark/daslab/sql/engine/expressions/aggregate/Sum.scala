@@ -18,6 +18,7 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   override def nullable: Boolean = true
 
   // Return data type.
+  // 返回的数据类型需要额外定义
   override def dataType: DataType = resultType
 
   override def inputTypes: Seq[AbstractDataType] = Seq(NumericType)
@@ -25,6 +26,7 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   override def checkInputDataTypes(): TypeCheckResult =
     TypeUtils.checkForNumericExpr(child.dataType, "function sum")
 
+  //根据子节点的类型来判断是小数类型（DecimalType）/Long/Double
   private lazy val resultType = child.dataType match {
     case DecimalType.Fixed(precision, scale) =>
       DecimalType.bounded(precision + 10, scale)
@@ -38,6 +40,8 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
 
   private lazy val zero = Cast(Literal(0), sumDataType)
 
+
+  //缓冲区
   override lazy val aggBufferAttributes = sum :: Nil
 
   override lazy val initialValues: Seq[Expression] = Seq(

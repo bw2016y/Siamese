@@ -741,7 +741,7 @@ object Expand {
 /**
  * Apply a number of projections to every input row, hence we will get multiple output rows for
  * an input row.
- *
+ *  对于输入的每一行都执行一些projection，因此对于输入的一行我们将会得到多个输出的行
  * @param projections to apply
  * @param output of all projections.
  * @param child operator.

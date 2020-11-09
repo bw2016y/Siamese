@@ -6,7 +6,7 @@ import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.types._
 
 /**
- * Base class for all counting aggregators.
+  *  所有counting聚合的基类
  */
 abstract class CountLike extends DeclarativeAggregate {
   override def nullable: Boolean = false
@@ -14,7 +14,7 @@ abstract class CountLike extends DeclarativeAggregate {
   // Return data type.
   override def dataType: DataType = LongType
 
-
+  // 新建一个count作为返回的类型
   protected lazy val count = AttributeReference("count", LongType, nullable = false)()
 
   // 这些属性有可能在updateExpressions等各种表达式中用到
@@ -46,6 +46,7 @@ abstract class CountLike extends DeclarativeAggregate {
 // scalastyle:on line.size.limit
 case class Count(children: Seq[Expression]) extends CountLike {
 
+  // 如何根据input row更新聚合缓冲区
   override lazy val updateExpressions = {
     val nullableChildren = children.filter(_.nullable)
     if (nullableChildren.isEmpty) {

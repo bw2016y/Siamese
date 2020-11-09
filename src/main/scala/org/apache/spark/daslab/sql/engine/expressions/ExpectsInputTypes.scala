@@ -6,6 +6,7 @@ import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult
 import org.apache.spark.daslab.sql.types.AbstractDataType
 
 /**
+  *  一个定义了所期待的输入表达式类型的trait
  * A trait that gets mixin to define the expected input types of an expression.
  *
  * This trait is typically used by operator expressions (e.g. [[Add]], [[Subtract]]) to define
@@ -16,6 +17,7 @@ import org.apache.spark.daslab.sql.types.AbstractDataType
 trait ExpectsInputTypes extends Expression {
 
   /**
+    *  对子节点返回的表达式的类型的要求
    * Expected input types from child expressions. The i-th position in the returned seq indicates
    * the type requirement for the i-th child.
    *

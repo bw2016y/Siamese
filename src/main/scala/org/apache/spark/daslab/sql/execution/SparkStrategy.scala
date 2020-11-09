@@ -429,6 +429,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
           planLater(child)))
 
       case PhysicalAggregation(_, _, _, _) =>
+        // 如果不能匹配到前两种情况，就是错误
         // If cannot match the two cases above, then it's an error
         throw new AnalysisException(
           "Cannot use a mixture of aggregate function and group aggregate pandas UDF")

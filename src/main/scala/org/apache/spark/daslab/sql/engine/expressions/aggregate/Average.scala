@@ -56,6 +56,7 @@ abstract class AverageLike(child: Expression) extends DeclarativeAggregate {
   )
 
   // If all input are nulls, count will be 0 and we will get null after the division.
+  // 如果所有的输入都是null，count就是0，那么在执行除法的时候就会返回null
   override lazy val evaluateExpression = child.dataType match {
     case _: DecimalType =>
       DecimalPrecision.decimalAndDecimal(sum / count.cast(DecimalType.LongDecimal)).cast(resultType)
@@ -63,6 +64,7 @@ abstract class AverageLike(child: Expression) extends DeclarativeAggregate {
       sum.cast(resultType) / count.cast(resultType)
   }
 
+  //update
   protected def updateExpressionsDef: Seq[Expression] = Seq(
     /* sum = */
     Add(
