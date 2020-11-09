@@ -26,7 +26,7 @@ import static org.apache.spark.daslab.sql.engine.expressions.UnsafeArrayData.cal
 
 /**
  * A helper class to write data into global row buffer using `UnsafeArrayData` format,
- * used by {@link org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeProjection}.
+ * used by {@link org.apache.spark.daslab.sql.engine.expressions.codegen.GenerateUnsafeProjection}.
  */
 public final class UnsafeArrayWriter extends UnsafeWriter {
 

@@ -40,7 +40,7 @@ import org.apache.spark.SparkException
  *   BinaryType -> byte array
  *   ArrayType -> scala.collection.Seq or Array
  *   MapType -> scala.collection.Map
- *   StructType -> org.apache.spark.sql.Row
+ *   StructType -> org.apache.spark.daslab.sql.Row
  * }}}
  */
 object RowEncoder {
@@ -200,7 +200,7 @@ object RowEncoder {
    * by this function can be more permissive since multiple external types may map to a single
    * internal type.  For example, for an input with DecimalType in external row, its external types
    * can be `scala.math.BigDecimal`, `java.math.BigDecimal`, or
-   * `org.apache.spark.sql.types.Decimal`.
+   * `org.apache.spark.daslab.sql.types.Decimal`.
    */
   def externalDataTypeForInput(dt: DataType): DataType = dt match {
     // In order to support both Decimal and java/scala BigDecimal in external row, we make this

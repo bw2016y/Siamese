@@ -504,7 +504,7 @@ case class StringTranslate(srcExpr: Expression, matchingExpr: Expression, replac
         // Not all of them is literal or matching or replace value changed
         $termLastMatching = $matching.clone();
         $termLastReplace = $replace.clone();
-        $termDict = org.apache.spark.sql.catalyst.expressions.StringTranslate
+        $termDict = org.apache.spark.daslab.sql.engine.expressions.StringTranslate
           .buildDict($termLastMatching, $termLastReplace);
       }
       ${ev.value} = $src.translate($termDict);

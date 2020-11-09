@@ -89,7 +89,7 @@ import org.apache.spark.annotation.InterfaceStability
 @InterfaceStability.Evolving
 abstract class ForeachWriter[T] extends Serializable {
 
-  // TODO: Move this to org.apache.spark.sql.util or consolidate this with batch API.
+  // TODO: Move this to org.apache.daslab.spark.sql.util or consolidate this with batch API.
 
   /**
    * Called when starting to process one partition of new data in the executor. See the class

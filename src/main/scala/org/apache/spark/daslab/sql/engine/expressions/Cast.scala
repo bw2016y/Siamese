@@ -838,11 +838,11 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
         (c, evPrim, evNull) => code"$evPrim = UTF8String.fromBytes($c);"
       case DateType =>
         (c, evPrim, evNull) => code"""$evPrim = UTF8String.fromString(
-          org.apache.spark.sql.catalyst.util.DateTimeUtils.dateToString($c));"""
+          org.apache.spark.daslab.sql.engine.util.DateTimeUtils.dateToString($c));"""
       case TimestampType =>
         val tz = JavaCode.global(ctx.addReferenceObj("timeZone", timeZone), timeZone.getClass)
         (c, evPrim, evNull) => code"""$evPrim = UTF8String.fromString(
-          org.apache.spark.sql.catalyst.util.DateTimeUtils.timestampToString($c, $tz));"""
+          org.apache.spark.daslab.sql.engine.util.DateTimeUtils.timestampToString($c, $tz));"""
       case ArrayType(et, _) =>
         (c, evPrim, evNull) => {
           val buffer = ctx.freshVariable("buffer", classOf[UTF8StringBuilder])
@@ -901,7 +901,7 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
       val intOpt = ctx.freshVariable("intOpt", classOf[Option[Integer]])
       (c, evPrim, evNull) => code"""
         scala.Option<Integer> $intOpt =
-          org.apache.spark.sql.catalyst.util.DateTimeUtils.stringToDate($c);
+          org.apache.spark.daslab.sql.engine.util.DateTimeUtils.stringToDate($c);
         if ($intOpt.isDefined()) {
           $evPrim = ((Integer) $intOpt.get()).intValue();
         } else {
@@ -912,7 +912,7 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
       val tz = JavaCode.global(ctx.addReferenceObj("timeZone", timeZone), timeZone.getClass)
       (c, evPrim, evNull) =>
         code"""$evPrim =
-          org.apache.spark.sql.catalyst.util.DateTimeUtils.millisToDays($c / 1000L, $tz);"""
+          org.apache.spark.daslab.sql.engine.util.DateTimeUtils.millisToDays($c / 1000L, $tz);"""
     case _ =>
       (c, evPrim, evNull) => code"$evNull = true;"
   }
@@ -1004,7 +1004,7 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
       (c, evPrim, evNull) =>
         code"""
           scala.Option<Long> $longOpt =
-            org.apache.spark.sql.catalyst.util.DateTimeUtils.stringToTimestamp($c, $tz);
+            org.apache.spark.daslab.sql.engine.util.DateTimeUtils.stringToTimestamp($c, $tz);
           if ($longOpt.isDefined()) {
             $evPrim = ((Long) $longOpt.get()).longValue();
           } else {
@@ -1019,7 +1019,7 @@ case class Cast(child: Expression, dataType: DataType, timeZoneId: Option[String
       val tz = JavaCode.global(ctx.addReferenceObj("timeZone", timeZone), timeZone.getClass)
       (c, evPrim, evNull) =>
         code"""$evPrim =
-          org.apache.spark.sql.catalyst.util.DateTimeUtils.daysToMillis($c, $tz) * 1000;"""
+          org.apache.spark.daslab.sql.engine.util.DateTimeUtils.daysToMillis($c, $tz) * 1000;"""
     case DecimalType() =>
       (c, evPrim, evNull) => code"$evPrim = ${decimalToTimestampCode(c)};"
     case DoubleType =>

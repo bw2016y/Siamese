@@ -2703,7 +2703,7 @@ object Sequence {
 
       val timestampAddIntervalCode =
         s"""
-           |$t = org.apache.spark.sql.catalyst.util.DateTimeUtils.timestampAddInterval(
+           |$t = org.apache.spark.daslab.sql.engine.util.DateTimeUtils.timestampAddInterval(
            |  $t, $stepMonths, $stepMicros, $genTimeZone);
           """.stripMargin
 

@@ -682,7 +682,7 @@ object SQLConf {
       .internal()
       .stringConf
       .createWithDefault(
-        "org.apache.spark.sql.execution.datasources.SQLHadoopMapReduceCommitProtocol")
+        "org.apache.spark.daslab.sql.execution.datasources.SQLHadoopMapReduceCommitProtocol")
 
   val PARALLEL_PARTITION_DISCOVERY_THRESHOLD =
     buildConf("spark.sql.sources.parallelPartitionDiscovery.threshold")
@@ -843,7 +843,7 @@ object SQLConf {
           "be a subclass of StateStoreProvider, and must have a zero-arg constructor.")
       .stringConf
       .createWithDefault(
-        "org.apache.spark.sql.execution.streaming.state.HDFSBackedStateStoreProvider")
+        "org.apache.spark.daslab.sql.execution.streaming.state.HDFSBackedStateStoreProvider")
 
   val STATE_STORE_MIN_DELTAS_FOR_SNAPSHOT =
     buildConf("spark.sql.streaming.stateStore.minDeltasForSnapshot")
@@ -939,7 +939,7 @@ object SQLConf {
     buildConf("spark.sql.streaming.commitProtocolClass")
       .internal()
       .stringConf
-      .createWithDefault("org.apache.spark.sql.execution.streaming.ManifestFileCommitProtocol")
+      .createWithDefault("org.apache.spark.daslab.sql.execution.streaming.ManifestFileCommitProtocol")
 
   val STREAMING_MULTIPLE_WATERMARK_POLICY =
     buildConf("spark.sql.streaming.multipleWatermarkPolicy")

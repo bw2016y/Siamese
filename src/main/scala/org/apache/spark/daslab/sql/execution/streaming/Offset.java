@@ -4,7 +4,7 @@ package org.apache.spark.daslab.sql.execution.streaming;
 
 /**
  * This is an internal, deprecated interface. New source implementations should use the
- * org.apache.spark.sql.sources.v2.reader.streaming.Offset class, which is the one that will be
+ * org.apache.spark.daslab.sql.sources.v2.reader.streaming.Offset class, which is the one that will be
  * supported in the long term.
  *
  * This class will be removed in a future release.

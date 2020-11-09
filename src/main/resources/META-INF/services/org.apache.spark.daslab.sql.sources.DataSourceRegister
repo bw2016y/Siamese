@@ -7,3 +7,5 @@ org.apache.spark.daslab.sql.execution.datasources.text.TextFileFormat
 org.apache.spark.daslab.sql.execution.streaming.ConsoleSinkProvider
 org.apache.spark.daslab.sql.execution.streaming.sources.RateStreamProvider
 org.apache.spark.daslab.sql.execution.streaming.sources.TextSocketSourceProvider
+org.apache.spark.daslab.sql.hive.orc.OrcFileFormat
+org.apache.spark.daslab.sql.hive.execution.HiveFileFormat

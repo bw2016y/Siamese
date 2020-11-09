@@ -634,7 +634,7 @@ class CodegenContext {
     case FloatType => s"org.apache.spark.util.Utils.nanSafeCompareFloats($c1, $c2)"
     // use c1 - c2 may overflow
     case dt: DataType if isPrimitiveType(dt) => s"($c1 > $c2 ? 1 : $c1 < $c2 ? -1 : 0)"
-    case BinaryType => s"org.apache.spark.sql.catalyst.util.TypeUtils.compareBinary($c1, $c2)"
+    case BinaryType => s"org.apache.spark.daslab.sql.engine.util.TypeUtils.compareBinary($c1, $c2)"
     case NullType => "0"
     case array: ArrayType =>
       val elementType = array.elementType
@@ -1270,7 +1270,7 @@ object CodeGenerator extends Logging {
     val parentClassLoader = new ParentClassLoader(Utils.getContextOrSparkClassLoader)
     evaluator.setParentClassLoader(parentClassLoader)
     // Cannot be under package codegen, or fail with java.lang.InstantiationException
-    evaluator.setClassName("org.apache.spark.sql.catalyst.expressions.GeneratedClass")
+    evaluator.setClassName("org.apache.spark.daslab.sql.engine.expressions.GeneratedClass")
     evaluator.setDefaultImports(
       classOf[Platform].getName,
       classOf[InternalRow].getName,

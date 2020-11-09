@@ -1131,9 +1131,9 @@ class SessionCatalog(
     // Unfortunately we need to use reflection here because UserDefinedAggregateFunction
     // and ScalaUDAF are defined in sql/core module.
     val clsForUDAF =
-    Utils.classForName("org.apache.spark.sql.expressions.UserDefinedAggregateFunction")
+    Utils.classForName("org.apache.spark.daslab.sql.expressions.UserDefinedAggregateFunction")
     if (clsForUDAF.isAssignableFrom(clazz)) {
-      val cls = Utils.classForName("org.apache.spark.sql.execution.aggregate.ScalaUDAF")
+      val cls = Utils.classForName("org.apache.spark.daslab.sql.execution.aggregate.ScalaUDAF")
       val e = cls.getConstructor(classOf[Seq[Expression]], clsForUDAF, classOf[Int], classOf[Int])
         .newInstance(input, clazz.newInstance().asInstanceOf[Object], Int.box(1), Int.box(1))
         .asInstanceOf[ImplicitCastInputTypes]

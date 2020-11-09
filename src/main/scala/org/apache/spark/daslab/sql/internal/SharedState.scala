@@ -150,7 +150,7 @@ object SharedState extends Logging {
       logWarning("URL.setURLStreamHandlerFactory failed to set FsUrlStreamHandlerFactory")
   }
   //todo
-  private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.sql.hive.HiveExternalCatalog"
+  private val HIVE_EXTERNAL_CATALOG_CLASS_NAME = "org.apache.spark.daslab.sql.hive.HiveExternalCatalog"
 
   private def externalCatalogClassName(conf: SparkConf): String = {
     conf.get(CATALOG_IMPLEMENTATION) match {

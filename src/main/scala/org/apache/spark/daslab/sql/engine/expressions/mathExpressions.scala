@@ -436,7 +436,7 @@ case class Factorial(child: Expression) extends UnaryExpression with ImplicitCas
           ${ev.isNull} = true;
         } else {
           ${ev.value} =
-            org.apache.spark.sql.catalyst.expressions.Factorial.factorial($eval);
+            org.apache.spark.daslab.sql.engine.expressions.Factorial.factorial($eval);
         }
       """
     })
