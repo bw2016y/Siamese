@@ -6,6 +6,8 @@ import org.apache.spark.daslab.sql.engine.expressions.codegen.CodegenFallback
 import org.apache.spark.daslab.sql.engine.expressions.objects.LambdaVariable
 
 /**
+  * 这个类是用来计算表达式树的等价性的，可以添加表达式到这个class中然后查询表达式等价性
+  * 对于表达式树来说，如果输入相同则输出相同则认为是等价的
   * This class is used to compute equality of (sub)expression trees. Expressions can be added
   * to this class and they subsequently query for expression equality. Expression trees are
   * considered equal if for the same input(s), the same result is produced.
@@ -27,13 +29,19 @@ class EquivalentExpressions {
   private val equivalenceMap = mutable.HashMap.empty[Expr, mutable.MutableList[Expression]]
 
   /**
-    * Adds each expression to this data structure, grouping them with existing equivalent
-    * expressions. Non-recursive.
-    * Returns true if there was already a matching expression.
+    *
+    *  将每个表达式都添加到这个数据结构中，使用已有等价的表达式来分组
+    *  如果已经有一个匹配的表达式就返回true
+    *  对于Non-deterministic的表达式来说就永远是false
+    *
+    *   Adds each expression to this data structure, grouping them with existing equivalent
+    *   expressions. Non-recursive.
+    *   Returns true if there was already a matching expression.
+    *
     */
   def addExpr(expr: Expression): Boolean = {
     if (expr.deterministic) {
-      val e: Expr = Expr(expr)
+      val e: Expr = Expr(expr)   // Key
       val f = equivalenceMap.get(e)
       if (f.isDefined) {
         f.get += expr

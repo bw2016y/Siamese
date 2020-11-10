@@ -141,6 +141,7 @@ case class ObjectHashAggregateExec(
 }
 
 object ObjectHashAggregateExec {
+  //判断是否可以使用ObjectHashAggregateExec，如果聚合表达式中存在TypedImperativeAggregate类型的聚合函数 就可以使用
   def supportsAggregate(aggregateExpressions: Seq[AggregateExpression]): Boolean = {
     aggregateExpressions.map(_.aggregateFunction).exists {
       case _: TypedImperativeAggregate[_] => true

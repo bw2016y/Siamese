@@ -11,6 +11,19 @@ import org.apache.spark.daslab.sql.internal.SQLConf
  * Utility functions used by the query planner to convert our plan to new aggregation code path.
  */
 object AggUtils {
+  //构造聚合函数的实现
+  /**
+    *  总的来说聚合的物理实现的顺序是
+    *  Hash >> ObjectHash >> Sort
+    * @param requiredChildDistributionExpressions
+    * @param groupingExpressions
+    * @param aggregateExpressions
+    * @param aggregateAttributes
+    * @param initialInputBufferOffset
+    * @param resultExpressions
+    * @param child
+    * @return
+    */
   private def createAggregate(
                                requiredChildDistributionExpressions: Option[Seq[Expression]] = None,
                                groupingExpressions: Seq[NamedExpression] = Nil,
@@ -19,9 +32,13 @@ object AggUtils {
                                initialInputBufferOffset: Int = 0,
                                resultExpressions: Seq[NamedExpression] = Nil,
                                child: SparkPlan): SparkPlan = {
+
+    // 首先尝试使用HashAggregateExec
     val useHash = HashAggregateExec.supportsAggregate(
       aggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes))
+
     if (useHash) {
+
       HashAggregateExec(
         requiredChildDistributionExpressions = requiredChildDistributionExpressions,
         groupingExpressions = groupingExpressions,
@@ -34,6 +51,7 @@ object AggUtils {
       val objectHashEnabled = child.sqlContext.conf.useObjectHashAggregation
       val useObjectHash = ObjectHashAggregateExec.supportsAggregate(aggregateExpressions)
 
+       // 同时为true才可以使用
       if (objectHashEnabled && useObjectHash) {
         ObjectHashAggregateExec(
           requiredChildDistributionExpressions = requiredChildDistributionExpressions,
@@ -44,6 +62,7 @@ object AggUtils {
           resultExpressions = resultExpressions,
           child = child)
       } else {
+        //否则使用SortAggregateExec
         SortAggregateExec(
           requiredChildDistributionExpressions = requiredChildDistributionExpressions,
           groupingExpressions = groupingExpressions,
@@ -55,21 +74,22 @@ object AggUtils {
       }
     }
   }
-
+  //处理没有Distinct的情况
   def planAggregateWithoutDistinct(
                                     groupingExpressions: Seq[NamedExpression],
                                     aggregateExpressions: Seq[AggregateExpression],
                                     resultExpressions: Seq[NamedExpression],
                                     child: SparkPlan): Seq[SparkPlan] = {
-    // Check if we can use HashAggregate.
 
-    // 1. Create an Aggregate Operator for partial aggregations.
+    // 检查我们是否可以使用HashAggregate
+    // 1. Create an Aggregate Operator for partial aggregations.(
+    // 先创建一个用于partial agg的聚合算子)
 
     val groupingAttributes = groupingExpressions.map(_.toAttribute)
-    val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))
-    val partialAggregateAttributes =
+    val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))  // Partial agg
+    val partialAggregateAttributes =    // 所有聚合函数的聚合缓冲区所涉及的attributes
       partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-    val partialResultExpressions =
+    val partialResultExpressions =  //  聚合函数的输入的Attribute（Ref）
       groupingAttributes ++
         partialAggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
 
@@ -82,10 +102,15 @@ object AggUtils {
       resultExpressions = partialResultExpressions,
       child = child)
 
-    // 2. Create an Aggregate Operator for final aggregations.
+    // 2. Create an Aggregate Operator for final aggregations.(
+    // 第二步，创建Final Mode的聚合算子用于最后的合并，一般来说就是用于合并聚合缓冲区)
     val finalAggregateExpressions = aggregateExpressions.map(_.copy(mode = Final))
+
     // The attributes of the final aggregation buffer, which is presented as input to the result
     // projection:
+    /**
+      *  第二步聚合中的聚合缓冲区中的列（resultAttribute，Attributes）就被当作是最终projection的输入
+      */
     val finalAggregateAttributes = finalAggregateExpressions.map(_.resultAttribute)
 
     val finalAggregate = createAggregate(
@@ -100,6 +125,7 @@ object AggUtils {
     finalAggregate :: Nil
   }
 
+  //处理只有一个Distinct的情况
   def planAggregateWithOneDistinct(
                                     groupingExpressions: Seq[NamedExpression],
                                     functionsWithDistinct: Seq[AggregateExpression],

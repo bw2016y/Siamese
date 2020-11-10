@@ -72,6 +72,10 @@ object AggregateExpression {
 /**
  * A container for an [[AggregateFunction]] with its [[AggregateMode]] and a field
  * (`isDistinct`) indicating if DISTINCT keyword is specified for this function.
+  *
+  *  是一个聚合函数[[AggregateFunction]]和[[AggregateMode]]还有一个标识其是否有DISTINCT关键词
+  *  修饰的isDistinct的域的container
+  *
  */
 case class AggregateExpression(
                                 aggregateFunction: AggregateFunction,
@@ -171,7 +175,9 @@ abstract class AggregateFunction extends Expression {
    * These attributes are created automatically by cloning the [[aggBufferAttributes]].
    */
   /**
+    *
     *  聚合函数处理新的数据行时，数据行的列构成信息
+    *
     * @return
     */
   def inputAggBufferAttributes: Seq[AttributeReference]
@@ -179,12 +185,14 @@ abstract class AggregateFunction extends Expression {
   /**
    * Result of the aggregate function when the input is empty. This is currently only used for the
    * proper rewriting of distinct aggregate functions.
+    *  当输入是空的时候聚合函数的结果
+    *  当前只在适当重写distinct aggregate function的时候被用到了
    */
   def defaultResult: Option[Literal] = None
 
   /**
    * Creates [[AggregateExpression]] with `isDistinct` flag disabled.
-   *
+   * 默认是false
    * @see `toAggregateExpression(isDistinct: Boolean)` for detailed description
    */
   def toAggregateExpression(): AggregateExpression = toAggregateExpression(isDistinct = false)
@@ -206,7 +214,12 @@ abstract class AggregateFunction extends Expression {
     s"$prettyName($distinct${children.map(_.sql).mkString(", ")})"
   }
 
-  /** String representation used in explain plans. */
+
+  /**
+    *  在解释逻辑计划的时候用于说明的字符串表示
+    * @param isDistinct
+    * @return
+    */
   def toAggString(isDistinct: Boolean): String = {
     val start = if (isDistinct) "(distinct " else "("
     prettyName + flatArguments.mkString(start, ", ", ")")

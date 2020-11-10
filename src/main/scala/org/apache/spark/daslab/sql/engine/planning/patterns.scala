@@ -203,7 +203,9 @@ object PhysicalAggregation {
 
       /**
         *  某个单个聚合表达式有可能多次出现在resultExpressions中
-        *  为了避免多次evaluating同一个聚合函数
+        *  为了避免多次evaluating同一个聚合函数, 我们构造一个语义不同的聚合表达式的集合
+        *  并且重写这些表达式以便他们可以指向一个实际上已经计算的聚合函数的副本
+        *  Non-deterministic聚合表达式不算是重复的
         */
       // A single aggregate expression might appear multiple times in resultExpressions.
       // In order to avoid evaluating an individual aggregate function multiple times, we'll
@@ -213,6 +215,7 @@ object PhysicalAggregation {
       val equivalentAggregateExpressions = new EquivalentExpressions
       val aggregateExpressions = resultExpressions.flatMap { expr =>
         expr.collect {
+          // 重复的就不添加到aggregateExpressions中
           // addExpr() always returns false for non-deterministic expressions and do not add them.
           case agg: AggregateExpression
             if !equivalentAggregateExpressions.addExpr(agg) => agg
@@ -233,6 +236,12 @@ object PhysicalAggregation {
       }
       val groupExpressionMap = namedGroupingExpressions.toMap
 
+      /**
+        * 原始的resultExpression是一系列表达式的集合，可能会引用聚合表达式/用于分组的列值/常量
+        * 当聚合算子输出row时，会使用resultExpressions来产生一个输出的投影（这个投影的输入是grouping columns
+        *  和最后的聚合结果缓冲区）
+        *  因此，我们必须重写result expression，以便让他们的attributes可以匹配到最终的投影算子的输入的attribute
+        */
       // The original `resultExpressions` are a set of expressions which may reference
       // aggregate expressions, grouping column values, and constants. When aggregate operator
       // emits output rows, we will use `resultExpressions` to generate an output projection
@@ -262,7 +271,7 @@ object PhysicalAggregation {
       }
 
       Some((
-        namedGroupingExpressions.map(_._2),
+        namedGroupingExpressions.map(_._2), //这里都是named的表达式
         aggregateExpressions,
         rewrittenResultExpressions,
         child))

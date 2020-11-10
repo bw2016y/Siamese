@@ -20,6 +20,7 @@ import org.apache.spark.unsafe.Platform;
 import org.apache.spark.unsafe.map.BytesToBytesMap;
 
 /**
+ *
  * Unsafe-based HashMap for performing aggregations where the aggregated values are fixed-width.
  *
  * This map supports a maximum of 2 billion keys.
@@ -52,6 +53,10 @@ public final class UnsafeFixedWidthAggregationMap {
     private final UnsafeRow currentAggregationBuffer;
 
     /**
+     *     对于给定的Schema来说，如果其中每个Field的类型都是UnsafeRow中可以in place替换的
+     *     就说明UnsafeFixedWidthAggregationMap支持这个schema的aggregation buffers
+     *
+     *
      * @return true if UnsafeFixedWidthAggregationMap supports aggregation buffers with the given
      *         schema, false otherwise.
      */

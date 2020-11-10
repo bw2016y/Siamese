@@ -69,6 +69,7 @@ public final class UnsafeRow extends InternalRow implements Externalizable, Kryo
 
     /**
      * Field types that can be updated in place in UnsafeRows (e.g. we support set() for these types)
+     *  mutable types是指那些可以在UnsafeRows中可以使用set()方法来in place的更新的类型
      */
     public static final Set<DataType> mutableFieldTypes;
 

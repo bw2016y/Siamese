@@ -383,17 +383,22 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
   /**
     *  用来处理使用了AggregateFunction2接口的表达式的聚合算子
+    *  生成SparkPlan
    */
   object Aggregation extends Strategy {
     def apply(plan: LogicalPlan): Seq[SparkPlan] = plan match {
       case PhysicalAggregation(groupingExpressions, aggExpressions, resultExpressions, child)
+        // 如果aggExpressions都是聚合表达式
         if aggExpressions.forall(expr => expr.isInstanceOf[AggregateExpression]) =>
         val aggregateExpressions = aggExpressions.map(expr =>
           expr.asInstanceOf[AggregateExpression])
 
+
+        //根据是否是Distinct分别处理
         val (functionsWithDistinct, functionsWithoutDistinct) =
           aggregateExpressions.partition(_.isDistinct)
         if (functionsWithDistinct.map(_.aggregateFunction.children.toSet).distinct.length > 1) {
+          // 这是一个合理性的检查，代码不应该执行到这里（当我们有多个distinct column sets
           // This is a sanity check. We should not reach here when we have multiple distinct
           // column sets. Our `RewriteDistinctAggregates` should take care this case.
           sys.error("You hit a query analyzer bug. Please report your query to " +

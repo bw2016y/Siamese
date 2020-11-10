@@ -35,6 +35,7 @@ case class HashAggregateExec(
                               child: SparkPlan)
   extends UnaryExecNode with CodegenSupport {
 
+  // 聚合缓冲池会使用到的Attributes
   private[this] val aggregateBufferAttributes = {
     aggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
   }
@@ -944,8 +945,15 @@ case class HashAggregateExec(
 }
 
 object HashAggregateExec {
+  /**
+    *
+    * @param aggregateBufferAttributes
+    * @return
+    */
   def supportsAggregate(aggregateBufferAttributes: Seq[Attribute]): Boolean = {
+    // 构造一个聚合缓冲区组成的Schema
     val aggregationBufferSchema = StructType.fromAttributes(aggregateBufferAttributes)
+
     UnsafeFixedWidthAggregationMap.supportsAggregationBufferSchema(aggregationBufferSchema)
   }
 }
