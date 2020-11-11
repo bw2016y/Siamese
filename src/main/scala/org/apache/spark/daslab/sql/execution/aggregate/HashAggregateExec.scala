@@ -42,10 +42,12 @@ case class HashAggregateExec(
 
   require(HashAggregateExec.supportsAggregate(aggregateBufferAttributes))
 
+  // 所需的所有Attributes
   override lazy val allAttributes: AttributeSeq =
     child.output ++ aggregateBufferAttributes ++ aggregateAttributes ++
       aggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
 
+  //  metric
   override lazy val metrics = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
     "peakMemory" -> SQLMetrics.createSizeMetric(sparkContext, "peak memory"),
@@ -53,14 +55,19 @@ case class HashAggregateExec(
     "aggTime" -> SQLMetrics.createTimingMetric(sparkContext, "aggregate time"),
     "avgHashProbe" -> SQLMetrics.createAverageMetric(sparkContext, "avg hash probe"))
 
+  // 输出的Attribute
+  // 最终置信区间和错误率可能需要在这里输出
   override def output: Seq[Attribute] = resultExpressions.map(_.toAttribute)
 
   override def outputPartitioning: Partitioning = child.outputPartitioning
 
+  //  不算子节点的输入，做了去重的处理
   override def producedAttributes: AttributeSet =
     AttributeSet(aggregateAttributes) ++
       AttributeSet(resultExpressions.diff(groupingExpressions).map(_.toAttribute)) ++
       AttributeSet(aggregateBufferAttributes)
+
+
 
   override def requiredChildDistribution: List[Distribution] = {
     requiredChildDistributionExpressions match {
@@ -70,6 +77,7 @@ case class HashAggregateExec(
     }
   }
 
+  // fallback策略
   // This is for testing. We force TungstenAggregationIterator to fall back to the unsafe row hash
   // map and/or the sort-based aggregation once it has processed a given number of input rows.
   private val testFallbackStartsAt: Option[(Int, Int)] = {
@@ -127,9 +135,12 @@ case class HashAggregateExec(
   }
 
   // all the mode of aggregate expressions
+  // 所有的聚合表达式的模式
   private val modes = aggregateExpressions.map(_.mode).distinct
 
+  // 这里默认所有子节点的输出都被使用了
   override def usedInputs: AttributeSet = inputSet
+
 
   override def supportCodegen: Boolean = {
     // ImperativeAggregate is not supported right now
@@ -163,6 +174,7 @@ case class HashAggregateExec(
       doConsumeWithKeys(ctx, input)
     }
   }
+
 
   // The variables used as aggregation buffer. Only used for aggregation without keys.
   private var bufVars: Seq[ExprCode] = _
@@ -286,21 +298,29 @@ case class HashAggregateExec(
      """.stripMargin
   }
 
+  // grouping setting
   private val groupingAttributes = groupingExpressions.map(_.toAttribute)
   private val groupingKeySchema = StructType.fromAttributes(groupingAttributes)
+
+  // 所有的DeclarativeAggregate
   private val declFunctions = aggregateExpressions.map(_.aggregateFunction)
     .filter(_.isInstanceOf[DeclarativeAggregate])
     .map(_.asInstanceOf[DeclarativeAggregate])
+
+  // 所有的聚合函数都共享的buffer
   private val bufferSchema = StructType.fromAttributes(aggregateBufferAttributes)
 
   // The name for Fast HashMap
   private var fastHashMapTerm: String = _
   private var isFastHashMapEnabled: Boolean = false
 
+
+  // 列式HashMap
   // whether a vectorized hashmap is used instead
   // we have decided to always use the row-based hashmap,
   // but the vectorized hashmap can still be switched on for testing and benchmarking purposes.
   private var isVectorizedHashMapEnabled: Boolean = false
+
 
   // The name for UnsafeRow HashMap
   private var hashMapTerm: String = _
@@ -308,6 +328,8 @@ case class HashAggregateExec(
 
   /**
    * This is called by generated Java class, should be public.
+    * 通过生成的Java class来调用，应该是public的
+    * 这个函数初始化了物理阶段的聚合缓冲区
    */
   def createHashMap(): UnsafeFixedWidthAggregationMap = {
     // create initialized aggregate buffer
@@ -329,6 +351,7 @@ case class HashAggregateExec(
     TaskContext.get().taskMemoryManager()
   }
 
+  // 获得一个空的聚合缓冲区
   def getEmptyAggregationBuffer(): InternalRow = {
     val initExpr = declFunctions.flatMap(f => f.initialValues)
     val initialBuffer = UnsafeProjection.create(initExpr)(EmptyRow)
@@ -337,6 +360,7 @@ case class HashAggregateExec(
 
   /**
    * This is called by generated Java class, should be public.
+    * UnsafeRowJoiner
    */
   def createUnsafeJoiner(): UnsafeRowJoiner = {
     GenerateUnsafeRowJoiner.create(groupingKeySchema, bufferSchema)
@@ -344,6 +368,8 @@ case class HashAggregateExec(
 
   /**
    * Called by generated Java class to finish the aggregate and return a KVIterator.
+    *
+    *  被生成的Java class调用，用于结束一个聚合并返回KVIterator
    */
   def finishAggregate(
                        hashMap: UnsafeFixedWidthAggregationMap,
@@ -429,6 +455,7 @@ case class HashAggregateExec(
   }
 
   /**
+    *  生成用于输出的代码
    * Generate the code for output.
    * @return function name for the result code.
    */
@@ -528,6 +555,7 @@ case class HashAggregateExec(
   }
 
   /**
+    *
    * A required check for any fast hash map implementation (basically the common requirements
    * for row-based and vectorized).
    * Currently fast hash map is supported for primitive data types during partial aggregation.
@@ -680,6 +708,7 @@ case class HashAggregateExec(
     }
 
     // Iterate over the aggregate rows and convert them from InternalRow to UnsafeRow
+    // 将InternalRow变为UnsafeRow
     def outputFromVectorizedMap: String = {
       val row = ctx.freshName("fastHashMapRow")
       ctx.currentVars = null
@@ -924,7 +953,9 @@ case class HashAggregateExec(
 
   override def simpleString: String = toString(verbose = false)
 
+  // print message
   private def toString(verbose: Boolean): String = {
+
     val allAggregateExpressions = aggregateExpressions
 
     testFallbackStartsAt match {

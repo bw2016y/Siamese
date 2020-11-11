@@ -135,7 +135,7 @@ object  ScalaTest{
       println(a)
     })*/
 
-    val sql7 = "select max(age),sum(age),avg(age),count(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sql7 = "select sum(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
     val execution: QueryExecution = spark.sql(sql7).queryExecution

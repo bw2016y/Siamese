@@ -74,7 +74,7 @@ class TungstenAggregationIterator(
                                    initialInputBufferOffset: Int,
                                    resultExpressions: Seq[NamedExpression],
                                    newMutableProjection: (Seq[Expression], Seq[Attribute]) => MutableProjection,
-                                   originalInputAttributes: Seq[Attribute],
+                                   originalInputAttributes: Seq[Attribute],    // child.output
                                    inputIter: Iterator[InternalRow],
                                    testFallbackStartsAt: Option[(Int, Int)],
                                    numOutputRows: SQLMetric,
