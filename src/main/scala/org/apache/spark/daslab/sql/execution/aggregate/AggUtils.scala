@@ -86,13 +86,14 @@ object AggUtils {
     // 先创建一个用于partial agg的聚合算子)
 
     val groupingAttributes = groupingExpressions.map(_.toAttribute)
-    val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))  // Partial agg
-    val partialAggregateAttributes =    // 所有聚合函数的聚合缓冲区所涉及的attributes
-      partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
-    val partialResultExpressions =  //  聚合函数的输入的Attribute（Ref）
-      groupingAttributes ++
-        partialAggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
+    // Partial agg
+    val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))
+    // 所有聚合函数的聚合缓冲区所涉及的attributes
+    val partialAggregateAttributes = partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
+    // 聚合算子应当输出的列集
+    val partialResultExpressions = groupingAttributes ++ partialAggregateExpressions.flatMap(_.aggregateFunction.inputAggBufferAttributes)
 
+    // 第一步的partial agg
     val partialAggregate = createAggregate(
       requiredChildDistributionExpressions = None,
       groupingExpressions = groupingExpressions,

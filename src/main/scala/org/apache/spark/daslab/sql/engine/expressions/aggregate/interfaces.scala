@@ -127,6 +127,7 @@ case class AggregateExpression(
     }
   }
 
+  // 打印mode作为前缀
   override def toString: String = {
     val prefix = mode match {
       case Partial => "partial_"
@@ -175,9 +176,9 @@ abstract class AggregateFunction extends Expression {
    * These attributes are created automatically by cloning the [[aggBufferAttributes]].
    */
   /**
+    *     input agg buffers的列的Attributes
     *
-    *  聚合函数处理新的数据行时，数据行的列构成信息
-    *
+    *     这些属性是通过自动通过cloning[[aggBufferAttributes]]来创建的
     * @return
     */
   def inputAggBufferAttributes: Seq[AttributeReference]

@@ -11,17 +11,20 @@ import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate._
 
 /**
+  *
  * [[SortBasedAggregationIterator]] 和 [[TungstenAggregationIterator]]的基类
  * 主要包含两个部分：
   * 1. 初始化聚合函数（aggregate functions）
  *  2. 生成两个函数: 基于聚合函数的模式生成processRow函数和generateOutput函数
   *   processRow函数用于处理输入
   *   generateOutput用于生成结果
+  *
+  *
  */
 abstract class AggregationIterator(
                                     partIndex: Int,
                                     groupingExpressions: Seq[NamedExpression],
-                                    inputAttributes: Seq[Attribute],
+                                    inputAttributes: Seq[Attribute],  // child.output
                                     aggregateExpressions: Seq[AggregateExpression],
                                     aggregateAttributes: Seq[Attribute],
                                     initialInputBufferOffset: Int,
@@ -34,6 +37,7 @@ abstract class AggregationIterator(
   ///////////////////////////////////////////////////////////////////////////
 
   /**
+    *   如下的AggregationMode的组合是支持的
    * The following combinations of AggregationMode are supported:
    * - Partial
    * - PartialMerge (for single distinct)
@@ -42,31 +46,59 @@ abstract class AggregationIterator(
    * - Complete (for SortAggregate with functions that does not support Partial)
    * - Final and Complete (currently not used)
    *
+    *
    * TODO: AggregateMode should have only two modes: Update and Merge, AggregateExpression
    * could have a flag to tell it's final or not.
+    *   聚合模式应该只有两个模式： Update/Merge
+    *   AggregateExpression需要一个flag来标识它是否是final
+    *
    */
   {
     val modes = aggregateExpressions.map(_.mode).distinct.toSet
+    // aggMode <= 2 是合理的
     require(modes.size <= 2,
       s"$aggregateExpressions are not supported because they have more than 2 distinct modes.")
+    // 模式应该是 Set(Partial,PartialMerge) 或者是 Set(Final,Complete)的一个子集
     require(modes.subsetOf(Set(Partial, PartialMerge)) || modes.subsetOf(Set(Final, Complete)),
       s"$aggregateExpressions can't have Partial/PartialMerge and Final/Complete in the same time.")
   }
 
+
+  /**
+    *  通过绑定reference初始化所有的AggregateFunction
+    *
+    *  并且设置inputBufferOffset/mutableBufferOffset
+    *  -
+    *  -
+    * @param expressions
+    * @param startingInputBufferOffset
+    * @return
+    */
   // Initialize all AggregateFunctions by binding references if necessary,
   // and set inputBufferOffset and mutableBufferOffset.
   protected def initializeAggregateFunctions(
                                               expressions: Seq[AggregateExpression],
                                               startingInputBufferOffset: Int): Array[AggregateFunction] = {
+
     var mutableBufferOffset = 0
     var inputBufferOffset: Int = startingInputBufferOffset
     val expressionsLength = expressions.length
+
+    // 作为返回值返回
     val functions = new Array[AggregateFunction](expressionsLength)
+
     var i = 0
     while (i < expressionsLength) {
       val func = expressions(i).aggregateFunction
       val funcWithBoundReferences: AggregateFunction = expressions(i).mode match {
         case Partial | Complete if func.isInstanceOf[ImperativeAggregate] =>
+
+          /**
+            *  如果聚合函数不是一个expression-based的聚合函数（不支持code-gen）而且聚合模式
+            *   是Partial/Complete，我们就需要创建BoundReferences了，因为我们将会在这个聚合函数
+            *   的update方法中调用子节点的eval函数
+            *   这些调用需要进行BoundReferences来工作
+            */
           // We need to create BoundReferences if the function is not an
           // expression-based aggregate function (it does not support code-gen) and the mode of
           // this function is Partial or Complete because we will call eval of this
@@ -74,6 +106,10 @@ abstract class AggregationIterator(
           // Those eval calls require BoundReferences to work.
           BindReferences.bindReference(func, inputAttributes)
         case _ =>
+
+          /**
+            *  对于聚合模式为PartialMerge和Final类型的聚合函数来说，我们只需要设置inputBufferOffset就可以了
+            */
           // We only need to set inputBufferOffset for aggregate functions with mode
           // PartialMerge and Final.
           val updatedFunc = func match {
@@ -81,11 +117,17 @@ abstract class AggregationIterator(
               function.withNewInputAggBufferOffset(inputBufferOffset)
             case function => function
           }
+          // 这里根据每个function的aggBufferSchema的长度来更新inputBufferOffset
           inputBufferOffset += func.aggBufferSchema.length
           updatedFunc
       }
       val funcWithUpdatedAggBufferOffset = funcWithBoundReferences match {
         case function: ImperativeAggregate =>
+
+          /**
+            *  对于ImperativeAggregate类型的聚合函数，更重要的是在所有可能潜在的bindReference操作
+            *  之后再设置mutableBufferOffset,因为bindReference将会构造一个新的聚合函数实例
+            */
           // Set mutableBufferOffset for this function. It is important that setting
           // mutableBufferOffset happens after all potential bindReference operations
           // because bindReference will create a new instance of the function.
