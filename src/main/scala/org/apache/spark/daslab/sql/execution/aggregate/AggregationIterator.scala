@@ -141,6 +141,7 @@ abstract class AggregationIterator(
     functions
   }
 
+  // 初始化
   protected val aggregateFunctions: Array[AggregateFunction] =
     initializeAggregateFunctions(aggregateExpressions, initialInputBufferOffset)
 
@@ -148,6 +149,7 @@ abstract class AggregationIterator(
   // For example, we have func1, func2, func3, func4 in aggregateFunctions, and
   // func2 and func3 are imperative aggregate functions.
   // ImperativeAggregateFunctionPositions will be [1, 2].
+  // 获取所有Imperative类型的聚合函数的下标的数组
   protected[this] val allImperativeAggregateFunctionPositions: Array[Int] = {
     val positions = new ArrayBuffer[Int]()
     var i = 0
@@ -162,6 +164,7 @@ abstract class AggregationIterator(
   }
 
   // The projection used to initialize buffer values for all expression-based aggregates.
+  // 用于初始化所有expression-based 聚合的buffer values的投影
   protected[this] val expressionAggInitialProjection = {
     val initExpressions = aggregateFunctions.flatMap {
       case ae: DeclarativeAggregate => ae.initialValues
@@ -173,6 +176,7 @@ abstract class AggregationIterator(
   }
 
   // All imperative AggregateFunctions.
+  // 取出所有的Imperative聚合函数
   protected[this] val allImperativeAggregateFunctions: Array[ImperativeAggregate] =
     allImperativeAggregateFunctionPositions
       .map(aggregateFunctions)

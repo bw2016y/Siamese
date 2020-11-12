@@ -47,6 +47,7 @@ case object Final extends AggregateMode
 case object Complete extends AggregateMode
 
 /**
+ * 在code-gen中使用的占位表达式，不改变row中对应的值
  * A place holder expressions used in code-gen, it does not change the corresponding value
  * in the row.
  */
