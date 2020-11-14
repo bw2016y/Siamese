@@ -189,6 +189,7 @@ abstract class AggregationIterator(
                                     inputAttributes: Seq[Attribute]): (InternalRow, InternalRow) => Unit = {
     val joinedRow = new JoinedRow
     if (expressions.nonEmpty) {
+      // 取出DeclarativeAggregate类型聚合函数的 update/merge表达式
       val mergeExpressions = functions.zipWithIndex.flatMap {
         case (ae: DeclarativeAggregate, i) =>
           expressions(i).mode match {
@@ -197,6 +198,7 @@ abstract class AggregationIterator(
           }
         case (agg: AggregateFunction, _) => Seq.fill(agg.aggBufferAttributes.length)(NoOp)
       }
+       // 对于ImperativeAggregate来说需要返回（InternalRow,InternalRow ) =>  Unit
       val updateFunctions = functions.zipWithIndex.collect {
         case (ae: ImperativeAggregate, i) =>
           expressions(i).mode match {
@@ -206,7 +208,9 @@ abstract class AggregationIterator(
               (buffer: InternalRow, row: InternalRow) => ae.merge(buffer, row)
           }
       }.toArray
+
       // This projection is used to merge buffer values for all expression-based aggregates.
+      // 这个投影用于合并所有基于表达式的聚合的buffer value
       val aggregationBufferSchema = functions.flatMap(_.aggBufferAttributes)
       val updateProjection =
         newMutableProjection(mergeExpressions, aggregationBufferSchema ++ inputAttributes)
@@ -223,6 +227,8 @@ abstract class AggregationIterator(
       }
     } else {
       // Grouping only.
+
+      // 只分组 不聚合
       (currentBuffer: InternalRow, row: InternalRow) => {}
     }
   }
@@ -230,32 +236,44 @@ abstract class AggregationIterator(
   protected val processRow: (InternalRow, InternalRow) => Unit =
     generateProcessRow(aggregateExpressions, aggregateFunctions, inputAttributes)
 
+  // 根据groupingExpression来投影
   protected val groupingProjection: UnsafeProjection =
     UnsafeProjection.create(groupingExpressions, inputAttributes)
+
+  // grouping 涉及到的列
   protected val groupingAttributes = groupingExpressions.map(_.toAttribute)
 
-  // Initializing the function used to generate the output row.
+  // 初始化用于生成output row的函数
   protected def generateResultProjection(): (UnsafeRow, InternalRow) => UnsafeRow = {
     val joinedRow = new JoinedRow
     val modes = aggregateExpressions.map(_.mode).distinct
     val bufferAttributes = aggregateFunctions.flatMap(_.aggBufferAttributes)
+    // 包含Final/Complete的聚合模式
     if (modes.contains(Final) || modes.contains(Complete)) {
+
       val evalExpressions = aggregateFunctions.map {
         case ae: DeclarativeAggregate => ae.evaluateExpression
         case agg: AggregateFunction => NoOp
       }
+
+
+       // 这是聚合结果，但不是最终的结果
       val aggregateResult = new SpecificInternalRow(aggregateAttributes.map(_.dataType))
       val expressionAggEvalProjection = newMutableProjection(evalExpressions, bufferAttributes)
       expressionAggEvalProjection.target(aggregateResult)
 
+      // 这才是最终的ResultProjection
       val resultProjection =
         UnsafeProjection.create(resultExpressions, groupingAttributes ++ aggregateAttributes)
       resultProjection.initialize(partIndex)
 
+       // 根据groupingKey + currentBuffer  返回最终的 UnsafeRow
       (currentGroupingKey: UnsafeRow, currentBuffer: InternalRow) => {
         // Generate results for all expression-based aggregate functions.
+        // 进行投影，生成所有基于表达式的聚合函数的结果
         expressionAggEvalProjection(currentBuffer)
         // Generate results for all imperative aggregate functions.
+        // imperative聚合函数
         var i = 0
         while (i < allImperativeAggregateFunctions.length) {
           aggregateResult.update(
@@ -265,7 +283,9 @@ abstract class AggregationIterator(
         }
         resultProjection(joinedRow(currentGroupingKey, aggregateResult))
       }
+        //  聚合模式是 Partial / PartialMerge
     } else if (modes.contains(Partial) || modes.contains(PartialMerge)) {
+
       val resultProjection = UnsafeProjection.create(
         groupingAttributes ++ bufferAttributes,
         groupingAttributes ++ bufferAttributes)
@@ -273,6 +293,10 @@ abstract class AggregationIterator(
 
       // TypedImperativeAggregate stores generic object in aggregation buffer, and requires
       // calling serialization before shuffling. See [[TypedImperativeAggregate]] for more info.
+      /**
+        *  TypedImperativeAggregate会在聚合缓冲区中存储generic object，而且在shuffling之前
+        *  需要调用序列化机制（serialization）
+        */
       val typedImperativeAggregates: Array[TypedImperativeAggregate[_]] = {
         aggregateFunctions.collect {
           case (ag: TypedImperativeAggregate[_]) => ag
@@ -289,6 +313,7 @@ abstract class AggregationIterator(
         resultProjection(joinedRow(currentGroupingKey, currentBuffer))
       }
     } else {
+      // 对于只分组，没有聚合函数的情况
       // Grouping-only: we only output values based on grouping expressions.
       val resultProjection = UnsafeProjection.create(resultExpressions, groupingAttributes)
       resultProjection.initialize(partIndex)
@@ -298,10 +323,12 @@ abstract class AggregationIterator(
     }
   }
 
+
   protected val generateOutput: (UnsafeRow, InternalRow) => UnsafeRow =
     generateResultProjection()
 
   /** Initializes buffer values for all aggregate functions. */
+  // 为所有聚合函数初始化buffer values
   protected def initializeBuffer(buffer: InternalRow): Unit = {
     expressionAggInitialProjection.target(buffer)(EmptyRow)
     var i = 0

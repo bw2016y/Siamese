@@ -118,6 +118,7 @@ package object expressions  {
       */
     @transient private lazy val attrsArray = attrs.toArray
 
+    //一个HashMap存放ExprId -> Ordinal
     @transient private lazy val exprIdToOrdinal = {
       val arr = attrsArray
       val map = Maps.newHashMapWithExpectedSize[ExprId, Int](arr.length)

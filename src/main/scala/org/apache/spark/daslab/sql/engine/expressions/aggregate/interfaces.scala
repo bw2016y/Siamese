@@ -410,7 +410,7 @@ abstract class DeclarativeAggregate
   final override def aggBufferSchema: StructType = StructType.fromAttributes(aggBufferAttributes)
 
   final lazy val inputAggBufferAttributes: Seq[AttributeReference] =
-    aggBufferAttributes.map(_.newInstance())
+    aggBufferAttributes.map( _.newInstance() )
 
   /**
    * A helper class for representing an attribute used in merging two

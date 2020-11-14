@@ -134,8 +134,10 @@ object  ScalaTest{
     value6.foreach(a =>{
       println(a)
     })*/
+    val sql9= "select sum(age) from data group by name"
+    spark.sql(sql9).show()
 
-    val sql7 = "select sum(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sql7 = "select sum(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
     val execution: QueryExecution = spark.sql(sql7).queryExecution

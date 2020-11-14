@@ -15,6 +15,8 @@ import org.apache.spark.internal.Logging
  * to be retrieved more efficiently.  However, since operations like column pruning can change
  * the layout of intermediate tuples, BindReferences should be run after all such transformations.
   *
+  *  一个BoundReference指向InternalRow中的某个slot，并且根据数据类型来获取accessor,可以更加有效的获取
+  *  对应数据。
   *  因为类似列裁剪之类的操作有可能改变intermediate tuples的数据layout，BindReferences应该在所有这些
   *  变换之后执行
  */
@@ -63,6 +65,8 @@ case class BoundReference(ordinal: Int, dataType: DataType, nullable: Boolean)
 
 object BindReferences extends Logging {
 
+  // 这里进行绑定指的是将expression与inputSchema中的某个AttributeSeq进行绑定
+  // 绑定的依据是exprId
   def bindReference[A <: Expression](
                                       expression: A,
                                       input: AttributeSeq,
@@ -77,6 +81,7 @@ object BindReferences extends Logging {
             sys.error(s"Couldn't find $a in ${input.attrs.mkString("[", ",", "]")}")
           }
         } else {
+          //
           BoundReference(ordinal, a.dataType, input(ordinal).nullable)
         }
       }

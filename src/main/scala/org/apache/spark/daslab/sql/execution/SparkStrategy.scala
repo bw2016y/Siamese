@@ -407,6 +407,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
 
         val aggregateOperator =
           if (functionsWithDistinct.isEmpty) {
+            // without distinct
             AggUtils.planAggregateWithoutDistinct(
               groupingExpressions,
               aggregateExpressions,

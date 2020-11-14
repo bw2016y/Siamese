@@ -355,8 +355,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
 
       val p = partsScanned.until(math.min(partsScanned + numPartsToTry, totalParts).toInt)
       val sc = sqlContext.sparkContext
-      val res = sc.runJob(childRDD,
-        (it: Iterator[Array[Byte]]) => if (it.hasNext) it.next() else Array.empty[Byte], p)
+      val res = sc.runJob(childRDD, (it: Iterator[Array[Byte]]) => if (it.hasNext) it.next() else Array.empty[Byte], p)
 
       buf ++= res.flatMap(decodeUnsafeRows)
 
@@ -370,6 +369,13 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     }
   }
 
+  /**
+    *
+    * @param expressions
+    * @param inputSchema
+    * @param useSubexprElimination
+    * @return
+    */
   protected def newMutableProjection(
                                       expressions: Seq[Expression],
                                       inputSchema: Seq[Attribute],

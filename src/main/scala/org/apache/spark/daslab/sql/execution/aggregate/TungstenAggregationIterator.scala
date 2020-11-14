@@ -35,6 +35,15 @@ import org.apache.spark.unsafe.KVIterator
  *  - Step 5: Initialize sort-based aggregation on the sorted iterator.
  * Then, this iterator works in the way of sort-based aggregation.
  *
+  *  处理的流程：
+  *  - 0 ：执行基于Hash的聚合
+  *  - 1 ： 根据grouping expression的值对hash map中所有的entries进行排序，并将他们存储到磁盘
+  *  - 2 ： 基于那些已经存储在外存的排序后的map entries构造一个external sorter，并重置map
+  *  - 3 ： 从external sorter中获取一个排好序的[[KVIterator]]
+  *  - 4 ： 重复step 0 - 3 直到没有更多的数据输入
+  *  - 5 ： 在上述有序的iterator中初始化一个sort-based aggregation
+  *  然后，这个iterator就可以根据sort-based aggregation的方式进行工作
+  *
  * The code of this class is organized as follows:
  *  - Part 1: Initializing aggregate functions.
  *  - Part 2: Methods and fields used by setting aggregation buffer values,
@@ -48,23 +57,41 @@ import org.apache.spark.unsafe.KVIterator
  *  - Part 8: A utility function used to generate a result when there is no
  *            input and there is no grouping expression.
  *
+  *  这个类的代码说明：
+  *  - 1 ： 初始化聚合函数
+  *  - 2 ： 设置聚合缓冲区的值所需的方法和域
+  *         处理从inputIter中输入的行，并且生成输出的row
+  *  - 3 ： hash-based 聚合所需的方法和域
+  *  - 4 ： 当我们切换到sort-based聚合时需要使用的方法和域
+  *  - 5 ： sort-based 聚合所需的方法和域
+  *  - 6 ： 载入input,处理input row
+  *  - 7 ： iterator所需的公共方法
+  *  - 8 ： 当没有input也没有grouping expression时用于生成结果的工具函数
  * @param partIndex
  *   index of the partition
+  *   分区对应的index
  * @param groupingExpressions
  *   expressions for grouping keys
+  *   用于分组的expression
  * @param aggregateExpressions
  * [[AggregateExpression]] containing [[AggregateFunction]]s with mode [[Partial]],
  * [[PartialMerge]], or [[Final]].
+  * 聚合表达式，聚合模式不固定
  * @param aggregateAttributes the attributes of the aggregateExpressions'
  *   outputs when they are stored in the final aggregation buffer.
+  *   聚合表达式输出（存储在final聚合缓冲区中）的属性
  * @param resultExpressions
  *   expressions for generating output rows.
+  *   生成最终的输出的行的表达式
  * @param newMutableProjection
  *   the function used to create mutable projections.
+  *  用于构造mutable projection的函数
  * @param originalInputAttributes
  *   attributes of representing input rows from `inputIter`.
+  *  聚合原始输入的Attributes
  * @param inputIter
  *   the iterator containing input [[UnsafeRow]]s.
+  *  聚合算子的输入的[[UnsafeRow ]]的iterator
  */
 class TungstenAggregationIterator(
                                    partIndex: Int,
@@ -84,7 +111,7 @@ class TungstenAggregationIterator(
   extends AggregationIterator(
     partIndex,
     groupingExpressions,
-    originalInputAttributes,
+    originalInputAttributes,   // child.output
     aggregateExpressions,
     aggregateAttributes,
     initialInputBufferOffset,

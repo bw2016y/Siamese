@@ -32,6 +32,53 @@ object AggUtils {
                                initialInputBufferOffset: Int = 0,
                                resultExpressions: Seq[NamedExpression] = Nil,
                                child: SparkPlan): SparkPlan = {
+    //todo some debug here
+    println("check aggFunction")
+    aggregateExpressions.foreach(ae => println(ae.aggregateFunction.children))
+    println("check child output")
+    println(child.output)
+
+
+    // retrieve weight
+    val weight: Seq[Attribute] = child.output.filter(_.name == "_weight")
+    if(weight.length!=0){
+       println("do have weight"+weight.head)
+       println(weight.length)
+
+      // check flag
+      aggregateExpressions.foreach( ae=> {
+        ae.aggregateFunction match{
+          case s:Sum =>
+            println("before fix : "+s.hasWeight)
+            println(ae.aggregateFunction.children)
+
+          case _  =>
+        }
+      })
+      //append weight for sum/avg/count only
+      aggregateExpressions.foreach( ae => {
+        ae.aggregateFunction match {
+          case s: Sum => s.appendWeight(weight.head)
+          case _ =>
+        }
+      })
+      // check flag
+      aggregateExpressions.foreach( ae=> {
+         ae.aggregateFunction match{
+           case s:Sum =>
+             println("after fix " + s.hasWeight)
+             println(ae.aggregateFunction.children)
+
+           case _  =>
+         }
+      })
+    }
+    else {
+      println("do not have weight,we dont need fix anything")
+    }
+
+
+
 
     // 首先尝试使用HashAggregateExec
     val useHash = HashAggregateExec.supportsAggregate(
