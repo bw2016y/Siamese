@@ -408,6 +408,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         val aggregateOperator =
           if (functionsWithDistinct.isEmpty) {
             // without distinct
+            // 这是目前我们处理的主要情况
             AggUtils.planAggregateWithoutDistinct(
               groupingExpressions,
               aggregateExpressions,

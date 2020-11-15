@@ -20,6 +20,7 @@ package org.apache.spark.daslab.sql.engine.expressions.aggregate
 import org.apache.spark.daslab.sql.engine.analysis.{DecimalPrecision, TypeCheckResult}
 import org.apache.spark.daslab.sql.engine.dsl.expressions._
 import org.apache.spark.daslab.sql.engine.expressions._
+import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.util.TypeUtils
 import org.apache.spark.daslab.sql.types._
 
@@ -80,6 +81,13 @@ abstract class AverageLike(child: Expression) extends DeclarativeAggregate {
   usage = "_FUNC_(expr) - Returns the mean calculated from values of a group.")
 case class Average(child: Expression)
   extends AverageLike(child) with ImplicitCastInputTypes {
+
+  // todo Confidence/error 需要保存在这里，后续位置可以修改
+  var errorRate: ErrorRate = null
+  var confidence: Confidence = null
+
+
+
 
   override def prettyName: String = "avg"
 

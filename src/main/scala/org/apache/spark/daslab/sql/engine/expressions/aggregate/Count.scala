@@ -3,6 +3,7 @@ package org.apache.spark.daslab.sql.engine.expressions.aggregate
 
 import org.apache.spark.daslab.sql.engine.dsl.expressions._
 import org.apache.spark.daslab.sql.engine.expressions._
+import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.types._
 
 /**
@@ -45,6 +46,13 @@ abstract class CountLike extends DeclarativeAggregate {
   """)
 // scalastyle:on line.size.limit
 case class Count(children: Seq[Expression]) extends CountLike {
+
+
+  // todo Confidence/error 需要保存在这里，后续位置可以修改
+  var errorRate: ErrorRate = null
+  var confidence: Confidence = null
+
+
 
   // 如何根据input row更新聚合缓冲区
   override lazy val updateExpressions = {

@@ -128,9 +128,37 @@ object AggUtils {
                                     resultExpressions: Seq[NamedExpression],
                                     child: SparkPlan): Seq[SparkPlan] = {
 
-    // 检查我们是否可以使用HashAggregate
+    // 检查我们是否可以使用HashAggregate(这里存在问题，实际上对HashAggregate的判断放在上面的createAggregate中)
+
+
+
+
+    //todo debug here
+    aggregateExpressions.foreach( aggto =>
+      aggto.aggregateFunction match {
+        case sum : Sum =>
+          println("conf info ==============="+sum.confidence+"  :::"+ sum.errorRate )
+        case _ =>
+      }
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // 1. Create an Aggregate Operator for partial aggregations.(
     // 先创建一个用于partial agg的聚合算子)
+
 
     val groupingAttributes = groupingExpressions.map(_.toAttribute)
     // Partial agg

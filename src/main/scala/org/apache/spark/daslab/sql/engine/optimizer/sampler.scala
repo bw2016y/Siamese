@@ -1,5 +1,6 @@
 package org.apache.spark.daslab.sql.engine.optimizer
 
+import org.apache.spark.daslab.sql.engine.expressions.aggregate.{AggregateExpression, Average, Count, Sum}
 import org.apache.spark.daslab.sql.engine.expressions.{Expression, NamedExpression}
 
 import scala.collection.mutable
@@ -22,6 +23,36 @@ object InsertSampler extends Rule[LogicalPlan] {
         case aqpinfo @ AqpInfo(errorRate:ErrorRate,confidence:Confidence,child:LogicalPlan)=> aqpinfo.child transform{
               //AQP QUERY
               case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
+                //todo 后续我希望把所有涉及到对AQP聚合函数的改变都放在这里
+                //todo  当前只是在这里传入置信区间和错误率
+
+                aggExps.foreach(
+                   aggExp => {
+                      aggExp.foreach{
+                        case aggregateExpression : AggregateExpression =>
+                          // 目前只有avg/sum/count需要传入
+                          // 其实weight也应该设置在这里
+                          aggregateExpression.aggregateFunction match {
+
+                            case sum: Sum =>
+                              sum.errorRate = errorRate
+                              sum.confidence = confidence
+                            case avg: Average =>
+                              avg.errorRate=errorRate
+                              avg.confidence = confidence
+                            case count: Count =>
+                              count.errorRate = errorRate
+                              count.confidence = confidence
+                            case _  =>
+                          }
+
+                          // 不是聚合表达式就什么也不做
+                        case _ =>
+                      }
+                   }
+                )
+
+
               Aggregate(groupExps,aggExps,AqpSample(errorRate,confidence,(math.random * 1000).toInt,child))
               }
         case _ => plan

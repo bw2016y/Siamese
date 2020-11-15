@@ -6,12 +6,23 @@ package org.apache.spark.daslab.sql.engine.expressions.aggregate
 import org.apache.spark.daslab.sql.engine.analysis.TypeCheckResult
 import org.apache.spark.daslab.sql.engine.dsl.expressions._
 import org.apache.spark.daslab.sql.engine.expressions._
+import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.util.TypeUtils
 import org.apache.spark.daslab.sql.types._
 
 @ExpressionDescription(
   usage = "_FUNC_(expr) - Returns the sum calculated from values of a group.")
 case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCastInputTypes {
+
+  // todo Confidence/error 需要保存在这里，后续位置可以修改
+  var errorRate: ErrorRate = null
+  var confidence: Confidence = null
+
+
+
+
+
+
   //todo append weight here
   var weight:Expression = null
   def appendWeight(w:Expression): Unit = {
