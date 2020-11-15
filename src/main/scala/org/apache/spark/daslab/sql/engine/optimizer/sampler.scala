@@ -26,6 +26,7 @@ object InsertSampler extends Rule[LogicalPlan] {
                 //todo 后续我希望把所有涉及到对AQP聚合函数的改变都放在这里
                 //todo  当前只是在这里传入置信区间和错误率
 
+                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child)
                 aggExps.foreach(
                    aggExp => {
                       aggExp.foreach{
@@ -35,6 +36,7 @@ object InsertSampler extends Rule[LogicalPlan] {
                           aggregateExpression.aggregateFunction match {
 
                             case sum: Sum =>
+                             // sum.appendWeight(aqpSample.newAtt)
                               sum.errorRate = errorRate
                               sum.confidence = confidence
                             case avg: Average =>
@@ -53,7 +55,7 @@ object InsertSampler extends Rule[LogicalPlan] {
                 )
 
 
-              Aggregate(groupExps,aggExps,AqpSample(errorRate,confidence,(math.random * 1000).toInt,child))
+              Aggregate(groupExps,aggExps,aqpSample)
               }
         case _ => plan
     }
