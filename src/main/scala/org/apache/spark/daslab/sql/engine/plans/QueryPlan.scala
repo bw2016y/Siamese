@@ -150,7 +150,10 @@ abstract class QueryPlan[PlanType <: QueryPlan[PlanType]] extends TreeNode[PlanT
   }
 
   //返回对应的schema信息,output输出属性的schema信息
-  lazy val schema: StructType = StructType.fromAttributes(output)
+  //todo not lazy
+    //lazy val schema: StructType = StructType.fromAttributes(output)
+   lazy  val   schema: StructType = StructType.fromAttributes(output)
+
 
   /** Returns the output schema in the tree format. */
   def schemaString: String = schema.treeString

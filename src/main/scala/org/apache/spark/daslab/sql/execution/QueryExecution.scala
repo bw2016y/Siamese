@@ -41,6 +41,31 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   def physicalPlan = "========== Physical Plan==========\n"+sparkPlan
   def executedPhysicalPlan = "==========Executed Physical Plan==========\n"+executedPlan
 
+
+  //todo 打印schema信息
+
+  //这个阶段还未解析，调用会有bug
+  def originLogicalPlanSchema :  StructType ={
+     //logical.schema
+     null
+  }
+  def analyzedLogicalPlanSchema :  StructType ={
+     analyzed.schema
+  }
+  def optimizedLogicalPlanSchema :  StructType ={
+    optimizedPlan.schema
+  }
+  def physicalPlanSchema :  StructType ={
+     sparkPlan.schema
+  }
+  def executedPhysicalPlanSchema :  StructType ={
+    executedPlan.schema
+  }
+
+
+
+
+
   def assertAnalyzed(): Unit = analyzed
 
   def assertSupported(): Unit = {
@@ -49,10 +74,16 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     }
   }
 
-  lazy val analyzed: LogicalPlan = {
+
+  //todo make this private
+
+  // 艹啊 在37个地方被用到了
+    lazy val analyzed: LogicalPlan = {
     SparkSession.setActiveSession(sparkSession)
     sparkSession.sessionState.analyzer.executeAndCheck(logical)
   }
+
+
 
 
 
@@ -73,6 +104,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     //  planner是SparkPlanner类型 ， plan方法继承于QueryPlanner类，可以返回Iterator[PhysicalPlan]
     planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
+
 
   /**
     * executedPlan 类型同样是SparkPlan，是可以直接执行的物理计划，不应当用于初始化其他任何SparkPlan
@@ -136,6 +168,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     case other =>
       val result: Seq[Seq[Any]] = other.executeCollectPublic().map(_.toSeq).toSeq
       // We need the types so we can output struct field names
+      // todo make this sparkPlan
       val types = analyzed.output.map(_.dataType)
       // Reformat to match hive tab delimited output.
       result.map(_.zip(types).map(toHiveString)).map(_.mkString("\t"))

@@ -135,6 +135,8 @@ case class MapPartitionsInR(
                              outputSchema: StructType,
                              outputObjAttr: Attribute,
                              child: LogicalPlan) extends ObjectConsumer with ObjectProducer {
+
+  //todo var
   override lazy val schema = outputSchema
 
   override protected def stringArgs: Iterator[Any] = Iterator(inputSchema, outputSchema,
@@ -453,7 +455,7 @@ case class FlatMapGroupsInR(
                              dataAttributes: Seq[Attribute],
                              outputObjAttr: Attribute,
                              child: LogicalPlan) extends UnaryNode with ObjectProducer{
-
+ //todo
   override lazy val schema = outputSchema
 
   override protected def stringArgs: Iterator[Any] = Iterator(inputSchema, outputSchema,

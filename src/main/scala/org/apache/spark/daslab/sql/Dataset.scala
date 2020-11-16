@@ -443,7 +443,7 @@ class Dataset[T] private[sql](
 
   /**
    * Returns the schema of this Dataset.
-   *
+   *  
    * @group basic
    * @since 1.6.0
    */

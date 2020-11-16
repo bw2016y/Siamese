@@ -33,7 +33,7 @@ object  ScalaTest{
 
     import spark.implicits._
     //创建视图
-    val dataset=spark.read.json("src/test/resources/student.json").toDF();
+    val dataset=spark.read.json("src/test/resources/student.json").toDF()
     dataset.createTempView("data")
     dataset.createTempView("data1")
     val dataset1=spark.read.json("src/test/resources/grade.json").toDF();
@@ -151,8 +151,15 @@ object  ScalaTest{
       a.getString(0)
     })*/
 
-    spark.sql(sql7).show()
+    println("SCHEMA start")
+    println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  ana"+spark.sql(sql7).queryExecution.analyzedLogicalPlanSchema)
+    println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS opti"+spark.sql(sql7).queryExecution.optimizedLogicalPlanSchema)
+    println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS phy "+spark.sql(sql7).queryExecution.physicalPlanSchema)
+    println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  exec"+spark.sql(sql7).queryExecution.executedPhysicalPlanSchema)
+    println("SCHEMA end")
 
+
+    spark.sql(sql7).show()
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
     println(spark.sql(sql8).queryExecution.originLogicalPlan)
     println(spark.sql(sql8).queryExecution.analyzedLogicalPlan)

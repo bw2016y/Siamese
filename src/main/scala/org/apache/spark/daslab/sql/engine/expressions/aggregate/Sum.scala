@@ -102,16 +102,45 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
 
   private lazy val sum = AttributeReference("sum", sumDataType)()
 
+  //todo 方差  , 目前type也是resultType
+  private lazy val sum_var = AttributeReference("sum_var",resultType)()
+
+
   // zero
   private lazy val zero = Cast(Literal(0), sumDataType)
+  // one
+  private lazy val one = Cast(Literal(1),sumDataType)
 
+  // offset
+  private lazy val offset=Cast(Literal(10000),sumDataType)
 
   //缓冲区
-  override lazy val aggBufferAttributes = sum :: Nil
+  // todo: 这里有可能需要添加sum_var
+  override lazy val aggBufferAttributes = {
+    if(hasWeight){
+      sum :: sum_var :: Nil
+    }else{
+      sum :: Nil
+    }
+  }
 
-  override lazy val initialValues: Seq[Expression] = Seq(
-    /* sum = */ Literal.create(null, sumDataType)
-  )
+
+ //todo 添加对sum_var的初始化
+  override lazy val initialValues: Seq[Expression] ={
+    if(hasWeight){
+      Seq(
+        /* sum = */ Literal.create(null, sumDataType),
+        /* sum_var = */  Literal(0).cast(resultType)
+      )
+    }else{
+      Seq(
+        /* sum = */ Literal.create(null, sumDataType)
+      )
+    }
+  }
+
+
+
 
   //todo 这里要除weight
 /*  override lazy val updateExpressions: Seq[Expression] = {
@@ -128,15 +157,26 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
     }
   }*/
   // sumDataType也需要修改
+  // todo 这里魔改 用offset
   override lazy val updateExpressions: Seq[Expression]= {
     if(hasWeight){
        if(child.nullable){
           Seq(
-            coalesce(coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType),sum)
+            coalesce(coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType),sum),
+            //todo 更新方差
+            Add( sum_var ,
+              coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+                Literal(0).cast(sumDataType) )
+            )
           )
        }else{
           Seq(
-            coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType)
+            coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType),
+            //todo 更新方差
+            Add( sum_var ,
+              coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+                Literal(0).cast(sumDataType) )
+            )
           )
        }
     }else{
@@ -154,15 +194,70 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
     }
   }
 
+  /*override lazy val updateExpressions: Seq[Expression]= {
+    if(hasWeight){
+      if(child.nullable){
+        Seq(
+          coalesce(coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType)+offset*coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+            Literal(0).cast(sumDataType) ),sum),
+          //todo 更新方差
+          Add( sum_var ,
+            coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+              Literal(0).cast(sumDataType) )
+          )
+        )
+      }else{
+        Seq(
+          coalesce(sum,zero) + child.cast(sumDataType)/weight.cast(sumDataType)+offset*coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+            Literal(0).cast(sumDataType) ),
+          //todo 更新方差
+          Add( sum_var ,
+            coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
+              Literal(0).cast(sumDataType) )
+          )
+        )
+      }
+    }else{
+      if (child.nullable) {
+        Seq(
+          /* sum = */
+          coalesce(coalesce(sum, zero) + child.cast(sumDataType), sum)
+        )
+      } else {
+        Seq(
+          /* sum = */
+          coalesce(sum, zero) + child.cast(sumDataType)
+        )
+      }
+    }
+  }*/
 
 
-
-  override lazy val mergeExpressions: Seq[Expression] = {
-    Seq(
-      /* sum = */
-      coalesce(coalesce(sum.left, zero) + sum.right, sum.left)
-    )
+  override lazy val mergeExpressions: Seq[Expression] ={
+    if(hasWeight){
+        Seq(
+          /* sum = */
+          coalesce(coalesce(sum.left, zero) + sum.right, sum.left),
+          /* sum_var = */
+          coalesce(sum_var.left + sum_var.right , sum_var.left)
+        )
+    }else{
+      Seq(
+        /* sum = */
+        coalesce(coalesce(sum.left, zero) + sum.right, sum.left)
+      )
+    }
   }
 
-  override lazy val evaluateExpression: Expression = sum
+
+
+
+  //override lazy val evaluateExpression: Expression = sum
+  override lazy val evaluateExpression: Expression = {
+      if(hasWeight){
+        sum+sum_var
+      }else{
+        sum
+      }
+  }
 }

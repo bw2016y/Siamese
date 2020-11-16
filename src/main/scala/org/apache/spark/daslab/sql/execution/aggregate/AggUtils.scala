@@ -176,6 +176,7 @@ object AggUtils {
         }
       })
       //append weight for sum/avg/count only
+      // todo remove this to sampler
       aggregateExpressions.foreach( ae => {
         ae.aggregateFunction match {
           case s: Sum => s.appendWeight(weight.head)
@@ -218,6 +219,20 @@ object AggUtils {
     val partialAggregateExpressions = aggregateExpressions.map(_.copy(mode = Partial))
 
 
+    //todo 检查一下复制的结果
+    partialAggregateExpressions.foreach(pe =>{
+      pe.aggregateFunction match {
+        case sum : Sum =>
+          println("第一步的partialAggregateExpressions==============="+sum.confidence+"  :::"+ sum.errorRate +"  "+sum.hasWeight)
+        case _ =>
+      }
+    }
+    )
+    println("第一步聚合表达式的exprId")
+    partialAggregateExpressions.foreach(
+      f => println("第一步聚合表达式的exprId"+f.resultId)
+    )
+
     // 所有聚合函数的聚合缓冲区所涉及的attributes
     val partialAggregateAttributes = partialAggregateExpressions.flatMap(_.aggregateFunction.aggBufferAttributes)
 
@@ -248,6 +263,16 @@ object AggUtils {
       resultExpressions = partialResultExpressions,
       child = child)
 
+
+    //todo
+    println("第一步结束后的输出")
+    partialAggregate.output.foreach(
+       att => println("第一步结束后的输出"+att)
+    )
+
+
+
+
     // 2. Create an Aggregate Operator for final aggregations.(
     // 第二步，创建Final Mode的聚合算子用于最后的合并，一般来说就是用于合并聚合缓冲区)
 
@@ -274,6 +299,15 @@ object AggUtils {
      // 复制生成第二步的聚合表达式
 
      val finalAggregateExpressions = aggregateExpressions.map(_.copy(mode = Final))
+    //todo 检查一下复制的结果
+    finalAggregateExpressions.foreach(fe =>{
+      fe.aggregateFunction match {
+        case sum : Sum =>
+          println("第二步的finalAggregateExpressions==============="+sum.confidence+"  :::"+ sum.errorRate +"  "+sum.hasWeight)
+        case _ =>
+      }
+    }
+    )
      println("第二步聚合表达式的exprId")
      finalAggregateExpressions.foreach(
        f => println("第二步聚合表达式的exprId"+f.resultId)
@@ -299,7 +333,10 @@ object AggUtils {
       p=> println(" 最终的聚合算子输出的列集      "+p)
     )
 
-
+    // todo append result
+    val   resE= resultExpressions :+ resultExpressions.head
+    println("修改后的投影列集")
+    resE.foreach(e => println("修改后的投影列集"+e))
 
     val finalAggregate = createAggregate(
       requiredChildDistributionExpressions = Some(groupingAttributes),
@@ -307,9 +344,17 @@ object AggUtils {
       aggregateExpressions = finalAggregateExpressions,
       aggregateAttributes = finalAggregateAttributes,
       initialInputBufferOffset = groupingExpressions.length,
-      resultExpressions = resultExpressions,
+      resultExpressions = resE ,
       child = partialAggregate)
 
+     //第二步的输出
+    println("第二步结束后的输出")
+    finalAggregate.output.foreach(
+      att => println("第二步结束后的输出"+att)
+    )
+
+
+    //  partialAggregate::Nil
     finalAggregate :: Nil
   }
 
