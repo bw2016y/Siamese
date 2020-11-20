@@ -333,10 +333,7 @@ object AggUtils {
       p=> println(" 最终的聚合算子输出的列集      "+p)
     )
 
-    // todo append result
-    val   resE= resultExpressions :+ resultExpressions.head
-    println("修改后的投影列集")
-    resE.foreach(e => println("修改后的投影列集"+e))
+
 
     val finalAggregate = createAggregate(
       requiredChildDistributionExpressions = Some(groupingAttributes),
@@ -344,7 +341,7 @@ object AggUtils {
       aggregateExpressions = finalAggregateExpressions,
       aggregateAttributes = finalAggregateAttributes,
       initialInputBufferOffset = groupingExpressions.length,
-      resultExpressions = resE ,
+      resultExpressions = resultExpressions ,
       child = partialAggregate)
 
      //第二步的输出

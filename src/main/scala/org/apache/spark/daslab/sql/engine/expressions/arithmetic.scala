@@ -140,8 +140,10 @@ object BinaryArithmetic {
        3
   """)
 case class Add(left: Expression, right: Expression) extends BinaryArithmetic {
-
+  //todo modified this
   override def inputType: AbstractDataType = TypeCollection.NumericAndInterval
+
+  //override def inputType: AbstractDataType = TypeCollection.NumericAndIntervalAndString
 
   override def symbol: String = "+"
 

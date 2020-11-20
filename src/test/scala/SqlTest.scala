@@ -159,7 +159,8 @@ object  ScalaTest{
     println("SCHEMA end")
 
 
-    spark.sql(sql7).show()
+    spark.sql(sql7).show(20,false)
+    spark.sql(sql7).filter()
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
     println(spark.sql(sql8).queryExecution.originLogicalPlan)
     println(spark.sql(sql8).queryExecution.analyzedLogicalPlan)

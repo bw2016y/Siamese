@@ -45,7 +45,9 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
 
   // Return data type.
   // 返回的数据类型需要额外定义
-  override def dataType: DataType = resultType
+  // 这里改成StringType试一下
+  //override def dataType: DataType = resultType
+  override def dataType: DataType = StringType
 
 
   //todo input check也发生了变化
@@ -96,7 +98,8 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
      }
   }*/
 
-
+ //todo 真正的返回值
+  // private lazy val toPrint = AttributeReference("toPrint",StringType)()
 
   private lazy val sumDataType = resultType
 
@@ -255,9 +258,14 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   //override lazy val evaluateExpression: Expression = sum
   override lazy val evaluateExpression: Expression = {
       if(hasWeight){
-        sum+sum_var
+       // sum+sum_var
+       // sum.cast(StringType) +" var:" + sum_var.cast(StringType)
+        //sum_var.cast(StringType)
+       // Literal(one.toString).cast(StringType)
+       // Literal(sum.cast(StringType)+" var:" + sum_var.toString).cast(StringType)
+        ConcatWs(Seq(Literal("  ").cast(StringType),Literal("E:").cast(StringType),sum.cast(StringType),Literal("Var:").cast(StringType),sum_var.cast(StringType))).cast(StringType)
       }else{
-        sum
+        sum.cast(StringType)
       }
   }
 }
