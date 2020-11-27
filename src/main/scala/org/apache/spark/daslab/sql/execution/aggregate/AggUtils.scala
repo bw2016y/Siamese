@@ -515,6 +515,59 @@ object AggUtils {
                                 stateFormatVersion: Int,
                                 child: SparkPlan): Seq[SparkPlan] = {
 
+
+
+    val weight: Seq[Attribute] = child.output.filter(_.name == "_weight")
+    if(weight.length!=0){
+      println("do have weight"+weight.head)
+      println(weight.length)
+
+      // check flag
+      functionsWithoutDistinct.foreach( ae=> {
+        ae.aggregateFunction match{
+          case s:Sum =>
+            println("before fix : "+s.hasWeight)
+            println(ae.aggregateFunction.children)
+          case c: Count =>
+            println("before fix : "+c.hasWeight)
+            println(ae.aggregateFunction.children)
+
+          case _  =>
+        }
+      })
+      //append weight for sum/avg/count only
+      // todo remove this to sampler
+      functionsWithoutDistinct.foreach( ae => {
+        ae.aggregateFunction match {
+          case s: Sum => s.appendWeight(weight.head)
+          case c:Count => c.appendWeight(weight.head)
+          case _ =>
+        }
+      })
+      // check flag
+      functionsWithoutDistinct.foreach( ae=> {
+        ae.aggregateFunction match{
+          case s:Sum =>
+            println("after fix " + s.hasWeight)
+            println(ae.aggregateFunction.children)
+          case c: Count =>
+            println("after fix " + c.hasWeight)
+            println(ae.aggregateFunction.children)
+
+
+          case _  =>
+        }
+      })
+    }
+    else {
+      println("do not have weight,we dont need fix anything")
+    }
+
+
+
+
+
+    // stable
     val groupingAttributes = groupingExpressions.map(_.toAttribute)
 
     val partialAggregate: SparkPlan = {

@@ -167,7 +167,7 @@ object  ScalaTest{
     val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
     val streamDF: DataFrame = spark.readStream.schema(studentSchema).json("src/test/resources/stream")
     streamDF.createOrReplaceTempView("stream");
-    val sql8 = "SELECT count(*) from stream"
+    val sql8 = "select sum(age),count(age) from stream group by name ERROR WITHIN 5% AT CONFIDENCE 95%  "
     val resStream: DataFrame = spark.sql(sql8)
 
     val query: StreamingQuery = resStream.writeStream.outputMode("complete").format("console").start()
