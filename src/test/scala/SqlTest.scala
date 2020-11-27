@@ -164,7 +164,7 @@ object  ScalaTest{
     spark.sql(sql7).show(20,false)
 
    //todo 定义流数据源
-    /*val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
+    val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
     val streamDF: DataFrame = spark.readStream.schema(studentSchema).json("src/test/resources/stream")
     streamDF.createOrReplaceTempView("stream");
     val sql8 = "SELECT count(*) from stream"
@@ -172,7 +172,7 @@ object  ScalaTest{
 
     val query: StreamingQuery = resStream.writeStream.outputMode("complete").format("console").start()
 
-    query.awaitTermination()*/
+    query.awaitTermination()
 
 
 
