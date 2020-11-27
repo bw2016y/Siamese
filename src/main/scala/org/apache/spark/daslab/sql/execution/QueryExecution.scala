@@ -102,6 +102,9 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     //       but we will implement to choose the best plan.
     //  直接返回第一个可行的SparkPlan，后续会挑选最优的计划
     //  planner是SparkPlanner类型 ， plan方法继承于QueryPlanner类，可以返回Iterator[PhysicalPlan]
+
+
+    println(".......how many"+planner.plan(ReturnAnswer(optimizedPlan)).length)
     planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
 

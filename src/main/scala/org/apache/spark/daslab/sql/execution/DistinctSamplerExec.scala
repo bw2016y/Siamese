@@ -58,11 +58,11 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
        //    row.setDouble(4,0.5)
         //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
         //   row.setDouble(4,0.1)
-          (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
           true
         })
     }
-    println(temp.count())
+   // println(temp.count())
   /*  println("todo")
     println(child.output.length)
     child.output.foreach(println)

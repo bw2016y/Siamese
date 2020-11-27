@@ -155,6 +155,10 @@ object AggUtils {
       aggto.aggregateFunction match {
         case sum : Sum =>
           println("conf info ==============="+sum.confidence+"  :::"+ sum.errorRate +"  "+sum.hasWeight)
+        case avg: Average =>
+          println("conf info ==============="+avg.confidence+"   :::"+avg.errorRate+ "   "+avg)
+        case count: Count =>
+          println("conf info ==============="+count.confidence+"   :::"+count.errorRate+"    "+count)
         case _ =>
       }
     )
@@ -171,6 +175,9 @@ object AggUtils {
           case s:Sum =>
             println("before fix : "+s.hasWeight)
             println(ae.aggregateFunction.children)
+          case c: Count =>
+            println("before fix : "+c.hasWeight)
+            println(ae.aggregateFunction.children)
 
           case _  =>
         }
@@ -180,6 +187,7 @@ object AggUtils {
       aggregateExpressions.foreach( ae => {
         ae.aggregateFunction match {
           case s: Sum => s.appendWeight(weight.head)
+          case c:Count => c.appendWeight(weight.head)
           case _ =>
         }
       })
@@ -189,6 +197,10 @@ object AggUtils {
           case s:Sum =>
             println("after fix " + s.hasWeight)
             println(ae.aggregateFunction.children)
+          case c: Count =>
+            println("after fix " + c.hasWeight)
+            println(ae.aggregateFunction.children)
+
 
           case _  =>
         }

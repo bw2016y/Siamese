@@ -2,9 +2,11 @@ import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.daslab.sql.streaming.StreamingQuery
 import org.apache.spark.daslab.sql.functions._
-import org.apache.spark.daslab.sql.types.LongType
+import org.apache.spark.daslab.sql.types.{LongType, StructType}
 import org.apache.spark.rdd.RDD
+
 import scala.collection.mutable
 
 
@@ -134,10 +136,10 @@ object  ScalaTest{
     value6.foreach(a =>{
       println(a)
     })*/
-    val sql9= "select sum(age) from data group by name"
+    val sql9= "select sum(age),count(age) from data group by name"
     spark.sql(sql9).show()
 
-    val sql7 = "select sum(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
+    val sql7 = "select sum(age),count(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
     val execution: QueryExecution = spark.sql(sql7).queryExecution
@@ -151,16 +153,32 @@ object  ScalaTest{
       a.getString(0)
     })*/
 
-    println("SCHEMA start")
+  /*  println("SCHEMA start")
     println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  ana"+spark.sql(sql7).queryExecution.analyzedLogicalPlanSchema)
     println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS opti"+spark.sql(sql7).queryExecution.optimizedLogicalPlanSchema)
     println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS phy "+spark.sql(sql7).queryExecution.physicalPlanSchema)
     println("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  exec"+spark.sql(sql7).queryExecution.executedPhysicalPlanSchema)
     println("SCHEMA end")
-
+*/
 
     spark.sql(sql7).show(20,false)
-    spark.sql(sql7).filter()
+
+   //todo 定义流数据源
+    /*val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
+    val streamDF: DataFrame = spark.readStream.schema(studentSchema).json("src/test/resources/stream")
+    streamDF.createOrReplaceTempView("stream");
+    val sql8 = "SELECT count(*) from stream"
+    val resStream: DataFrame = spark.sql(sql8)
+
+    val query: StreamingQuery = resStream.writeStream.outputMode("complete").format("console").start()
+
+    query.awaitTermination()*/
+
+
+
+
+
+
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
     println(spark.sql(sql8).queryExecution.originLogicalPlan)
     println(spark.sql(sql8).queryExecution.analyzedLogicalPlan)

@@ -61,7 +61,7 @@ case class ProjectExec(projectList: Seq[NamedExpression], child: SparkPlan)
         subexpressionEliminationEnabled)
       project.initialize(index)
       iter.map(project).filter(row => {
-        projectList.zipWithIndex.foreach{case (exp,ti) => println("projectexec:"+ti+" "+row.get(ti,exp.dataType))}
+     //   projectList.zipWithIndex.foreach{case (exp,ti) => println("projectexec:"+ti+" "+row.get(ti,exp.dataType))}
         true
       })
     }
