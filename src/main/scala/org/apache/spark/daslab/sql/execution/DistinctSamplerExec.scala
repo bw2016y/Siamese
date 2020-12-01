@@ -25,7 +25,7 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
                                 S: Seq[DistinctColumn],
                                 delta: Int,
                                 weight: NamedExpression
-                            )extends UnaryExecNode
+                               )extends UnaryExecNode
 //  with CodegenSupport
 {
 
@@ -44,9 +44,16 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     */
   override protected def doExecute(): RDD[InternalRow] = {
     val numPartitions: Int = child.outputPartitioning.numPartitions
-    val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
-    val res=SampleUtils.distinctSample(child.execute().map(appender), S, delta, 0.3, 1, seed)
-    res
+    child.execute().mapPartitionsWithIndex{
+      (index, iter) =>
+        val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, 0.3, 1, seed)
+        rows.filter{ row =>
+          println(row.getString(1) + " " + row.getLong(0) + " " + row.getDouble(row.numFields-1))
+          true
+        }
+    }
+
     //todo add weight
 //    (child.output:+weight).foreach(println)
 //    val temp = res.mapPartitionsWithIndexInternal {

@@ -42,50 +42,59 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
    * @return
    */
   override def sample(rows: Iterator[InternalRow]): Iterator[InternalRow] = {
-    var new_rows: Iterator[InternalRow] = rows.filter(row => {
-      /*println("internalrow")
-      println(item.numFields)*/
-      var distinctValue: List[Any] = List()
-      S.foreach(s => {
-        distinctValue = distinctValue ::: row.get(s.ordinal, s.datatype) :: Nil
-      })
-      val count: Int = distinctValueCounts.getOrElse(distinctValue, 0)
-      if (count < partitionDelta) {
-        // 属于第一区间，直接采样，权重为1
-        distinctValueCounts.put(distinctValue, count + 1)
-        true
-      } else if (count < partitionDelta + reservoirAmount / fraction) {
-        // 属于第二区间，存入采样池，权重最后再算
-        distinctValueCounts.put(distinctValue, count + 1)
-        val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
-        var index = count - partitionDelta
-        if (index >= reservoirAmount) {
-          index = (rng.nextDouble * reservoirAmount).toInt
-        }
-        reservoir(index) = row
-        distinctValueReservoirs.put(distinctValue, reservoir)
-        false
-      } else {
-        // 属于第三区间，按概率p采样，权重1/p
-        if (sample() > 0) {
-          row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, 1 / fraction)
+    var newRows: Iterator[InternalRow] = rows.filter {
+      row =>
+        /*println("internalrow")
+        println(item.numFields)*/
+        var distinctValue: List[Any] = List()
+        S.foreach(s => {
+          distinctValue = distinctValue ::: row.get(s.ordinal, s.datatype).toString :: Nil
+        })
+        val count: Int = distinctValueCounts.getOrElse(distinctValue, 0)
+        if (count < partitionDelta) {
+          // 属于第一区间，直接采样，权重为1
+          distinctValueCounts.put(distinctValue, count + 1)
           true
-        } else {
+        } else if (count < partitionDelta + reservoirAmount / fraction) {
+          // 属于第二区间，存入采样池，权重最后再算
+          distinctValueCounts.put(distinctValue, count + 1)
+          if(!(count >= partitionDelta + reservoirAmount && sample() <= 0)) {
+            val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
+            var index = count - partitionDelta
+            if (index >= reservoirAmount) {
+              index = (rng.nextDouble * reservoirAmount).toInt
+            }
+            reservoir(index) = row.copy()
+            distinctValueReservoirs.put(distinctValue, reservoir)
+          }
           false
+        } else {
+          // 属于第三区间，按概率p采样，权重1/p
+          distinctValueCounts.put(distinctValue, count + 1)
+          if (sample() > 0) {
+            row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, fraction)
+            true
+          } else {
+            false
+          }
         }
+    } ++ distinctValueReservoirs.map { // 给采样池中的行计算权重并加入总样本中
+      case (key, reservoir) => {
+        var count: Int = distinctValueCounts.getOrElse(key, 0) - partitionDelta
+        val weight: Double = if (count < reservoirAmount / fraction) reservoirAmount.toDouble / count else fraction
+        if (count > reservoirAmount) {
+          count = reservoirAmount
+        }
+        val newReservoir: Array[InternalRow] = reservoir.take(count)
+          .map{
+            row =>
+              row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, weight)
+              row
+          }
+        (key, newReservoir)
       }
-    })
-    // 给采样池中的行计算权重并加入总样本中
-    distinctValueReservoirs.map{
-      case (key,reservoir) => {
-        val count: Int = distinctValueCounts.getOrElse(key,0)
-        reservoir.take(count - partitionDelta)
-          .foreach(row => row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, (count-partitionDelta)/reservoirAmount))
-        new_rows = new_rows ++ reservoir
-        (key,reservoir)
-      }
-    }
-    new_rows
+    }.values.foldLeft(Array.empty[InternalRow])(_ ++ _)
+    newRows
   }
 
   /**

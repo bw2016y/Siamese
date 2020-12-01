@@ -8,7 +8,11 @@ import org.apache.spark.daslab.sql.types.{LongType, StructType}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
-
+class Person(id:Int){
+  def getId():Int = {
+    id
+  }
+}
 
 object  ScalaTest{
   def main(args: Array[String]): Unit = {

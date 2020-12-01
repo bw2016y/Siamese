@@ -2,7 +2,7 @@ package org.apache.spark.daslab.sql.execution
 
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, UnsafeRow}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeSet, NamedExpression, UnsafeProjection, UnsafeRow}
 import org.apache.spark.daslab.sql.engine.expressions.codegen.{CodegenContext, ExprCode}
 import org.apache.spark.daslab.sql.engine.plans.logical.{Confidence, ErrorRate}
 import org.apache.spark.daslab.sql.engine.plans.physical.Partitioning
@@ -21,8 +21,9 @@ import org.apache.spark.util.random.BernoulliCellSampler
 case class  UniformSamplerExec(errorRate: ErrorRate,
                              confidence: Confidence,
                              seed : Long ,
-                             child: SparkPlan
-                            )extends UnaryExecNode  with CodegenSupport {
+                             child: SparkPlan,
+                             weight: NamedExpression
+                              )extends UnaryExecNode  with CodegenSupport {
 
 
   /** Specifies how data is partitioned across different nodes in the cluster. */
@@ -36,7 +37,11 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     * Overridden by concrete implementations of SparkPlan.
     */
   override protected def doExecute(): RDD[InternalRow] = {
-    SampleUtils.uniformSample(child.execute(), 0.3, seed)
+    child.execute().mapPartitionsWithIndex{
+      (index, iter) =>
+        val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+        SampleUtils.uniformSample(index, iter, 0.3, seed)
+    }
   }
 
 
