@@ -25,7 +25,7 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
                                 S: Seq[DistinctColumn],
                                 delta: Int,
                                 weight: NamedExpression
-                            )extends UnaryExecNode
+                               )extends UnaryExecNode
 //  with CodegenSupport
 {
 
@@ -44,24 +44,32 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     */
   override protected def doExecute(): RDD[InternalRow] = {
     val numPartitions: Int = child.outputPartitioning.numPartitions
-    val res=SampleUtils.distinctSample(child.execute(), S, delta, 0.3, 1, seed)
+    child.execute().mapPartitionsWithIndex{
+      (index, iter) =>
+        val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, 0.3, 1, seed)
+        rows.filter{ row =>
+          println(row.getString(1) + " " + row.getLong(0) + " " + row.getDouble(row.numFields-1))
+          true
+        }
+    }
 
     //todo add weight
-    (child.output:+weight).foreach(println)
-    val temp = res.mapPartitionsWithIndexInternal {
-      (index, iter) =>
-        val append = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
-        append.initialize(index)
-        iter.map(append).filter(row => {
-          // row.setDouble(row.numFields-1,0.7)
-           row.asInstanceOf[UnsafeRow].setDouble(row.numFields-1,0.8)
-       //    row.setDouble(4,0.5)
-        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
-        //   row.setDouble(4,0.1)
-        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
-          true
-        })
-    }
+//    (child.output:+weight).foreach(println)
+//    val temp = res.mapPartitionsWithIndexInternal {
+//      (index, iter) =>
+//        val append = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
+//        append.initialize(index)
+//        iter.map(append).filter(row => {
+//          // row.setDouble(row.numFields-1,0.7)
+//           row.asInstanceOf[UnsafeRow].setDouble(row.numFields-1,0.8)
+//       //    row.setDouble(4,0.5)
+//        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+//        //   row.setDouble(4,0.1)
+//        //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+//          true
+//        })
+//    }
    // println(temp.count())
   /*  println("todo")
     println(child.output.length)
@@ -108,7 +116,7 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     */
     // return
     //res
-    temp
+//    temp
    /* res.mapPartitionsWithIndexInternal{
       (index,iter) => {
         val append = UnsafeProjection.create(weight,child.output, subexpressionEliminationEnabled )

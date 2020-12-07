@@ -4,11 +4,10 @@ import java.util.Random
 
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.engine.expressions.AttributeReference
-import org.apache.spark.daslab.sql.types.{DataType, LongType}
+import org.apache.spark.daslab.sql.engine.expressions.UnsafeRow
+import org.apache.spark.daslab.sql.types.DataType
 import org.apache.spark.util.random.{RandomSampler, XORShiftRandom}
 
-import scala.collection.immutable.HashMap
 
 /**
  * :: DeveloperApi ::
@@ -29,32 +28,73 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
     s"$fraction must be <= 1.0")
 
   private val epsilon = delta/numPartitions
+  private val partitionDelta = delta/numPartitions + epsilon
+  private val reservoirAmount = 2
   private val rng: Random = new XORShiftRandom
   private val distinctValueCounts = scala.collection.mutable.HashMap.empty[List[Any], Int]
+  private val distinctValueReservoirs = scala.collection.mutable.HashMap.empty[List[Any], Array[InternalRow]]
 
   override def setSeed(seed: Long): Unit = rng.setSeed(seed)
 
   /**
    * distincSampler的分层采样逻辑
-   * @param items
+   * @param rows
    * @return
    */
-  override def sample(items: Iterator[InternalRow]): Iterator[InternalRow] = {
-    items.filter(item => {
-      /*println("internalrow")
-      println(item.numFields)*/
-      var distinctValue: List[Any] = List()
-      S.foreach(s => {
-        distinctValue = distinctValue ::: item.get(s.ordinal, s.datatype) :: Nil
-      })
-      val count: Int = distinctValueCounts.getOrElse(distinctValue,0)
-      if (count < delta/numPartitions + epsilon) {
-        distinctValueCounts.put(distinctValue,count+1)
-        true
-      } else {
-        sample() > 0
+  override def sample(rows: Iterator[InternalRow]): Iterator[InternalRow] = {
+    var newRows: Iterator[InternalRow] = rows.filter {
+      row =>
+        /*println("internalrow")
+        println(item.numFields)*/
+        var distinctValue: List[Any] = List()
+        S.foreach(s => {
+          distinctValue = distinctValue ::: row.get(s.ordinal, s.datatype).toString :: Nil
+        })
+        val count: Int = distinctValueCounts.getOrElse(distinctValue, 0)
+        if (count < partitionDelta) {
+          // 属于第一区间，直接采样，权重为1
+          distinctValueCounts.put(distinctValue, count + 1)
+          true
+        } else if (count < partitionDelta + reservoirAmount / fraction) {
+          // 属于第二区间，存入采样池，权重最后再算
+          distinctValueCounts.put(distinctValue, count + 1)
+          if(!(count >= partitionDelta + reservoirAmount && sample() <= 0)) {
+            val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
+            var index = count - partitionDelta
+            if (index >= reservoirAmount) {
+              index = (rng.nextDouble * reservoirAmount).toInt
+            }
+            reservoir(index) = row.copy()
+            distinctValueReservoirs.put(distinctValue, reservoir)
+          }
+          false
+        } else {
+          // 属于第三区间，按概率p采样，权重1/p
+          distinctValueCounts.put(distinctValue, count + 1)
+          if (sample() > 0) {
+            row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, fraction)
+            true
+          } else {
+            false
+          }
+        }
+    } ++ distinctValueReservoirs.map { // 给采样池中的行计算权重并加入总样本中
+      case (key, reservoir) => {
+        var count: Int = distinctValueCounts.getOrElse(key, 0) - partitionDelta
+        val weight: Double = if (count < reservoirAmount / fraction) reservoirAmount.toDouble / count else fraction
+        if (count > reservoirAmount) {
+          count = reservoirAmount
+        }
+        val newReservoir: Array[InternalRow] = reservoir.take(count)
+          .map{
+            row =>
+              row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, weight)
+              row
+          }
+        (key, newReservoir)
       }
-    })
+    }.values.foldLeft(Array.empty[InternalRow])(_ ++ _)
+    newRows
   }
 
   /**

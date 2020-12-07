@@ -20,7 +20,7 @@ import org.apache.spark.daslab.sql.execution.streaming._
 import org.apache.spark.daslab.sql.execution.streaming.sources.MemoryPlanV2
 import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.daslab.sql.streaming.{OutputMode, StreamingQuery}
-import org.apache.spark.daslab.sql.types.{LongType, StructType}
+import org.apache.spark.daslab.sql.types.{LongType, StringType, StructType}
 import org.apache.spark.daslab.sql.execution.aggregate.AggUtils
 import org.apache.spark.daslab.sql.execution.util.DistinctColumn
 //todo
@@ -616,7 +616,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case s @ logical.AqpSample(errorRate,confidence,seed,child) =>
 //        execution.AqpSampleExec(errorRate,confidence,seed,planLater(child))::Nil
         //execution.UniformSamplerExec(errorRate, confidence, seed, planLater(child))::Nil
-        execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(0, LongType, "age")), 1,s.nameE) :: Nil
+        execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(1, StringType, "name")), 1,s.nameE) :: Nil
       case logical.LocalRelation(output, data, _) =>
         LocalTableScanExec(output, data) :: Nil
       case logical.LocalLimit(IntegerLiteral(limit), child) =>
