@@ -9,11 +9,13 @@ import org.apache.spark.daslab.sql.engine.expressions.aggregate.AggregateExpress
 import org.apache.spark.daslab.sql.engine.plans._
 import org.apache.spark.daslab.sql.engine.plans.physical.{HashPartitioning, Partitioning, RangePartitioning, RoundRobinPartitioning}
 import org.apache.spark.daslab.sql.types._
+//import scala.collection.mutable
 
 //todo spark core
 import org.apache.spark.util.Utils
 import org.apache.spark.util.random.RandomSampler
 
+//import scala.collection.mutable.Set
 /**
   *  基本操作算子
   */
@@ -980,13 +982,20 @@ case class AqpInfo(errorRate: ErrorRate,
 case class AqpSample(errorRate: ErrorRate,
                      confidence: Confidence,
                      seed: Long,
-                     child: LogicalPlan
+                     child: LogicalPlan,
+                     stratificationSet: Set[Attribute],
+                     universeSet: Set[Attribute],
+                     ds: Double,
+                     sfm: Double
                      ) extends UnaryNode {
   val eps = RandomSampler.roundingEpsilon
   require(confidence.confidence >= 0.0 - eps && confidence.confidence <= 1.0 + eps,
     s"Sampling fraction ($confidence) must be on interval [0, 1] without replacement")
   require(errorRate.errorRate >= 0.0 -eps && errorRate.errorRate <= 1.0 + eps,
     s"Sampling fraction ($errorRate) must be on interval [0, 1] without replacement")
+
+  //todo 采样器应该具有的四个属性
+
 
 
   //todo 添加weight信息

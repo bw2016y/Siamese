@@ -270,7 +270,7 @@ class Dataset[T] private[sql](
    */
   private[sql] def showString(
                                _numRows: Int,
-                               truncate: Int = 20,
+                               truncate: Int = 200,
                                vertical: Boolean = false): String = {
     val numRows = _numRows.max(0).min(ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH - 1)
     // Get rows represented by Seq[Seq[String]], we may get one more line if it has more data.
@@ -693,7 +693,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def show(numRows: Int): Unit = show(numRows, truncate = true)
+  def show(numRows: Int): Unit = show(numRows, truncate = false)
 
   /**
    * Displays the top 20 rows of Dataset in a tabular form. Strings more than 20 characters

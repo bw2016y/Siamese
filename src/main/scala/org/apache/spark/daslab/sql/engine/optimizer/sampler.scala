@@ -8,6 +8,10 @@ import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.plans
 import org.apache.spark.daslab.sql.engine.plans.logical._
+
+
+
+//import scala.collection.mutable.Set
 /**
   *   在Aggregator算子下插入采样器
   *
@@ -26,7 +30,7 @@ object InsertSampler extends Rule[LogicalPlan] {
                 //todo 后续我希望把所有涉及到对AQP聚合函数的改变都放在这里
                 //todo  当前只是在这里传入置信区间和错误率
 
-                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child)
+                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child,Set(),Set(),1.0,1.0)
                 aggExps.foreach(
                    aggExp => {
                       aggExp.foreach{
@@ -64,22 +68,27 @@ object InsertSampler extends Rule[LogicalPlan] {
 
 object PushDownSampler extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = plan transform{
-    case aqp @ AqpSample(errorRate,confidence,seed,child) =>
+    case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
       child match{
         // TODO 对Filter有特殊处理
         case filter @ Filter (_,grandChild) =>
           println("Pushing down Sampler through Filter")
-          filter.copy(child=AqpSample(errorRate,confidence,seed,grandChild))
+          filter.copy(child=AqpSample(errorRate,confidence,seed,grandChild,stratificationSet,universeSet,ds,sfm))
         // TODO 对Join有特殊处理
         case join @ Join(left,right,joinType,condition) =>
           println("Pushing down Sampler through Join")
-          join.copy(left=AqpSample(errorRate,confidence,seed,left),
-            right=AqpSample(errorRate,confidence,seed,right)
+          join.copy(
+            left,
+            //left=AqpSample(errorRate,confidence,seed,left),
+           // right,
+            right=AqpSample(errorRate,confidence,seed,right,stratificationSet,universeSet,ds,sfm),
+            joinType,
+            condition
           )
           // TODO 下推Project
         case project @ Project(projectList:Seq[NamedExpression],grandchild:LogicalPlan) =>
             println("Pushing down Sampler through Project")
-            project.copy(projectList,child=AqpSample(errorRate,confidence,seed,grandchild))
+            project.copy(projectList,child=AqpSample(errorRate,confidence,seed,grandchild,stratificationSet,universeSet,ds,sfm))
         case _ => aqp
       }
    /* case aqp @ AqpSample(errorRate, confidence, seed, logicalPlan ) =>

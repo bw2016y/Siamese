@@ -146,7 +146,7 @@ object  ScalaTest{
     val sql7 = "select sum(age),count(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
-    val execution: QueryExecution = spark.sql(sql7).queryExecution
+   // val execution: QueryExecution = spark.sql(sql7).queryExecution
     println(spark.sql(sql7).queryExecution.optimizedLogicalPlan)
     println(spark.sql(sql7).queryExecution.physicalPlan)
     println(spark.sql(sql7).queryExecution.executedPhysicalPlan)
@@ -168,7 +168,7 @@ object  ScalaTest{
     spark.sql(sql7).show(20,false)
 
    //todo 定义流数据源
-    val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
+   /* val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")
     val streamDF: DataFrame = spark.readStream.schema(studentSchema).json("src/test/resources/stream")
     streamDF.createOrReplaceTempView("stream");
     val sql8 = "select sum(age),count(age) from stream group by name ERROR WITHIN 5% AT CONFIDENCE 95%  "
@@ -177,10 +177,16 @@ object  ScalaTest{
     val query: StreamingQuery = resStream.writeStream.outputMode("complete").format("console").start()
 
     query.awaitTermination()
+*/
+    //todo 测试push down through join
+    val sqljoin= "select count(grade) from  data join gradetable on data.age=gradetable.age ERROR WITHIN 5% AT CONFIDENCE 95%"
+    println(spark.sql(sqljoin).queryExecution.originLogicalPlan)
+    println(spark.sql(sqljoin).queryExecution.analyzedLogicalPlan)
+    println(spark.sql(sqljoin).queryExecution.optimizedLogicalPlan)
+    println(spark.sql(sqljoin).queryExecution.physicalPlan)
+    println(spark.sql(sqljoin).queryExecution.executedPhysicalPlan)
 
-
-
-
+    spark.sql(sqljoin).show(20,false)
 
 
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
