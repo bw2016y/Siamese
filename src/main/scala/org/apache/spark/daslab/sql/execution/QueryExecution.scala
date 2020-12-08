@@ -77,7 +77,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   //todo make this private
 
-  // 艹啊 在37个地方被用到了
+
     lazy val analyzed: LogicalPlan = {
     SparkSession.setActiveSession(sparkSession)
     sparkSession.sessionState.analyzer.executeAndCheck(logical)
@@ -96,6 +96,13 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   lazy val optimizedPlan: LogicalPlan = sparkSession.sessionState.optimizer.execute(withCachedData)
 
+  //todo 需要将PushDownSampler的规则写在这里
+  def applyAllPushDownRules(plan:LogicalPlan): Seq[LogicalPlan] ={
+      Seq(plan)
+  }
+  // 所有可能位置的Plan
+  lazy val allOptimizedPlan=applyAllPushDownRules(optimizedPlan)
+
   lazy val sparkPlan: SparkPlan = {
     SparkSession.setActiveSession(sparkSession)
     // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
@@ -104,8 +111,15 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     //  planner是SparkPlanner类型 ， plan方法继承于QueryPlanner类，可以返回Iterator[PhysicalPlan]
 
 
-    println(".......how many"+planner.plan(ReturnAnswer(optimizedPlan)).length)
-    planner.plan(ReturnAnswer(optimizedPlan)).next()
+   // println(".......how many"+planner.plan(ReturnAnswer(optimizedPlan)).length)
+
+   // 这里需要处理一系列explodeOptimizedPlan
+
+    val plans: Seq[SparkPlan] = allOptimizedPlan.flatMap(plan => planner.plan(ReturnAnswer(plan)) )
+    println("plans length"+plans.length)
+    //todo cost model works here
+    plans.head
+    //planner.plan(ReturnAnswer(optimizedPlan)).next()
   }
 
 
