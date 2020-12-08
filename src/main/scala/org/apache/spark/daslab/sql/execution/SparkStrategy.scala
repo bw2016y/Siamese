@@ -613,7 +613,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
       case logical.Sample(lb, ub, withReplacement, seed, child) =>
         execution.SampleExec(lb, ub, withReplacement, seed, planLater(child)) :: Nil
         //todo add physical plan here
-      case s @ logical.AqpSample(errorRate,confidence,seed,child) =>
+      case s @ logical.AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
 //        execution.AqpSampleExec(errorRate,confidence,seed,planLater(child))::Nil
         //execution.UniformSamplerExec(errorRate, confidence, seed, planLater(child))::Nil
         execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(1, StringType, "name")), 1,s.nameE) :: Nil

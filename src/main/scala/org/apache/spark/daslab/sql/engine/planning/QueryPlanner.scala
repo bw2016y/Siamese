@@ -61,7 +61,7 @@ abstract class QueryPlanner[PhysicalPlan <: TreeNode[PhysicalPlan]] {
         // 处理那些被标记为[[PlanLater]]的逻辑计划 ，并将placeholders替换掉
         // 这里的placeholders类型 Seq[(PhysicalPlan, LogicalPlan)]
         placeholders.iterator.foldLeft(Iterator(candidate)) {
-          //  左操作变量cadidate  ，  右操作变量 (PhysicalPlan , LogicalPlan)
+          //  左操作变量candidate  ，  右操作变量 (PhysicalPlan , LogicalPlan)
           case (candidatesWithPlaceholders, (placeholder, logicalPlan)) =>
 
             // 为placeholder来生成物理计划

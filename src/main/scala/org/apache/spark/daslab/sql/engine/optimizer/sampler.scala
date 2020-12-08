@@ -120,3 +120,14 @@ object FindAQPInfo extends Rule[LogicalPlan] {
     }
   }
 }
+
+object DfsPushDown{
+  val res=Seq()
+  def gen(plan:LogicalPlan): Seq[LogicalPlan]={
+
+        res
+  }
+  def dfs(plan:LogicalPlan): LogicalPlan={
+    plan
+  }
+}
