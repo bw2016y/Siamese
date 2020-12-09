@@ -8,6 +8,7 @@ import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.plans
 import org.apache.spark.daslab.sql.engine.plans.logical._
+import org.apache.spark.daslab.sql.engine.trees.TreeNodeTag
 
 
 
@@ -122,12 +123,19 @@ object FindAQPInfo extends Rule[LogicalPlan] {
 }
 
 object DfsPushDown{
-  val res=Seq()
+  val res=Seq.empty
   def gen(plan:LogicalPlan): Seq[LogicalPlan]={
+        plan.setTagValue(TreeNodeTag[String]("insert"),"insert here")
+        dfs(plan)
+        val cplan: LogicalPlan = plan.clone()
+        dfs(cplan)
+        res :+ plan
 
-        res
   }
-  def dfs(plan:LogicalPlan): LogicalPlan={
-    plan
+  def dfs(plan:LogicalPlan): Unit = {
+
+      println("plan name   "+plan.getClass)
+      println("tags value  "+plan.getTagValue(TreeNodeTag[String]("insert")).getOrElse("null"))
+      plan.children.foreach(dfs(_))
   }
 }

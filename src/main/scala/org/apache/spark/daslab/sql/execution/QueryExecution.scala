@@ -8,6 +8,7 @@ import java.sql.{Date, Timestamp}
 import org.apache.spark.daslab.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.analysis.UnsupportedOperationChecker
+import org.apache.spark.daslab.sql.engine.optimizer.DfsPushDown
 import org.apache.spark.daslab.sql.engine.plans.logical.{LogicalPlan, ReturnAnswer}
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.util.DateTimeUtils
@@ -98,7 +99,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
   //todo 需要将PushDownSampler的规则写在这里
   def applyAllPushDownRules(plan:LogicalPlan): Seq[LogicalPlan] ={
-      Seq(plan)
+      DfsPushDown.gen(plan)
   }
   // 所有可能位置的Plan
   lazy val allOptimizedPlan=applyAllPushDownRules(optimizedPlan)

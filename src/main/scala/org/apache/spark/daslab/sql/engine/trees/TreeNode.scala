@@ -593,7 +593,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
   /**
    *  返回指定id的TreeNode，主要用于debugging
    *
-   *  这里不反悔BaseType的原因是logical plan的plan node的innerChildren有可能返回physical plan
+   *  这里不返回BaseType的原因是logical plan的plan node的innerChildren有可能返回physical plan
    * @param number
    * @return
    */
