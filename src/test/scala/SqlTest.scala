@@ -179,7 +179,7 @@ object  ScalaTest{
     query.awaitTermination()
 */
     //todo 测试push down through join
-    val sqljoin= "select count(grade) from  data join gradetable on data.age=gradetable.age ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sqljoin= "select count(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sqljoin).queryExecution.originLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.optimizedLogicalPlan)

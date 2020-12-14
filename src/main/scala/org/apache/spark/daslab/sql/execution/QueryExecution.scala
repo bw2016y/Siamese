@@ -104,6 +104,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
   // 所有可能位置的Plan
   lazy val allOptimizedPlan=applyAllPushDownRules(optimizedPlan)
 
+
   lazy val sparkPlan: SparkPlan = {
     SparkSession.setActiveSession(sparkSession)
     // TODO: We use next(), i.e. take the first plan returned by the planner, here for now,
@@ -115,12 +116,19 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
    // println(".......how many"+planner.plan(ReturnAnswer(optimizedPlan)).length)
 
    // 这里需要处理一系列explodeOptimizedPlan
-
-    val plans: Seq[SparkPlan] = allOptimizedPlan.flatMap(plan => planner.plan(ReturnAnswer(plan)) )
-    println("plans length"+plans.length)
+   // val plans: Seq[SparkPlan] = allOptimizedPlan.flatMap(plan => planner.plan(ReturnAnswer(plan)) )
+  //  println("plans length"+plans.length)
     //todo cost model works here
-    plans.head
-    //planner.plan(ReturnAnswer(optimizedPlan)).next()
+    println("allOptimizedPlan.............."+allOptimizedPlan.length)
+
+   // println(plans.head)
+  //  plans.head
+    // planner.plan(ReturnAnswer(optimizedPlan)).next()
+
+
+ //   println(allOptimizedPlan.last)
+
+    planner.plan(ReturnAnswer(allOptimizedPlan.head)).next()
   }
 
 

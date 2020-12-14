@@ -1,14 +1,14 @@
 package org.apache.spark.daslab.sql.engine.optimizer
 
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.{AggregateExpression, Average, Count, Sum}
-import org.apache.spark.daslab.sql.engine.expressions.{Expression, NamedExpression}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, Expression, NamedExpression}
 
 import scala.collection.mutable
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.plans
 import org.apache.spark.daslab.sql.engine.plans.logical._
-import org.apache.spark.daslab.sql.engine.trees.TreeNodeTag
+import org.apache.spark.daslab.sql.engine.trees.{TreeNode, TreeNodeTag}
 
 
 
@@ -123,19 +123,130 @@ object FindAQPInfo extends Rule[LogicalPlan] {
 }
 
 object DfsPushDown{
-  val res=Seq.empty
+  var res:Seq[LogicalPlan]=Seq.empty
+  var sampleStatus : AqpSample  = null
+  var treeToPush : LogicalPlan = null
   def gen(plan:LogicalPlan): Seq[LogicalPlan]={
-        plan.setTagValue(TreeNodeTag[String]("insert"),"insert here")
-        dfs(plan)
-        val cplan: LogicalPlan = plan.clone()
-        dfs(cplan)
-        res :+ plan
+        //reset status
+        res= (Seq.empty:+plan)
+        sampleStatus = null
+        treeToPush = null
+
+
+        val rootPlan: LogicalPlan = checkAqpSample(plan)
+        if(sampleStatus!=null){
+          //存在Aqp信息需要处理
+          println("sampleStatus"+sampleStatus)
+          println("treeToPush"+treeToPush)
+          println("rootPlan"+rootPlan)
+          val ds: Double = sampleStatus.ds
+          val sfm: Double = sampleStatus.sfm
+          val stratificationSet: Set[Attribute] = sampleStatus.stratificationSet
+          val universeSet: Set[Attribute] = sampleStatus.universeSet
+          dfs(treeToPush,ds,sfm,stratificationSet,universeSet,rootPlan)
+
+
+           println("final gen"+res.length)
+          // Seq.empty :+ plan
+          res
+
+        }else{
+          //无需处理
+         //   res :+ plan
+            Seq.empty:+plan
+        }
+
 
   }
-  def dfs(plan:LogicalPlan): Unit = {
+  def construct(root: LogicalPlan, sub: LogicalPlan,isLeft:Boolean=true): Unit ={
+    val newPlan: LogicalPlan = root.transform {
+      case project@Project(projectList: Seq[NamedExpression], grandChild: LogicalPlan) =>
+        if (project.getTagValue(TreeNodeTag[String]("insert")).nonEmpty) {
+          project.copy(projectList, sub)
+        } else {
+          project
+        }
+      case filter@Filter(condition, grandChild) =>
+        if (filter.getTagValue(TreeNodeTag[String]("insert")).nonEmpty) {
+          filter.copy(condition, sub)
+        } else {
+          filter
+        }
+      case join@Join(left, right, joinType, condition) =>
+        if (join.getTagValue(TreeNodeTag[String]("insert")).nonEmpty) {
+          if (isLeft) {
+            join.copy(sub, right, joinType, condition)
+          } else {
+            join.copy(left, sub, joinType, condition)
+          }
+        } else {
+          join
+        }
+    }
 
+    res=(res:+newPlan)
+
+    println("construct............."+res.length)
+    println(newPlan)
+
+  }
+  def dfs(plan:LogicalPlan,ds: Double ,sfm: Double , sSet:Set[Attribute],uSet:Set[Attribute],rootPlan: LogicalPlan): Unit = {
+
+/*
       println("plan name   "+plan.getClass)
-      println("tags value  "+plan.getTagValue(TreeNodeTag[String]("insert")).getOrElse("null"))
-      plan.children.foreach(dfs(_))
+      println("tags value  "+plan.getTagValue(TreeNodeTag[String]("insert")).getOrElse("null"))*/
+
+      plan match {
+        case project @ Project(projectList:Seq[NamedExpression],grandChild:LogicalPlan) =>
+          project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
+          val copiedPlan: LogicalPlan = rootPlan.clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm).clone()
+          construct(copiedPlan,copiedSubPlan)
+          project.unsetTagValue(TreeNodeTag[String]("insert"))
+          dfs(grandChild,ds,sfm,sSet,uSet,rootPlan)
+
+        case filter @ Filter(condition:Expression,grandChild) =>
+          filter.setTagValue(TreeNodeTag[String]("insert"),"push from this")
+          println("filter conditions"+condition.references)
+          var newS=sSet.toSet[Attribute]
+          condition.references.iterator.foreach(a => {
+            newS= (newS+ a)
+          })
+          println(newS)
+          val copiedPlan: LogicalPlan = rootPlan.clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm).clone()
+          construct(copiedPlan,copiedSubPlan)
+          filter.unsetTagValue(TreeNodeTag[String]("insert"))
+          dfs(grandChild,ds,sfm,sSet,uSet,rootPlan)
+
+        case join @ Join(left,right,joinType,condition) =>
+          join.setTagValue(TreeNodeTag[String]("insert"),"push from this")
+          val copiedPlan: LogicalPlan = rootPlan.clone()
+          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSet,uSet,ds,sfm).clone()
+          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSet,uSet,ds,sfm).clone()
+          construct(copiedPlan,copiedLeft,true)
+          construct(copiedPlan,copiedRight,false)
+          join.unsetTagValue(TreeNodeTag[String]("insert"))
+          dfs(left,ds,sfm,sSet,uSet,rootPlan)
+          dfs(right,ds,sfm,sSet,uSet,rootPlan)
+
+        case _ =>
+      }
+
+     // plan.children.foreach(dfs(_))
   }
+  def checkAqpSample(plan: LogicalPlan):LogicalPlan= plan transform{
+    case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
+      child match{
+        case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
+
+          sampleStatus=aqp
+          treeToPush= child
+          Aggregate(groupExps,aggExps,child)
+
+        case _ => agg
+      }
+
+  }
+
 }
