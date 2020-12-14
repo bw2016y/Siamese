@@ -166,6 +166,7 @@ object  ScalaTest{
 */
 
     spark.sql(sql7).show(20,false)
+   // spark.sql(sql7).show()
 
    //todo 定义流数据源
    /* val studentSchema = new StructType().add("name","string").add("age","long").add("sex","string").add("teacher","string")

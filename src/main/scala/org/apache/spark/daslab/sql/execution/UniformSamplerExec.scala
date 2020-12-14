@@ -22,8 +22,9 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
                              confidence: Confidence,
                              seed : Long ,
                              child: SparkPlan,
-                             weight: NamedExpression
-                              )extends UnaryExecNode  with CodegenSupport {
+                             weight: NamedExpression,
+                               fraction: Double
+                              )extends UnaryExecNode  {
 
 
   /** Specifies how data is partitioned across different nodes in the cluster. */
@@ -40,7 +41,7 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     child.execute().mapPartitionsWithIndex{
       (index, iter) =>
         val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
-        SampleUtils.uniformSample(index, iter, 0.3, seed)
+        SampleUtils.uniformSample(index, iter.map(appender), fraction, seed)
     }
   }
 
@@ -53,7 +54,7 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     * We will use this to insert some code to access those columns that are actually used by current
     * plan before calling doConsume().
     */
-  override def usedInputs: AttributeSet = AttributeSet.empty
+ // override def usedInputs: AttributeSet = AttributeSet.empty
 
 
 
@@ -62,9 +63,9 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     *
     * @note Right now we support up to two RDDs
     */
-  override def inputRDDs(): Seq[RDD[InternalRow]] = {
+ /* override def inputRDDs(): Seq[RDD[InternalRow]] = {
     child.asInstanceOf[CodegenSupport].inputRDDs()
-  }
+  }*/
 
   /**
     * Whether or not the result rows of this operator should be copied before putting into a buffer.
@@ -74,9 +75,9 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     *
     * If an operator starts a new pipeline, this should be false.
     */
-  override def needCopyResult: Boolean = {
+ /* override def needCopyResult: Boolean = {
     child.asInstanceOf[CodegenSupport].needCopyResult
-  }
+  }*/
 
   /**
     * Generate the Java source code to process, should be overridden by subclass to support codegen.
@@ -96,9 +97,9 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     * if (shouldStop()) return;
     * }
     */
-  override protected def doProduce(ctx: CodegenContext): String = {
+  /*override protected def doProduce(ctx: CodegenContext): String = {
     child.asInstanceOf[CodegenSupport].produce(ctx,this)
-  }
+  }*/
 
 
   /**
@@ -130,7 +131,7 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
     * `CodegenContext.INPUT_ROW` manually. Some plans may need more tweaks as they have
     * different inputs(join build side, aggregate buffer, etc.), or other special cases.
     */
-  override def doConsume(ctx: CodegenContext, input: Seq[ExprCode], row: ExprCode): String = {
+  /*override def doConsume(ctx: CodegenContext, input: Seq[ExprCode], row: ExprCode): String = {
      val numOutput = metricTerm(ctx,"numOutputRows")
 
      val samplerClass = classOf[BernoulliCellSampler[UnsafeRow]].getName
@@ -149,9 +150,10 @@ case class  UniformSamplerExec(errorRate: ErrorRate,
        | }
      """.stripMargin.trim
 
-  }
+  }*/
 
   // 输出的结构信息
-  override def output: Seq[Attribute] = child.output
+  // 添加权重列
+  override def output: Seq[Attribute] = child.output :+ weight.toAttribute
 }
 

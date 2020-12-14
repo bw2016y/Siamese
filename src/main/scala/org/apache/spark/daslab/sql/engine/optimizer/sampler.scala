@@ -207,28 +207,116 @@ object DfsPushDown{
 
         case filter @ Filter(condition:Expression,grandChild) =>
           filter.setTagValue(TreeNodeTag[String]("insert"),"push from this")
-          println("filter conditions"+condition.references)
+          // println("filter conditions"+condition.references)
           var newS=sSet.toSet[Attribute]
           condition.references.iterator.foreach(a => {
             newS= (newS+ a)
           })
-          println(newS)
+          // println(newS)
+          // S集合变化的情况
           val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm).clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS,uSet,ds,sfm).clone()
           construct(copiedPlan,copiedSubPlan)
+          // S集合不变换的情况
+          val copiedPlan1: LogicalPlan = rootPlan.clone()
+          val copiedSubPlan1: LogicalPlan =  AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds*0.5,sfm).clone()
+          construct(copiedPlan1,copiedSubPlan1)
+
           filter.unsetTagValue(TreeNodeTag[String]("insert"))
-          dfs(grandChild,ds,sfm,sSet,uSet,rootPlan)
+          dfs(grandChild,ds*0.5,sfm,sSet,uSet,rootPlan)
+          dfs(grandChild,ds,sfm,newS,uSet,rootPlan)
 
         case join @ Join(left,right,joinType,condition) =>
           join.setTagValue(TreeNodeTag[String]("insert"),"push from this")
-          val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSet,uSet,ds,sfm).clone()
-          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSet,uSet,ds,sfm).clone()
-          construct(copiedPlan,copiedLeft,true)
-          construct(copiedPlan,copiedRight,false)
+          println("Join type"+joinType)
+          println("split"+Utils.splitConjunctivePredicates(condition.get).map( e=> e.references.toSeq))
+          println("condition"+condition.get.references.toSeq)
+          println("left"+left.output)
+          println("right"+right.output)
+          // build maps
+
+           val leftPart: Set[Attribute] = left.output.toSet
+           val rightPart: Set[Attribute] = right.output.toSet
+
+           val l2rMap= mutable.Map[Attribute,Attribute]()
+           val r2lMap= mutable.Map[Attribute,Attribute]()
+
+          val cond: Seq[Seq[Attribute]] = Utils.splitConjunctivePredicates(condition.get).map(e=> e.references.toSeq)
+
+          cond.foreach( pair => {
+                if(leftPart.contains(pair.head)){
+                    l2rMap +=  (pair.head -> pair.last)
+                    r2lMap +=  (pair.last -> pair.head)
+                }else{
+                    l2rMap += (pair.last -> pair.head)
+                    r2lMap += (pair.head -> pair.last)
+                }
+          })
+          println("left part"+leftPart)
+          println("right part"+rightPart)
+          println("l2rMap"+l2rMap)
+          println("r2lMap"+r2lMap)
+          // push to left
+           val fullSetLeft: mutable.Set[Attribute] = mutable.Set[Attribute]()
+           sSet.foreach( a => {
+              if(r2lMap.get(a).nonEmpty){
+                fullSetLeft += r2lMap.get(a).get
+              }else{
+                fullSetLeft += a
+              }
+           })
+           // 当前能在左侧采样的列
+           var sSetOnLeft : Set[Attribute] = leftPart.intersect(fullSetLeft.toSet)
+           if((fullSetLeft.toSet -- sSetOnLeft).size>0){
+              // 缺一部分可采样的列，需要将Join Key加入到分层采样的列集中
+             // 这种情况会存在 miss group的问题
+
+               // 还存在可以添加的Join Key
+               if((l2rMap.toMap.keySet -- sSetOnLeft).size>0){
+                   sSetOnLeft = (sSetOnLeft ++ l2rMap.toMap.keySet)
+               }else{   // 不存在可以添加的Join Key了
+                  sSetOnLeft = sSetOnLeft
+               }
+           }else{
+              // 不缺少列，可以直接push到左侧 , 这种情况不会miss group
+                sSetOnLeft = sSetOnLeft
+           }
+
+          val copiedrootPlanLeft : LogicalPlan = rootPlan.clone()
+          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft,uSet,ds,sfm).clone()
+          construct(copiedrootPlanLeft,copiedLeft,isLeft=true)
+          // push to right start
+          val fullSetRight: mutable.Set[Attribute]=mutable.Set[Attribute]()
+          sSet.foreach( a => {
+            if(l2rMap.get(a).nonEmpty){
+              fullSetRight += l2rMap.get(a).get
+            }else{
+              fullSetRight += a
+            }
+          })
+          // 当前可以在右侧采样的列
+          var sSetOnRight : Set[Attribute] = rightPart.intersect(fullSetRight.toSet)
+          if((fullSetRight.toSet -- sSetOnRight).size >0){
+             if((r2lMap.toMap.keySet -- sSetOnRight).size >0){
+               sSetOnRight = (sSetOnRight ++ r2lMap.toMap.keySet)
+             }else{
+               sSetOnRight = sSetOnRight
+             }
+          }else {
+              sSetOnRight = sSetOnRight
+          }
+
+          val copiedrootPlanRight : LogicalPlan = rootPlan.clone()
+          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight,uSet,ds,sfm).clone()
+          construct(copiedrootPlanRight,copiedRight,isLeft = false)
+          // push to right end
+
           join.unsetTagValue(TreeNodeTag[String]("insert"))
-          dfs(left,ds,sfm,sSet,uSet,rootPlan)
-          dfs(right,ds,sfm,sSet,uSet,rootPlan)
+
+          println("sSetOnLeft"+sSetOnLeft)
+          println("sSetOnRight"+sSetOnRight)
+          dfs(left,ds,sfm,sSetOnLeft,uSet,rootPlan)
+          dfs(right,ds,sfm,sSetOnRight,uSet,rootPlan)
 
         case _ =>
       }
