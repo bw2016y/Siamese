@@ -1,6 +1,6 @@
 package org.apache.spark.daslab.sql.engine.optimizer
 
-import org.apache.spark.daslab.sql.engine.expressions.{And, Expression}
+import org.apache.spark.daslab.sql.engine.expressions.{And, AttributeReference, Expression}
 import org.apache.spark.daslab.sql.engine.plans.logical.{AqpSample, LogicalPlan}
 import org.apache.spark.daslab.sql.execution.util.DistinctColumn
 import org.apache.spark.daslab.sql.execution.{DistinctSamplerExec, PlanLater, SparkPlan, UniformSamplerExec}
@@ -22,10 +22,31 @@ object Utils {
    * @return
    */
     def choosePhysicalSampler(plan : AqpSample) : Seq[SparkPlan] = {
+      println("choosing plan child output"+plan.child.output)
+      plan.child.output.zipWithIndex.foreach{
+        case (c,index) =>
+          println("index"+index+"dataType"+c.dataType+"name"+c.name)
+      }
        if(plan.stratificationSet.nonEmpty){
          // Seq[DistinctColumn]
          // case class DistinctColumn(ordinal:Int,datatype: DataType, name: String)
-         DistinctSamplerExec(plan.errorRate,plan.confidence,plan.seed,PlanLater(plan.child),List(new DistinctColumn(1,StringType,"name")),1,plan.nameE)::Nil
+         //  (child.output :+ weight).zipWithIndex.foreach{case (exp,ti) => println(ti+"  "+row.get(ti,exp.dataType))}
+
+
+
+         var list: List[DistinctColumn]=List()
+         plan.stratificationSet.foreach( s => {
+           plan.child.output.zipWithIndex.foreach{
+             case (c,index) =>
+               println("index"+index+"dataType"+c.dataType+"name"+c.name)
+               if(c.asInstanceOf[AttributeReference].exprId.id == s.asInstanceOf[AttributeReference].exprId.id){
+                  list = (list ::: List(new DistinctColumn(index,c.dataType,c.name)))
+               }
+           }
+         })
+         println("Distinct List......------------"+list)
+        //List(new DistinctColumn(1,StringType,"name"))
+         DistinctSamplerExec(plan.errorRate,plan.confidence,plan.seed,PlanLater(plan.child),list ,1,plan.nameE)::Nil
          //选择分层采样器
        }else{
          //选择均匀采样器

@@ -128,7 +128,7 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
  //   println(allOptimizedPlan.last)
 
-    planner.plan(ReturnAnswer(allOptimizedPlan.head)).next()
+    planner.plan(ReturnAnswer(allOptimizedPlan.last)).next()
   }
 
 

@@ -1,7 +1,7 @@
 package org.apache.spark.daslab.sql.engine.optimizer
 
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.{AggregateExpression, Average, Count, Sum}
-import org.apache.spark.daslab.sql.engine.expressions.{Attribute, Expression, NamedExpression}
+import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeReference, Expression, NamedExpression}
 
 import scala.collection.mutable
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
@@ -30,8 +30,13 @@ object InsertSampler extends Rule[LogicalPlan] {
               case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
                 //todo 后续我希望把所有涉及到对AQP聚合函数的改变都放在这里
                 //todo  当前只是在这里传入置信区间和错误率
-
-                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child,Set(),Set(),1.0,1.0)
+                println("gourping expression....."+groupExps)
+                var groupSet : Set[Attribute]=Set()
+                groupExps.foreach( e =>{
+                   groupSet = (groupSet+e.asInstanceOf[Attribute])
+                })
+                println(groupSet)
+                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child,groupSet,Set(),1.0,1.0)
                 aggExps.foreach(
                    aggExp => {
                       aggExp.foreach{
@@ -204,18 +209,18 @@ object DfsPushDown{
           construct(copiedPlan,copiedSubPlan)
           project.unsetTagValue(TreeNodeTag[String]("insert"))
           dfs(grandChild,ds,sfm,sSet,uSet,rootPlan)
-
+        //todo 这里需要判断一下是不是SSet中已经包含了Filter涉及的列
         case filter @ Filter(condition:Expression,grandChild) =>
           filter.setTagValue(TreeNodeTag[String]("insert"),"push from this")
           // println("filter conditions"+condition.references)
-          var newS=sSet.toSet[Attribute]
+          var newS: Set[WrapAttribute] = sSet.toSet[Attribute].map( a => new WrapAttribute(a))
           condition.references.iterator.foreach(a => {
-            newS= (newS+ a)
+            newS= (newS + new WrapAttribute(a))
           })
           // println(newS)
           // S集合变化的情况
           val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS,uSet,ds,sfm).clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
           construct(copiedPlan,copiedSubPlan)
           // S集合不变换的情况
           val copiedPlan1: LogicalPlan = rootPlan.clone()
@@ -224,7 +229,7 @@ object DfsPushDown{
 
           filter.unsetTagValue(TreeNodeTag[String]("insert"))
           dfs(grandChild,ds*0.5,sfm,sSet,uSet,rootPlan)
-          dfs(grandChild,ds,sfm,newS,uSet,rootPlan)
+          dfs(grandChild,ds,sfm,newS.map(wa => wa.att).toSet,uSet,rootPlan)
 
         case join @ Join(left,right,joinType,condition) =>
           join.setTagValue(TreeNodeTag[String]("insert"),"push from this")
@@ -235,45 +240,59 @@ object DfsPushDown{
           println("right"+right.output)
           // build maps
 
-           val leftPart: Set[Attribute] = left.output.toSet
-           val rightPart: Set[Attribute] = right.output.toSet
+           val leftPart: Set[WrapAttribute] = left.output.toSet[Attribute].map(a=> new WrapAttribute(a))
+           val rightPart: Set[WrapAttribute] = right.output.toSet[Attribute].map(a=> new WrapAttribute(a))
 
-           val l2rMap= mutable.Map[Attribute,Attribute]()
-           val r2lMap= mutable.Map[Attribute,Attribute]()
+           //val leftPartId: Set[Long] = left.output.toSet.map(a => a.asInstanceOf[AttributeReference].exprId.id)
+           //val rightPartId: Set[Long] = right.output.toSet.map(a=> a.asInstanceOf[AttributeReference].exprId.id)
+
+           val l2rMap= mutable.Map[WrapAttribute,WrapAttribute]()
+           val r2lMap= mutable.Map[WrapAttribute,WrapAttribute]()
 
           val cond: Seq[Seq[Attribute]] = Utils.splitConjunctivePredicates(condition.get).map(e=> e.references.toSeq)
 
           cond.foreach( pair => {
-                if(leftPart.contains(pair.head)){
-                    l2rMap +=  (pair.head -> pair.last)
-                    r2lMap +=  (pair.last -> pair.head)
-                }else{
-                    l2rMap += (pair.last -> pair.head)
-                    r2lMap += (pair.head -> pair.last)
+                if(leftPart.contains(  new WrapAttribute(pair.head) ) ){
+                    l2rMap +=  ( new WrapAttribute(pair.head) -> new WrapAttribute(pair.last))
+                    r2lMap +=  ( new WrapAttribute(pair.last) -> new WrapAttribute(pair.head))
+                } else {
+                    l2rMap += ( new WrapAttribute(pair.last) ->  new WrapAttribute(pair.head))
+                    r2lMap += ( new WrapAttribute(pair.head) -> new WrapAttribute(pair.last))
                 }
           })
           println("left part"+leftPart)
           println("right part"+rightPart)
+       //   println("left partId"+leftPartId)
+       //   println("right partId"+rightPartId)
           println("l2rMap"+l2rMap)
           println("r2lMap"+r2lMap)
+
+
           // push to left
-           val fullSetLeft: mutable.Set[Attribute] = mutable.Set[Attribute]()
+           val fullSetLeft: mutable.Set[WrapAttribute] = mutable.Set[WrapAttribute]()
            sSet.foreach( a => {
-              if(r2lMap.get(a).nonEmpty){
-                fullSetLeft += r2lMap.get(a).get
+              if(r2lMap.get(new WrapAttribute(a)).nonEmpty){
+                fullSetLeft += r2lMap.get(new WrapAttribute(a)).get
               }else{
-                fullSetLeft += a
+                fullSetLeft += new WrapAttribute(a)
               }
            })
-           // 当前能在左侧采样的列
-           var sSetOnLeft : Set[Attribute] = leftPart.intersect(fullSetLeft.toSet)
-           if((fullSetLeft.toSet -- sSetOnLeft).size>0){
+           println("fullSetLeft********************"+fullSetLeft.toSet)
+           // 当前能在左侧采样的列  todo
+            //var sSetOnLeft : Set[Attribute] = leftPart.intersect(fullSetLeft.toSet)
+
+          var sSetOnLeft : Set[WrapAttribute] = leftPart.intersect(fullSetLeft.toSet)
+           //var sSetOnLeft : Set[Attribute] = (leftPart & (fullSetLeft.toSet))
+           println("sSetOnLeft**********************"+sSetOnLeft)
+           if((fullSetLeft.toSet -- sSetOnLeft.toSet).size>0){
               // 缺一部分可采样的列，需要将Join Key加入到分层采样的列集中
              // 这种情况会存在 miss group的问题
 
                // 还存在可以添加的Join Key
-               if((l2rMap.toMap.keySet -- sSetOnLeft).size>0){
+               if((l2rMap.toMap.keySet -- sSetOnLeft.toSet).size>0){
+
                    sSetOnLeft = (sSetOnLeft ++ l2rMap.toMap.keySet)
+
                }else{   // 不存在可以添加的Join Key了
                   sSetOnLeft = sSetOnLeft
                }
@@ -283,21 +302,21 @@ object DfsPushDown{
            }
 
           val copiedrootPlanLeft : LogicalPlan = rootPlan.clone()
-          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft,uSet,ds,sfm).clone()
+          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
           construct(copiedrootPlanLeft,copiedLeft,isLeft=true)
           // push to right start
-          val fullSetRight: mutable.Set[Attribute]=mutable.Set[Attribute]()
+          val fullSetRight: mutable.Set[WrapAttribute]=mutable.Set[WrapAttribute]()
           sSet.foreach( a => {
-            if(l2rMap.get(a).nonEmpty){
-              fullSetRight += l2rMap.get(a).get
+            if(l2rMap.get(new WrapAttribute(a)).nonEmpty){
+              fullSetRight += l2rMap.get(new WrapAttribute(a)).get
             }else{
-              fullSetRight += a
+              fullSetRight += new WrapAttribute(a)
             }
           })
           // 当前可以在右侧采样的列
-          var sSetOnRight : Set[Attribute] = rightPart.intersect(fullSetRight.toSet)
-          if((fullSetRight.toSet -- sSetOnRight).size >0){
-             if((r2lMap.toMap.keySet -- sSetOnRight).size >0){
+          var sSetOnRight : Set[WrapAttribute] = rightPart.intersect(fullSetRight.toSet)
+          if((fullSetRight.toSet -- sSetOnRight.toSet).size >0){
+             if((r2lMap.toMap.keySet -- sSetOnRight.toSet).size >0){
                sSetOnRight = (sSetOnRight ++ r2lMap.toMap.keySet)
              }else{
                sSetOnRight = sSetOnRight
@@ -307,7 +326,7 @@ object DfsPushDown{
           }
 
           val copiedrootPlanRight : LogicalPlan = rootPlan.clone()
-          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight,uSet,ds,sfm).clone()
+          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
           construct(copiedrootPlanRight,copiedRight,isLeft = false)
           // push to right end
 
@@ -315,8 +334,8 @@ object DfsPushDown{
 
           println("sSetOnLeft"+sSetOnLeft)
           println("sSetOnRight"+sSetOnRight)
-          dfs(left,ds,sfm,sSetOnLeft,uSet,rootPlan)
-          dfs(right,ds,sfm,sSetOnRight,uSet,rootPlan)
+          dfs(left,ds,sfm,sSetOnLeft.map(wa => wa.att).toSet,uSet,rootPlan)
+          dfs(right,ds,sfm,sSetOnRight.map(wa=>wa.att).toSet,uSet,rootPlan)
 
         case _ =>
       }
@@ -337,4 +356,20 @@ object DfsPushDown{
 
   }
 
+}
+
+
+class WrapAttribute (val att : Attribute){
+  override def equals(obj: Any): Boolean = {
+    obj.asInstanceOf[WrapAttribute].att.asInstanceOf[AttributeReference].exprId.id == att.asInstanceOf[AttributeReference].exprId.id
+     //obj .asInstanceOf[AttributeReference].exprId.id == att.asInstanceOf[AttributeReference].exprId.id
+  }
+
+  override def hashCode(): Int = {
+    val id: Long = att.asInstanceOf[AttributeReference].exprId.id
+    val h: Long = (id >>> 32) ^ id
+    h.toInt
+  }
+
+  override def toString: String = att.asInstanceOf[AttributeReference].toString
 }
