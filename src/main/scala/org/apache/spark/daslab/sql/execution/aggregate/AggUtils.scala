@@ -154,7 +154,7 @@ object AggUtils {
     aggregateExpressions.foreach( aggto =>
       aggto.aggregateFunction match {
         case sum : Sum =>
-          println("conf info ==============="+sum.confidence+"  :::"+ sum.errorRate +"  "+sum.hasWeight)
+          println("conf info ==============="+sum.confidence+"  :::"+ sum.errorRate +"  "+sum)
         case avg: Average =>
           println("conf info ==============="+avg.confidence+"   :::"+avg.errorRate+ "   "+avg)
         case count: Count =>
@@ -178,7 +178,9 @@ object AggUtils {
           case c: Count =>
             println("before fix : "+c.hasWeight)
             println(ae.aggregateFunction.children)
-
+          case a: Average =>
+            println("before fix: "+a.hasWeight)
+            println(ae.aggregateFunction.children)
           case _  =>
         }
       })
@@ -188,6 +190,7 @@ object AggUtils {
         ae.aggregateFunction match {
           case s: Sum => s.appendWeight(weight.head)
           case c:Count => c.appendWeight(weight.head)
+          case a: Average => a.appendWeight(weight.head)
           case _ =>
         }
       })
@@ -199,6 +202,9 @@ object AggUtils {
             println(ae.aggregateFunction.children)
           case c: Count =>
             println("after fix " + c.hasWeight)
+            println(ae.aggregateFunction.children)
+          case a : Average =>
+            println("after fix "+ a.hasWeight)
             println(ae.aggregateFunction.children)
 
 
@@ -531,7 +537,9 @@ object AggUtils {
           case c: Count =>
             println("before fix : "+c.hasWeight)
             println(ae.aggregateFunction.children)
-
+          case a: Average =>
+            println("before fix "+ a.hasWeight)
+            println(ae.aggregateFunction.children)
           case _  =>
         }
       })
@@ -541,6 +549,7 @@ object AggUtils {
         ae.aggregateFunction match {
           case s: Sum => s.appendWeight(weight.head)
           case c:Count => c.appendWeight(weight.head)
+          case a: Average => a.appendWeight(weight.head)
           case _ =>
         }
       })
@@ -554,7 +563,9 @@ object AggUtils {
             println("after fix " + c.hasWeight)
             println(ae.aggregateFunction.children)
 
-
+          case a: Average =>
+            println("after fix "+ a.hasWeight)
+            println(ae.aggregateFunction.children)
           case _  =>
         }
       })

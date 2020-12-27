@@ -140,10 +140,10 @@ object  ScalaTest{
     value6.foreach(a =>{
       println(a)
     })*/
-    val sql9= "select sum(age),count(age) from data group by name"
+    val sql9= "select sum(age),count(age),avg(age) from data group by name"
     spark.sql(sql9).show()
 
-    val sql7 = "select name, sum(age),count(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
+    val sql7 = "select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
    // val execution: QueryExecution = spark.sql(sql7).queryExecution
@@ -180,7 +180,7 @@ object  ScalaTest{
     query.awaitTermination()
 */
     //todo 测试push down through join
-    val sqljoin= "select count(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sqljoin= "select count(grade),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sqljoin).queryExecution.originLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.optimizedLogicalPlan)
@@ -188,6 +188,7 @@ object  ScalaTest{
     println(spark.sql(sqljoin).queryExecution.executedPhysicalPlan)
 
     spark.sql(sqljoin).show(20,false)
+
 
 
   /*  val sql8 = "SELECT (SELECT (SELECT age FROM data) FROM data) from data"
