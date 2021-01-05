@@ -180,7 +180,7 @@ object  ScalaTest{
     query.awaitTermination()
 */
     //todo 测试push down through join
-    val sqljoin= "select count(grade),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
+    val sqljoin= "select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sqljoin).queryExecution.originLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.analyzedLogicalPlan)
     println(spark.sql(sqljoin).queryExecution.optimizedLogicalPlan)
@@ -217,6 +217,14 @@ object  ScalaTest{
     println(spark.sql(sqlproject).queryExecution.executedPhysicalPlan)
     spark.sql(sqlproject).show();*/
 
+    val sqlCount = "select count(2) from data"
+    spark.sql(sqlCount).show()
+    val sqlCountSample= "select count(2) from data ERROR WITHIN 5% AT CONFIDENCE 95%"
+    spark.sql(sqlCountSample).show()
+    val toughSql = "select sum(age * 2),avg(age*2) from data"
+    spark.sql(toughSql).show()
+    val toughSqlSample = "select sum(age * 2),avg(age*2)  from data ERROR WITHIN 5% AT CONFIDENCE 95%"
+    spark.sql(toughSqlSample).show()
   }
 
 }

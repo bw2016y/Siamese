@@ -1,4 +1,4 @@
-import org.apache.spark.SparkConf;
+/*import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.ForeachFunction;
 import org.apache.spark.daslab.sql.Dataset;
 import org.apache.spark.daslab.sql.Row;
@@ -20,7 +20,7 @@ import scala.collection.immutable.List;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
+import java.util.ArrayList;*/
 
 public class SqlTest {
     public static void main(String[] args) {
@@ -42,7 +42,7 @@ public class SqlTest {
 ////        LogicalPlan logicalPlan = new Project(strings);
 ////        logicalPlan.foreach((node) -> System.out.println(node.toString()));
 ////        logicalPlan.collectLeaves().forEach((node) -> System.out.println(node.toString()));
-        SparkConf sparkConf = new SparkConf().setMaster("local[*]");
+   /*     SparkConf sparkConf = new SparkConf().setMaster("local[*]");
         SparkSession sparkSession = SparkSession.builder().config(sparkConf).getOrCreate();
 //        String file = getClass().getClassLoader().getResource("student.json").getFile();
 //        System.out.println(file);
@@ -69,7 +69,7 @@ public class SqlTest {
             public void call(Row row) throws Exception {
                 System.out.println(row);
             }
-        });
+        });*/
 
     }
 

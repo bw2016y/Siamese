@@ -1,4 +1,4 @@
-package org.apache.spark.daslab.sql.execution.Util
+package org.apache.spark.daslab.sql.execution.util
 
 import java.util.Random
 

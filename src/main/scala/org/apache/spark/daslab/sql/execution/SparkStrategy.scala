@@ -6,7 +6,7 @@ import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.encoders.RowEncoder
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.AggregateExpression
-import org.apache.spark.daslab.sql.engine.optimizer.Utils
+import org.apache.spark.daslab.sql.engine.optimizer.MyUtils
 import org.apache.spark.daslab.sql.engine.planning._
 import org.apache.spark.daslab.sql.engine.plans._
 import org.apache.spark.daslab.sql.engine.plans.logical._
@@ -615,7 +615,7 @@ abstract class SparkStrategies extends QueryPlanner[SparkPlan] {
         execution.SampleExec(lb, ub, withReplacement, seed, planLater(child)) :: Nil
         //todo add physical plan here
       case s @ logical.AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
-          Utils.choosePhysicalSampler(s)
+          MyUtils.choosePhysicalSampler(s)
        //execution.AqpSampleExec(errorRate,confidence,seed,planLater(child))::Nil
        //execution.UniformSamplerExec(errorRate, confidence, seed, planLater(child),s.nameE,0.2)::Nil
        //execution.DistinctSamplerExec(errorRate, confidence, seed, planLater(child), List(new DistinctColumn(1, StringType, "name")), 1,s.nameE) :: Nil

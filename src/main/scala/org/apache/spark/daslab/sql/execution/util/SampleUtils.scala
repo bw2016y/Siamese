@@ -2,7 +2,7 @@ package org.apache.spark.daslab.sql.execution.util
 
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.expressions.UnsafeProjection
-import org.apache.spark.daslab.sql.execution.Util.UniformSampler
+import org.apache.spark.daslab.sql.execution.util.UniformSampler
 import org.apache.spark.rdd.RDD
 import org.apache.spark.util.random.BernoulliCellSampler
 

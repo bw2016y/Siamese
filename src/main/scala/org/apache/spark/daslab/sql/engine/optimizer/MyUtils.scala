@@ -6,7 +6,7 @@ import org.apache.spark.daslab.sql.execution.util.DistinctColumn
 import org.apache.spark.daslab.sql.execution.{DistinctSamplerExec, PlanLater, SparkPlan, UniformSamplerExec}
 import org.apache.spark.daslab.sql.types.StringType
 
-object Utils {
+object MyUtils {
     def splitConjunctivePredicates(condition:Expression): Seq[Expression] = {
       condition match{
         case And(cond1,cond2) =>

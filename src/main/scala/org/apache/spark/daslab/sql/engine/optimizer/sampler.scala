@@ -234,7 +234,7 @@ object DfsPushDown{
         case join @ Join(left,right,joinType,condition) =>
           join.setTagValue(TreeNodeTag[String]("insert"),"push from this")
           println("Join type"+joinType)
-          println("split"+Utils.splitConjunctivePredicates(condition.get).map( e=> e.references.toSeq))
+          println("split"+MyUtils.splitConjunctivePredicates(condition.get).map( e=> e.references.toSeq))
           println("condition"+condition.get.references.toSeq)
           println("left"+left.output)
           println("right"+right.output)
@@ -249,7 +249,7 @@ object DfsPushDown{
            val l2rMap= mutable.Map[WrapAttribute,WrapAttribute]()
            val r2lMap= mutable.Map[WrapAttribute,WrapAttribute]()
 
-          val cond: Seq[Seq[Attribute]] = Utils.splitConjunctivePredicates(condition.get).map(e=> e.references.toSeq)
+          val cond: Seq[Seq[Attribute]] = MyUtils.splitConjunctivePredicates(condition.get).map(e=> e.references.toSeq)
 
           cond.foreach( pair => {
                 if(leftPart.contains(  new WrapAttribute(pair.head) ) ){
