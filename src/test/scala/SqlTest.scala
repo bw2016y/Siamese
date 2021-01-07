@@ -1,4 +1,7 @@
+import java.io.{File, FileWriter, PrintWriter}
+
 import org.apache.spark.daslab.sql.engine.InternalRow
+import org.apache.spark.daslab.sql.engine.optimizer.DfsPushDown
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SaveMode, SparkSession}
@@ -236,7 +239,82 @@ object  ScalaTest{
       .option("header","true")
       .csv("outputres/test.csv")*/
 
-    spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
-  }
 
+
+
+    val  target = new File("./sqlout/res.txt")
+    if(!target.exists()){
+      target.createNewFile()
+    }
+    sqls.zipWithIndex.foreach{
+      case (sql,index) =>
+        spark.sql(sql).coalesce(1).rdd.collect().foreach(
+          x=>{
+            val fileWriter = new FileWriter("./sqlout/res.txt", true)
+            val out = new PrintWriter(fileWriter)
+            val sb = new StringBuilder
+
+            sb.append(index + ",")
+            sb.append(x.mkString(","))
+
+            out.println(sb)
+            out.flush()
+
+            out.close()
+            fileWriter.close()
+          }
+        )
+    }
+
+    val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan(toughSqlSample)
+    val analyzed :LogicalPlan= spark.sessionState.analyzer.executeAndCheck(plan)
+    val withCachedData: LogicalPlan = spark.sharedState.cacheManager.useCachedData(analyzed)
+    val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)
+    val allOptimizedPlan: Seq[LogicalPlan] = DfsPushDown.gen(optimizedPlan)
+
+    println(allOptimizedPlan.length)
+    allOptimizedPlan.foreach(plan => println(plan.toJSON))
+
+    /*spark.sql(toughSqlSample).coalesce(1).rdd.collect().foreach(x => {
+      val  fileWriter= new FileWriter("./sqlout/res.txt",true)
+      val  out =new PrintWriter(fileWriter)
+      val sb:StringBuilder = new StringBuilder()
+
+      sb.append(id+",")
+      sb.append(x.mkString(","))
+      out.println(sb)
+      out.flush()
+
+      out.close()
+      fileWriter.close()
+
+    })*/
+    /*
+    id+=1
+    spark.sql(toughSql).coalesce(1).rdd.collect().foreach(x => {
+      val  fileWriter= new FileWriter("./sqlout/res.txt",true)
+      val  out =new PrintWriter(fileWriter)
+      val sb:StringBuilder = new StringBuilder()
+
+      sb.append(id+",")
+      sb.append(x.mkString(","))
+      out.println(sb)
+      out.flush()
+
+      out.close()
+      fileWriter.close()
+
+    })*/
+
+
+
+
+
+
+    // spark.sql(toughSql).coalesce(1).write.mode(SaveMode.Append).option("header","true").csv("outputres")
+    //spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
+  }
+  val sqls= "select sum(age * 2),avg(age*2) from data" ::
+    "select sum(age * 2),avg(age*2)  from data ERROR WITHIN 5% AT CONFIDENCE 95%" ::
+    Nil
 }
