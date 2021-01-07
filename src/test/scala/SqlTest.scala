@@ -1,7 +1,7 @@
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
-import org.apache.spark.daslab.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.daslab.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.apache.spark.daslab.sql.streaming.StreamingQuery
 import org.apache.spark.daslab.sql.functions._
 import org.apache.spark.daslab.sql.types.{LongType, StructType}
@@ -225,6 +225,18 @@ object  ScalaTest{
     spark.sql(toughSql).show()
     val toughSqlSample = "select sum(age * 2),avg(age*2)  from data ERROR WITHIN 5% AT CONFIDENCE 95%"
     spark.sql(toughSqlSample).show()
+
+  //  spark.sql(toughSql).write.format("csv").mode("append").save("outputres")
+  //  spark.sql(toughSqlSample).write.format("csv").mode("append").save("outputres")
+    //val frame: DataFrame = spark.sql(toughSql)
+    ///frame.rdd.saveAsTextFile()
+
+
+    /*spark.sql(toughSql).coalesce(1).write.mode(SaveMode.Append)
+      .option("header","true")
+      .csv("outputres/test.csv")*/
+
+    spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
   }
 
 }
