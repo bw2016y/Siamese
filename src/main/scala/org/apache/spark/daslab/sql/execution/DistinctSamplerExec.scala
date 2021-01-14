@@ -24,6 +24,8 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
                                 child: SparkPlan,
                                 S: Seq[DistinctColumn],
                                 delta: Int,
+                                fraction:Double,
+                                parallelNums: Int,
                                 weight: NamedExpression
                                )extends UnaryExecNode
 //  with CodegenSupport
@@ -47,7 +49,7 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     child.execute().mapPartitionsWithIndex{
       (index, iter) =>
         val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
-        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, 0.3, 1, seed)
+        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, fraction, parallelNums , seed)
         rows.filter{ row =>
           println(row.getString(1) + " " + row.getLong(0) + " " + row.getDouble(row.numFields-1))
           true

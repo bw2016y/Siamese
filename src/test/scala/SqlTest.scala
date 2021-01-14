@@ -242,7 +242,7 @@ object  ScalaTest{
 
 
 
-    val  target = new File("./sqlout/res.txt")
+    /*val  target = new File("./sqlout/res.txt")
     if(!target.exists()){
       target.createNewFile()
     }
@@ -264,7 +264,7 @@ object  ScalaTest{
             fileWriter.close()
           }
         )
-    }
+    }*/
 
     val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan(toughSqlSample)
     val analyzed :LogicalPlan= spark.sessionState.analyzer.executeAndCheck(plan)

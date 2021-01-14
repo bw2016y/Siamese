@@ -29,6 +29,8 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
 
   private val epsilon = delta/numPartitions
   private val partitionDelta = delta/numPartitions + epsilon
+
+  //todo ? 缓冲池大小？
   private val reservoirAmount = 2
   private val rng: Random = new XORShiftRandom
   private val distinctValueCounts = scala.collection.mutable.HashMap.empty[List[Any], Int]
