@@ -10,6 +10,7 @@ object MyUtils {
     var FRACTION=1.0
     var DELTA = 1
     var PARALLELNUMS = 1
+    var PLANPOS=0
     def setFraction(frac:Double)={
       MyUtils.FRACTION=frac
     }
@@ -18,6 +19,9 @@ object MyUtils {
     }
     def setParallelNums(para:Int)={
     MyUtils.PARALLELNUMS=para
+    }
+    def setPlan(index:Int)={
+       MyUtils.PLANPOS = index
     }
     def splitConjunctivePredicates(condition:Expression): Seq[Expression] = {
       condition match{
@@ -58,11 +62,11 @@ object MyUtils {
          })
          println("Distinct List......------------"+list)
         //List(new DistinctColumn(1,StringType,"name"))
-         DistinctSamplerExec(plan.errorRate,plan.confidence,plan.seed,PlanLater(plan.child),list ,MyUtils.DELTA,MyUtils.FRACTION,MyUtils.PARALLELNUMS,plan.nameE)::Nil
+         DistinctSamplerExec(plan.errorRate,plan.confidence,plan.seed,PlanLater(plan.child),list ,plan.delta,plan.sampleFraction,plan.parallel,plan.nameE)::Nil
          //选择分层采样器
        }else{
          //选择均匀采样器
-         UniformSamplerExec(plan.errorRate,plan.confidence,plan.seed, PlanLater(plan.child),plan.nameE,MyUtils.FRACTION)::Nil
+         UniformSamplerExec(plan.errorRate,plan.confidence,plan.seed, PlanLater(plan.child),plan.nameE,plan.sampleFraction )::Nil
        }
     }
 }

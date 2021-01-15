@@ -1,7 +1,7 @@
 import java.io.{File, FileWriter, PrintWriter}
 
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.engine.optimizer.DfsPushDown
+import org.apache.spark.daslab.sql.engine.optimizer.{DfsPushDown, MyUtils}
 import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SaveMode, SparkSession}
@@ -146,6 +146,8 @@ object  ScalaTest{
     val sql9= "select sum(age),count(age),avg(age) from data group by name"
     spark.sql(sql9).show()
 
+
+    MyUtils.setFraction(0.5)
     val sql7 = "select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% "
     println(spark.sql(sql7).queryExecution.originLogicalPlan)
     println(spark.sql(sql7).queryExecution.analyzedLogicalPlan)
@@ -182,6 +184,9 @@ object  ScalaTest{
 
     query.awaitTermination()
 */
+
+
+    spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age group by name").show(20,false)
     //todo 测试push down through join
     val sqljoin= "select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age group by name ERROR WITHIN 5% AT CONFIDENCE 95%"
     println(spark.sql(sqljoin).queryExecution.originLogicalPlan)
@@ -226,6 +231,9 @@ object  ScalaTest{
     spark.sql(sqlCountSample).show()
     val toughSql = "select sum(age * 2),avg(age*2) from data"
     spark.sql(toughSql).show()
+
+
+
     val toughSqlSample = "select sum(age * 2),avg(age*2)  from data ERROR WITHIN 5% AT CONFIDENCE 95%"
     spark.sql(toughSqlSample).show()
 
@@ -272,7 +280,17 @@ object  ScalaTest{
     val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)
     val allOptimizedPlan: Seq[LogicalPlan] = DfsPushDown.gen(optimizedPlan)
 
+
+
     println(allOptimizedPlan.length)
+    MyUtils.setPlan(0)
+    MyUtils.setFraction(0.3)
+    spark.sql(toughSqlSample).show(21,false)
+    MyUtils.setPlan(1)
+    MyUtils.setFraction(0.9)
+    spark.sql(toughSqlSample).show(21,false)
+
+  //  println(allOptimizedPlan(2))
     allOptimizedPlan.foreach(plan => println(plan.toJSON))
 
     /*spark.sql(toughSqlSample).coalesce(1).rdd.collect().foreach(x => {

@@ -986,7 +986,10 @@ case class AqpSample(errorRate: ErrorRate,
                      stratificationSet: Set[Attribute],
                      universeSet: Set[Attribute],
                      ds: Double,
-                     sfm: Double
+                     sfm: Double,
+                     sampleFraction: Double,
+                     delta: Int,
+                     parallel: Int
                      ) extends UnaryNode {
   val eps = RandomSampler.roundingEpsilon
   require(confidence.confidence >= 0.0 - eps && confidence.confidence <= 1.0 + eps,

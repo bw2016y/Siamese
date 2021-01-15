@@ -36,7 +36,7 @@ object InsertSampler extends Rule[LogicalPlan] {
                    groupSet = (groupSet+e.asInstanceOf[Attribute])
                 })
                 println(groupSet)
-                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child,groupSet,Set(),1.0,1.0)
+                val aqpSample=AqpSample(errorRate,confidence,(math.random * 1000).toInt,child,groupSet,Set(),1.0,1.0,MyUtils.FRACTION,MyUtils.DELTA,MyUtils.PARALLELNUMS)
                 aggExps.foreach(
                    aggExp => {
                       aggExp.foreach{
@@ -74,12 +74,12 @@ object InsertSampler extends Rule[LogicalPlan] {
 
 object PushDownSampler extends Rule[LogicalPlan] {
   override def apply(plan: LogicalPlan): LogicalPlan = plan transform{
-    case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
+    case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel) =>
       child match{
         // TODO 对Filter有特殊处理
         case filter @ Filter (_,grandChild) =>
           println("Pushing down Sampler through Filter")
-          filter.copy(child=AqpSample(errorRate,confidence,seed,grandChild,stratificationSet,universeSet,ds,sfm))
+          filter.copy(child=AqpSample(errorRate,confidence,seed,grandChild,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel))
         // TODO 对Join有特殊处理
         case join @ Join(left,right,joinType,condition) =>
           println("Pushing down Sampler through Join")
@@ -87,14 +87,14 @@ object PushDownSampler extends Rule[LogicalPlan] {
             left,
             //left=AqpSample(errorRate,confidence,seed,left),
            // right,
-            right=AqpSample(errorRate,confidence,seed,right,stratificationSet,universeSet,ds,sfm),
+            right=AqpSample(errorRate,confidence,seed,right,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel),
             joinType,
             condition
           )
           // TODO 下推Project
         case project @ Project(projectList:Seq[NamedExpression],grandchild:LogicalPlan) =>
             println("Pushing down Sampler through Project")
-            project.copy(projectList,child=AqpSample(errorRate,confidence,seed,grandchild,stratificationSet,universeSet,ds,sfm))
+            project.copy(projectList,child=AqpSample(errorRate,confidence,seed,grandchild,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel))
         case _ => aqp
       }
    /* case aqp @ AqpSample(errorRate, confidence, seed, logicalPlan ) =>
@@ -148,7 +148,16 @@ object DfsPushDown{
           val sfm: Double = sampleStatus.sfm
           val stratificationSet: Set[Attribute] = sampleStatus.stratificationSet
           val universeSet: Set[Attribute] = sampleStatus.universeSet
-          dfs(treeToPush,ds,sfm,stratificationSet,universeSet,rootPlan)
+
+          // sampleFraction , delta , parallel
+
+          val sampleFraction :Double = sampleStatus.sampleFraction
+          val delta: Int = sampleStatus.delta
+          val parallel: Int = sampleStatus.parallel
+
+
+
+          dfs(treeToPush,ds,sfm,stratificationSet,universeSet,sampleFraction,delta,parallel,rootPlan)
 
 
            println("final gen"+res.length)
@@ -195,7 +204,7 @@ object DfsPushDown{
     println(newPlan)
 
   }
-  def dfs(plan:LogicalPlan,ds: Double ,sfm: Double , sSet:Set[Attribute],uSet:Set[Attribute],rootPlan: LogicalPlan): Unit = {
+  def dfs(plan:LogicalPlan,ds: Double ,sfm: Double , sSet:Set[Attribute],uSet:Set[Attribute],sampleFrac:Double,delta:Int,parallel:Int,rootPlan: LogicalPlan): Unit = {
 
 /*
       println("plan name   "+plan.getClass)
@@ -205,10 +214,10 @@ object DfsPushDown{
         case project @ Project(projectList:Seq[NamedExpression],grandChild:LogicalPlan) =>
           project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
           val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm).clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
           construct(copiedPlan,copiedSubPlan)
           project.unsetTagValue(TreeNodeTag[String]("insert"))
-          dfs(grandChild,ds,sfm,sSet,uSet,rootPlan)
+          dfs(grandChild,ds,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
         //todo 这里需要判断一下是不是SSet中已经包含了Filter涉及的列
         case filter @ Filter(condition:Expression,grandChild) =>
           filter.setTagValue(TreeNodeTag[String]("insert"),"push from this")
@@ -220,16 +229,16 @@ object DfsPushDown{
           // println(newS)
           // S集合变化的情况
           val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
+          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel ).clone()
           construct(copiedPlan,copiedSubPlan)
           // S集合不变换的情况
           val copiedPlan1: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan1: LogicalPlan =  AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds*0.5,sfm).clone()
+          val copiedSubPlan1: LogicalPlan =  AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds*0.5,sfm,sampleFrac,delta,parallel ).clone()
           construct(copiedPlan1,copiedSubPlan1)
 
           filter.unsetTagValue(TreeNodeTag[String]("insert"))
-          dfs(grandChild,ds*0.5,sfm,sSet,uSet,rootPlan)
-          dfs(grandChild,ds,sfm,newS.map(wa => wa.att).toSet,uSet,rootPlan)
+          dfs(grandChild,ds*0.5,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
+          dfs(grandChild,ds,sfm,newS.map(wa => wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
 
         case join @ Join(left,right,joinType,condition) =>
           join.setTagValue(TreeNodeTag[String]("insert"),"push from this")
@@ -302,7 +311,7 @@ object DfsPushDown{
            }
 
           val copiedrootPlanLeft : LogicalPlan = rootPlan.clone()
-          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
+          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
           construct(copiedrootPlanLeft,copiedLeft,isLeft=true)
           // push to right start
           val fullSetRight: mutable.Set[WrapAttribute]=mutable.Set[WrapAttribute]()
@@ -326,7 +335,7 @@ object DfsPushDown{
           }
 
           val copiedrootPlanRight : LogicalPlan = rootPlan.clone()
-          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight.map(wa => wa.att).toSet,uSet,ds,sfm).clone()
+          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
           construct(copiedrootPlanRight,copiedRight,isLeft = false)
           // push to right end
 
@@ -334,8 +343,8 @@ object DfsPushDown{
 
           println("sSetOnLeft"+sSetOnLeft)
           println("sSetOnRight"+sSetOnRight)
-          dfs(left,ds,sfm,sSetOnLeft.map(wa => wa.att).toSet,uSet,rootPlan)
-          dfs(right,ds,sfm,sSetOnRight.map(wa=>wa.att).toSet,uSet,rootPlan)
+          dfs(left,ds,sfm,sSetOnLeft.map(wa => wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
+          dfs(right,ds,sfm,sSetOnRight.map(wa=>wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
 
         case _ =>
       }
@@ -345,7 +354,7 @@ object DfsPushDown{
   def checkAqpSample(plan: LogicalPlan):LogicalPlan= plan transform{
     case  agg @  Aggregate(groupExps :Seq[Expression] ,aggExps: Seq[NamedExpression] ,child: LogicalPlan) =>
       child match{
-        case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm) =>
+        case aqp @ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel) =>
 
           sampleStatus=aqp
           treeToPush= child

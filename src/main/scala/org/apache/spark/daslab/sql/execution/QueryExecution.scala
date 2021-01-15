@@ -8,7 +8,7 @@ import java.sql.{Date, Timestamp}
 import org.apache.spark.daslab.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.analysis.UnsupportedOperationChecker
-import org.apache.spark.daslab.sql.engine.optimizer.DfsPushDown
+import org.apache.spark.daslab.sql.engine.optimizer.{DfsPushDown, MyUtils}
 import org.apache.spark.daslab.sql.engine.plans.logical.{LogicalPlan, ReturnAnswer}
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.util.DateTimeUtils
@@ -127,8 +127,9 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
 
  //   println(allOptimizedPlan.last)
-
-    planner.plan(ReturnAnswer(allOptimizedPlan.last)).next()
+    val chosedPlan = allOptimizedPlan(MyUtils.PLANPOS)
+    println("choosing-------------------------------------\n"+chosedPlan)
+    planner.plan(ReturnAnswer(chosedPlan)).next()
   }
 
 
