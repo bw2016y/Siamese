@@ -707,9 +707,9 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
 
   private def jsonValue: JValue = {
     val jsonValues = scala.collection.mutable.ArrayBuffer.empty[JValue]
-
+    // 这里修改为SimpleName
     def collectJsonValue(tn: BaseType): Unit = {
-      val jsonFields = ("class" -> JString(tn.getClass.getName)) ::
+      val jsonFields = ("class" -> JString(tn.getClass.getSimpleName)) ::
         ("num-children" -> JInt(tn.children.length)) :: tn.jsonFields
       jsonValues += JObject(jsonFields)
       tn.children.foreach(collectJsonValue)
@@ -738,7 +738,7 @@ abstract class TreeNode[BaseType <: TreeNode[BaseType]] extends Product {
     }.toList
   }
 
-  private def parseToJson(obj: Any): JValue = obj match {
+   def parseToJson(obj: Any): JValue = obj match {
     case b: Boolean => JBool(b)
     case b: Byte => JInt(b.toInt)
     case s: Short => JInt(s.toInt)

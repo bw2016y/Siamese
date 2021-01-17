@@ -109,6 +109,8 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   private lazy val sum_var = AttributeReference("sum_var",resultType)()
 
 
+  private lazy val truecnt = AttributeReference("truecnt",sumDataType)()
+
   // zero
   private lazy val zero = Cast(Literal(0), sumDataType)
   // one
@@ -121,7 +123,7 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
   // todo: 这里有可能需要添加sum_var
   override lazy val aggBufferAttributes = {
     if(hasWeight){
-      sum :: sum_var :: Nil
+      sum :: sum_var :: truecnt ::Nil
     }else{
       sum :: Nil
     }
@@ -133,7 +135,8 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
     if(hasWeight){
       Seq(
         /* sum = */ Literal.create(null, sumDataType),
-        /* sum_var = */  Literal(0).cast(resultType)
+        /* sum_var = */  Literal(0).cast(resultType),
+        /* truecnt = */ Literal(0).cast(sumDataType)
       )
     }else{
       Seq(
@@ -170,7 +173,9 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
             Add( sum_var ,
               coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
                 Literal(0).cast(sumDataType) )
-            )
+            ),
+            // truecnt
+            coalesce(truecnt,zero) + If(child.isNull,zero,one)
           )
        }else{
           Seq(
@@ -179,7 +184,9 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
             Add( sum_var ,
               coalesce( child.cast(sumDataType)*child.cast(sumDataType)*(one-weight.cast(sumDataType))/weight.cast(sumDataType)/weight.cast(sumDataType)  ,
                 Literal(0).cast(sumDataType) )
-            )
+            ),
+            // truecnt
+            coalesce(truecnt,zero) + If(child.isNull,zero,one)
           )
        }
     }else{
@@ -242,7 +249,9 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
           /* sum = */
           coalesce(coalesce(sum.left, zero) + sum.right, sum.left),
           /* sum_var = */
-          coalesce(sum_var.left + sum_var.right , sum_var.left)
+          coalesce(sum_var.left + sum_var.right , sum_var.left),
+          /* truecnt */
+          coalesce(truecnt.left,zero) + coalesce(truecnt.right,zero)
         )
     }else{
       Seq(
@@ -263,7 +272,15 @@ case class Sum(child: Expression) extends DeclarativeAggregate with ImplicitCast
         //sum_var.cast(StringType)
        // Literal(one.toString).cast(StringType)
        // Literal(sum.cast(StringType)+" var:" + sum_var.toString).cast(StringType)
-        ConcatWs(Seq(Literal("  ").cast(StringType),Literal("E:").cast(StringType),sum.cast(StringType),Literal("Var:").cast(StringType),sum_var.cast(StringType))).cast(StringType)
+        ConcatWs(Seq(
+          Literal("  ").cast(StringType),
+          Literal("E:").cast(StringType),
+          sum.cast(StringType),
+          Literal("Var:").cast(StringType),
+          sum_var.cast(StringType),
+          Literal("truecnt:").cast(StringType),
+          truecnt.cast(StringType)
+        )).cast(StringType)
       }else{
         sum.cast(StringType)
       }

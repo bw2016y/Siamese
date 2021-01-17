@@ -81,12 +81,17 @@ case class Count(child : Seq[Expression]) extends CountLike {
   //one Literal
   private lazy val one = Cast(Literal(1),DoubleType)
 
+  //zero Literal
+  private lazy val zero = Cast(Literal(0),DoubleType)
+  // true cnt
+  private lazy val truecnt = AttributeReference("truecnt",DoubleType)()
+
 
   // 缓冲区
   //override lazy val aggBufferAttributes = count :: Nil
   override lazy val aggBufferAttributes = {
     if(hasWeight){
-      count :: count_var :: Nil
+      count :: count_var :: truecnt :: Nil
     }else{
       count :: Nil
     }
@@ -97,7 +102,8 @@ case class Count(child : Seq[Expression]) extends CountLike {
     if(hasWeight){
       Seq(
         /* count= */ Literal(0).cast(DoubleType),
-        /* count_var */ Literal(0).cast(DoubleType)
+        /* count_var */ Literal(0).cast(DoubleType),
+        /* truecnt= */ Literal(0).cast(DoubleType)
       )
     }else{
       Seq(
@@ -133,7 +139,9 @@ case class Count(child : Seq[Expression]) extends CountLike {
             Add(
                count_var ,
               (one-weight.cast(DoubleType))/weight.cast(DoubleType)/weight.cast(DoubleType)
-            )
+            ),
+            /* truecnt = */
+            coalesce(truecnt,zero) + one
           )
       } else{
         Seq(
@@ -152,6 +160,10 @@ case class Count(child : Seq[Expression]) extends CountLike {
               count_var ,
               (one-weight.cast(DoubleType))/weight.cast(DoubleType)/weight.cast(DoubleType)
             )
+          ),
+          /* truecnt = */
+          If(nullableChildren.map(IsNull).reduce(Or), truecnt ,
+            coalesce(truecnt,zero) + one
           )
 
         )
@@ -179,7 +191,9 @@ case class Count(child : Seq[Expression]) extends CountLike {
          /* count */
          count.left + count.right ,
          /* count_var */
-         count_var.left + count_var.right
+         count_var.left + count_var.right ,
+         /* truecnt */
+         truecnt.left + truecnt.right
        )
      }else{
        Seq(
@@ -192,7 +206,16 @@ case class Count(child : Seq[Expression]) extends CountLike {
   // evaluate
   override lazy val evaluateExpression : Expression  = {
     if(hasWeight){
-      ConcatWs(Seq(Literal(" ").cast(StringType),Literal("E: ").cast(StringType),count.cast(StringType),Literal("Var: ").cast(StringType) ,count_var.cast(StringType))).cast(StringType)
+      ConcatWs(Seq(
+        Literal(" ").cast(StringType),
+        Literal("E: ").cast(StringType),
+        count.cast(StringType),
+        Literal("Var: ").cast(StringType) ,
+        count_var.cast(StringType),
+        Literal("truecnt: ").cast(StringType),
+        truecnt.cast(StringType)
+
+      )).cast(StringType)
     }else {
       count.cast(StringType)
     }

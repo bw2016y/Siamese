@@ -274,7 +274,7 @@ object  ScalaTest{
         )
     }*/
 
-    val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan(toughSqlSample)
+    val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan("select sum(age) from data ERROR WITHIN 5% AT CONFIDENCE 95%")
     val analyzed :LogicalPlan= spark.sessionState.analyzer.executeAndCheck(plan)
     val withCachedData: LogicalPlan = spark.sharedState.cacheManager.useCachedData(analyzed)
     val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)

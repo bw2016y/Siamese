@@ -2,13 +2,17 @@ package org.apache.spark.daslab.sql.engine.plans.logical
 
 import org.apache.spark.daslab.sql.Column
 import org.apache.spark.daslab.sql.engine.AliasIdentifier
+import org.apache.spark.daslab.sql.engine.ScalaReflection.getConstructorParameterNames
 import org.apache.spark.daslab.sql.engine.analysis.{MultiInstanceRelation, NamedRelation}
 import org.apache.spark.daslab.sql.engine.catalog.{CatalogStorageFormat, CatalogTable}
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.expressions.aggregate.AggregateExpression
 import org.apache.spark.daslab.sql.engine.plans._
 import org.apache.spark.daslab.sql.engine.plans.physical.{HashPartitioning, Partitioning, RangePartitioning, RoundRobinPartitioning}
+import org.apache.spark.daslab.sql.engine.trees.TreeNode
 import org.apache.spark.daslab.sql.types._
+import org.json4s.JsonAST._
+import org.json4s.JsonDSL._
 //import scala.collection.mutable
 
 //todo spark core
@@ -614,6 +618,19 @@ case class Aggregate(
                       aggregateExpressions: Seq[NamedExpression],
                       child: LogicalPlan)
   extends UnaryNode {
+
+  //todo
+  override protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+
+    ("aggregateExpressions" -> JString(aggregateExpressions(0).name).asInstanceOf[JValue])::Nil
+
+  }
+
 
   /**
     *  判断一个Aggregate是否被解析过，需要满足以下三个条件
