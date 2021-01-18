@@ -323,7 +323,10 @@ case class AttributeReference(
     ""
   }
 
-  override def toString: String = s"$name# exprId.id:${exprId.id} typeSuffix:$typeSuffix delaySuffix:$delaySuffix"
+  //override def toString: String = s"$name# exprId.id:${exprId.id} typeSuffix:$typeSuffix delaySuffix:$delaySuffix"
+  // todo 修改 AttributeReference 的 toString
+  override def toString: String = s"$name"
+
 
   // Since the expression id is not in the first constructor it is missing from the default
   // tree string.

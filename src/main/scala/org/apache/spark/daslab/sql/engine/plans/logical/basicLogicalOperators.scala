@@ -86,6 +86,18 @@ case class Project(projectList: Seq[NamedExpression], child: LogicalPlan)
   // 当存在子查询的时候，有可能会报错
   // val message=child.output
 
+
+  override protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+
+    ("projectList")  -> JString(projectList.map(
+      ne => { ne.asInstanceOf[AttributeReference].name}).mkString(",")).asInstanceOf[JValue] ::
+      Nil
+  }
 }
 
 /**
@@ -1027,8 +1039,22 @@ case class AqpSample(errorRate: ErrorRate,
 
   override def output: Seq[Attribute] = child.output :+ newAtt
 
-  // todo remove this
-  // val printmess=output
+  //todo
+  override protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+    ("stratificationSet")  -> JString(stratificationSet.mkString(",")).asInstanceOf[JValue] ::
+      ("universeSet") -> JString(universeSet.mkString(",")).asInstanceOf[JValue] ::
+      ("ds")  -> JDouble(ds).asInstanceOf[JValue] ::
+      ("sfm") -> JDouble(sfm).asInstanceOf[JValue] ::
+      ("sampleFraction") ->  JDouble(sampleFraction).asInstanceOf[JValue] ::
+      ("delta") -> JInt(delta).asInstanceOf[JValue] ::
+        ("parallel") -> JInt(parallel).asInstanceOf[JValue] ::
+    Nil
+  }
 }
 
 /**
