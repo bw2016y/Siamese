@@ -293,6 +293,12 @@ object  ScalaTest{
   //  println(allOptimizedPlan(2))
     allOptimizedPlan.foreach(plan => println(plan.toJSON))
 
+
+    spark.sessionState.catalog.tempViews.foreach{
+      case (name,plan) =>
+        println(name+"   "+plan)
+    }
+
     /*spark.sql(toughSqlSample).coalesce(1).rdd.collect().foreach(x => {
       val  fileWriter= new FileWriter("./sqlout/res.txt",true)
       val  out =new PrintWriter(fileWriter)

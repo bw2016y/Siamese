@@ -1,12 +1,14 @@
 package org.apache.spark.daslab.sql.execution.datasources
 
 
+import org.apache.spark.daslab.sql.engine.ScalaReflection.getConstructorParameterNames
 import org.apache.spark.daslab.sql.engine.analysis.MultiInstanceRelation
 import org.apache.spark.daslab.sql.engine.catalog.CatalogTable
-import org.apache.spark.daslab.sql.engine.expressions.{AttributeMap,AttributeReference}
+import org.apache.spark.daslab.sql.engine.expressions.{AttributeMap, AttributeReference}
 import org.apache.spark.daslab.sql.engine.plans.QueryPlan
-import org.apache.spark.daslab.sql.engine.plans.logical.{LeafNode,LogicalPlan,Statistics}
+import org.apache.spark.daslab.sql.engine.plans.logical.{LeafNode, LogicalPlan, Statistics}
 import org.apache.spark.daslab.sql.sources.BaseRelation
+import org.json4s.JsonAST._
 
 
 //todo spark core
@@ -51,6 +53,19 @@ case class LogicalRelation(
   override def refresh(): Unit = relation match {
     case fs: HadoopFsRelation => fs.location.refresh()
     case _ =>  // Do nothing.
+  }
+
+
+  override protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+      ("tableName") -> JString("sometable") ::
+      ("relation")  ->  parseToJson(relation)  ::
+      ("output") -> JString(output.map(ar =>{ar.name}).mkString(",")).asInstanceOf[JValue]  ::
+      Nil
   }
 
   override def simpleString: String = s"Relation[${Utils.truncatedString(output, ",")}] $relation"

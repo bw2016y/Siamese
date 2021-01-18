@@ -6,8 +6,8 @@ import java.util.Date
 
 import scala.collection.mutable
 import scala.util.control.NonFatal
-
 import org.apache.spark.daslab.sql.AnalysisException
+import org.apache.spark.daslab.sql.engine.ScalaReflection.getConstructorParameterNames
 import org.apache.spark.daslab.sql.engine.{FunctionIdentifier, InternalRow, TableIdentifier}
 import org.apache.spark.daslab.sql.engine.analysis.MultiInstanceRelation
 import org.apache.spark.daslab.sql.engine.expressions.{Attribute, AttributeMap, AttributeReference, Cast, ExprId, Literal}
@@ -17,6 +17,7 @@ import org.apache.spark.daslab.sql.engine.util.{CaseInsensitiveMap, DateFormatte
 import org.apache.spark.daslab.sql.engine.util.quoteIdentifier
 import org.apache.spark.daslab.sql.internal.SQLConf
 import org.apache.spark.daslab.sql.types._
+import org.json4s.JsonAST._
 
 
 
@@ -622,4 +623,17 @@ case class HiveTableRelation(
   override def newInstance(): HiveTableRelation = copy(
     dataCols = dataCols.map(_.newInstance()),
     partitionCols = partitionCols.map(_.newInstance()))
+
+
+  override protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+    //todo 如果schema也是必须的话，可以继续添加
+    ("tableMeta")  -> JString(tableMeta.identifier.table).asInstanceOf[JValue] ::
+      Nil
+  }
+
 }
