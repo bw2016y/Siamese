@@ -274,7 +274,7 @@ object  ScalaTest{
         )
     }*/
 
-    val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan("select sum(age) from data group by name,sex ERROR WITHIN 5% AT CONFIDENCE 95%")
+    val plan: LogicalPlan = spark.sessionState.sqlParser.parsePlan("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ")
     val analyzed :LogicalPlan= spark.sessionState.analyzer.executeAndCheck(plan)
     val withCachedData: LogicalPlan = spark.sharedState.cacheManager.useCachedData(analyzed)
     val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)
@@ -283,12 +283,12 @@ object  ScalaTest{
 
 
     println(allOptimizedPlan.length)
-    MyUtils.setPlan(0)
+   /* MyUtils.setPlan(0)
     MyUtils.setFraction(0.3)
     spark.sql(toughSqlSample).show(21,false)
     MyUtils.setPlan(1)
     MyUtils.setFraction(0.9)
-    spark.sql(toughSqlSample).show(21,false)
+    spark.sql(toughSqlSample).show(21,false)*/
 
   //  println(allOptimizedPlan(2))
     allOptimizedPlan.foreach(plan => println(plan.toJSON))

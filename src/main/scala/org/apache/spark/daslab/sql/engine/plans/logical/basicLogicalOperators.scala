@@ -173,6 +173,20 @@ case class Filter(condition: Expression, child: LogicalPlan)
       .filterNot(SubqueryExpression.hasCorrelatedSubquery)
     child.constraints.union(predicates.toSet)
   }
+
+  // json
+  override  protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+      ("condition") -> JString(condition.sql).asInstanceOf[JValue] ::
+      Nil
+
+  }
+
+
 }
 
 abstract class SetOperation(left: LogicalPlan, right: LogicalPlan) extends BinaryNode {
@@ -396,6 +410,20 @@ case class Join(
     case NaturalJoin(_) => false
     case UsingJoin(_, _) => false
     case _ => resolvedExceptNatural
+  }
+
+
+
+  override  protected def jsonFields: List[JField] = {
+    val fieldNames = getConstructorParameterNames(getClass)
+    val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+      fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+    ("joinType") -> JString(joinType.getClass.getSimpleName).asInstanceOf[JValue] ::
+    ("condition")  -> JString(condition.get.sql).asInstanceOf[JValue] ::
+      Nil
+
   }
 }
 
