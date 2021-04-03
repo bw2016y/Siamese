@@ -283,15 +283,16 @@ object  ScalaTest{
 
 
     println(allOptimizedPlan.length)
-   /* MyUtils.setPlan(0)
+    MyUtils.setPlan(0)
     MyUtils.setFraction(0.3)
     spark.sql(toughSqlSample).show(21,false)
     MyUtils.setPlan(1)
     MyUtils.setFraction(0.9)
-    spark.sql(toughSqlSample).show(21,false)*/
-
+    spark.sql(toughSqlSample).show(21,false)
+    println(spark.sql(toughSqlSample).queryExecution.physicalPlan)
+    println(spark.sql(toughSqlSample).queryExecution.executedPhysicalPlan)
   //  println(allOptimizedPlan(2))
-    allOptimizedPlan.foreach(plan => println(plan.toJSON))
+  //  allOptimizedPlan.foreach(plan => println(plan.toJSON))
 
 
     spark.sessionState.catalog.tempViews.foreach{

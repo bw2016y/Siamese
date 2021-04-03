@@ -128,7 +128,11 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
  //   println(allOptimizedPlan.last)
     val chosedPlan = allOptimizedPlan(MyUtils.PLANPOS)
-    println("choosing-------------------------------------\n"+chosedPlan)
+    /*println("choosing-------------------------------------\n"+chosedPlan)
+    println("how many physical plan---------------------"+planner.plan(ReturnAnswer(chosedPlan)).length)
+    planner.plan(ReturnAnswer(chosedPlan)).foreach((plan)=>{
+       println("physical    "+plan)
+    })*/
     planner.plan(ReturnAnswer(chosedPlan)).next()
   }
 
