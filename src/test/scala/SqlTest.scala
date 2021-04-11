@@ -306,6 +306,14 @@ object  ScalaTest{
         println(name+"   "+plan)
     }
 
+    MyUtils.setPlan(0)
+    val checkRule: DataFrame = spark.sql("select count(1) from  data join gradetable on data.age=gradetable.age")
+    checkRule.show()
+    println(checkRule.queryExecution.physicalPlan)
+
+
+
+
    /* MyUtils.setPlan(0)
     MyUtils.setFraction(0.5)
     var bbres = spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ")
