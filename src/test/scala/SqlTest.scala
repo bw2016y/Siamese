@@ -48,6 +48,9 @@ object  ScalaTest{
     val dataset1=spark.read.json("src/test/resources/grade.json").toDF();
     dataset1.createTempView("gradetable")
 
+
+
+
   /*  val testinput ="select data.age from data"
     println(spark.sql(testinput).queryExecution.originLogicalPlan)
     println(spark.sql(testinput).queryExecution.analyzedLogicalPlan)
@@ -280,16 +283,17 @@ object  ScalaTest{
     val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)
     val allOptimizedPlan: Seq[LogicalPlan] = DfsPushDown.gen(optimizedPlan)
 
-
+    MyUtils.checkStats(allOptimizedPlan(5))
 
     println(allOptimizedPlan.length)
-    MyUtils.setPlan(0)
+    MyUtils.setPlan(5)
     MyUtils.setFraction(0.3)
-    println(allOptimizedPlan(0).toJSON)
-    spark.sql(toughSqlSample).show(21,false)
+    //println(allOptimizedPlan(0).toJSON)
+    println(spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ").queryExecution.physicalPlan)
+    spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ").show(21,false)
     MyUtils.setPlan(1)
     MyUtils.setFraction(0.9)
-    println(allOptimizedPlan(1).toJSON)
+    println(allOptimizedPlan(1))
     spark.sql(toughSqlSample).show(21,false)
   //   println(spark.sql(toughSqlSample).queryExecution.physicalPlan)
   //  println(spark.sql(toughSqlSample).queryExecution.executedPhysicalPlan)
@@ -301,6 +305,14 @@ object  ScalaTest{
       case (name,plan) =>
         println(name+"   "+plan)
     }
+
+   /* MyUtils.setPlan(0)
+    MyUtils.setFraction(0.5)
+    var bbres = spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ")
+    bbres.show()*/
+
+   //  bbres.explain(true)
+   //  println(bbres.queryExecution.stringWithStats)
 
     /*spark.sql(toughSqlSample).coalesce(1).rdd.collect().foreach(x => {
       val  fileWriter= new FileWriter("./sqlout/res.txt",true)

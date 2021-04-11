@@ -69,4 +69,14 @@ object MyUtils {
          UniformSamplerExec(plan.errorRate,plan.confidence,plan.seed, PlanLater(plan.child),plan.nameE,plan.sampleFraction )::Nil
        }
     }
+
+  /**
+   * 打印stats信息
+   */
+  def checkStats(plan:LogicalPlan)={
+     plan.foreach(
+       p => println(p.simpleString+"  "+p.stats.toString)
+     )
+  }
+
 }

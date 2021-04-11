@@ -16,6 +16,8 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
    * same as the output row number, and compute sizes based on the column types.
    */
   private def visitUnaryNode(p: UnaryNode): Statistics = {
+    println("cost aqp ************************")
+
     // There should be some overhead in Row object, the size should not be zero when there is
     // no columns, this help to prevent divide-by-zero error.
     val childRowSize = EstimationUtils.getSizePerRow(p.child.output)
@@ -38,6 +40,14 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
    */
   override def default(p: LogicalPlan): Statistics = p match {
     case p: LeafNode => p.computeStats()
+    case aqp@ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel) => {
+
+      println("cost aqp ************************")
+      val sampleRows = aqp.child.stats.rowCount.map(c => EstimationUtils.ceil(BigDecimal(c) * aqp.sampleFraction))
+
+       Statistics(sizeInBytes = 1 , sampleRows ,hints = aqp.child.stats.hints  )
+
+    }
     case _: LogicalPlan => Statistics(sizeInBytes = p.children.map(_.stats.sizeInBytes).product)
   }
 
@@ -61,6 +71,7 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
     Statistics(sizeInBytes = sizeInBytes)
   }
 
+  // Filter
   override def visitFilter(p: Filter): Statistics = visitUnaryNode(p)
 
   override def visitGenerate(p: Generate): Statistics = default(p)
@@ -86,7 +97,7 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
       sizeInBytes = sizeInBytes,
       hints = p.left.stats.hints.resetForJoin())
   }
-
+  // Join
   override def visitJoin(p: Join): Statistics = {
     p.joinType match {
       case LeftAnti | LeftSemi =>
@@ -118,12 +129,15 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
 
   override def visitPivot(p: Pivot): Statistics = default(p)
 
+  // Project
   override def visitProject(p: Project): Statistics = visitUnaryNode(p)
 
   override def visitRepartition(p: Repartition): Statistics = default(p)
 
   override def visitRepartitionByExpr(p: RepartitionByExpression): Statistics = default(p)
 
+
+  // Sample
   override def visitSample(p: Sample): Statistics = {
     val ratio = p.upperBound - p.lowerBound
     var sizeInBytes = EstimationUtils.ceil(BigDecimal(p.child.stats.sizeInBytes) * ratio)

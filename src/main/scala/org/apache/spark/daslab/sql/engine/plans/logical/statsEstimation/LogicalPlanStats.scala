@@ -17,8 +17,10 @@ trait LogicalPlanStats { self: LogicalPlan =>
    */
   def stats: Statistics = statsCache.getOrElse {
     if (conf.cboEnabled) {
+     // println("cbo enabled ****************************")
       statsCache = Option(BasicStatsPlanVisitor.visit(self))
     } else {
+     //  println("SizeInBytesOnlyStatsPlanVisitor enabled *****************************")
       statsCache = Option(SizeInBytesOnlyStatsPlanVisitor.visit(self))
     }
     statsCache.get
