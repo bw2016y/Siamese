@@ -283,15 +283,20 @@ object  ScalaTest{
     val optimizedPlan: LogicalPlan = spark.sessionState.optimizer.execute(withCachedData)
     val allOptimizedPlan: Seq[LogicalPlan] = DfsPushDown.gen(optimizedPlan)
 
+    for(i<- 0 to allOptimizedPlan.length-1){
+      println("00000000000000000000000000000000000"+i)
+      println(allOptimizedPlan(i))
+    }
+
     MyUtils.checkStats(allOptimizedPlan(5))
 
     println(allOptimizedPlan.length)
-    MyUtils.setPlan(5)
+    MyUtils.setPlan(0)
     MyUtils.setFraction(0.3)
     //println(allOptimizedPlan(0).toJSON)
     println(spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ").queryExecution.physicalPlan)
     spark.sql("select count(1),sum(grade),avg(grade) from  data join gradetable on data.age=gradetable.age where grade>1 group by name ERROR WITHIN 5% AT CONFIDENCE 95% ").show(21,false)
-    MyUtils.setPlan(1)
+    MyUtils.setPlan(0)
     MyUtils.setFraction(0.9)
     println(allOptimizedPlan(1))
     spark.sql(toughSqlSample).show(21,false)

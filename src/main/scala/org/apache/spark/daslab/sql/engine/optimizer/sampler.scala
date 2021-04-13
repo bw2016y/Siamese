@@ -212,11 +212,17 @@ object DfsPushDown{
 
       plan match {
         case project @ Project(projectList:Seq[NamedExpression],grandChild:LogicalPlan) =>
-          project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
+          // todo 因为project不会影响到结果
+          // 而且一般来说，采样器在Project算子之下可以节省运行时间
+          // 但是有一定的概率会在 DistinctSampler 算子运行的时候导致更大的内存消耗 （需要tuning DistinctSampler的具体的参数）
+          //
+
+         /* project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
           val copiedPlan: LogicalPlan = rootPlan.clone()
           val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
           construct(copiedPlan,copiedSubPlan)
-          project.unsetTagValue(TreeNodeTag[String]("insert"))
+          project.unsetTagValue(TreeNodeTag[String]("insert"))*/
+
           dfs(grandChild,ds,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
         //todo 这里需要判断一下是不是SSet中已经包含了Filter涉及的列
         case filter @ Filter(condition:Expression,grandChild) =>

@@ -50,10 +50,13 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
       (index, iter) =>
         val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
         val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, fraction, parallelNums , seed)
-        rows.filter{ row =>
-          println(row.getString(1) + " " + row.getLong(0) + " " + row.getDouble(row.numFields-1))
-          true
-        }
+
+        //  todo 如果有必要的话，再debug distinctSampler的具体运行逻辑
+        //  rows.filter{ row =>
+        //  println(row.getString(1) + " " + row.getLong(0) + " " + row.getDouble(row.numFields-1))
+        //  true
+        //  }
+        rows
     }
 
     //todo add weight
