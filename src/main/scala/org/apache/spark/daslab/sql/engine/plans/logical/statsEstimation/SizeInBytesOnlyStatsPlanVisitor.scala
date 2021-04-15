@@ -43,10 +43,25 @@ object SizeInBytesOnlyStatsPlanVisitor extends LogicalPlanVisitor[Statistics] {
     case aqp@ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel) => {
 
       println("cost aqp ************************")
-      val sampleRows = aqp.child.stats.rowCount.map(c => EstimationUtils.ceil(BigDecimal(c) * aqp.sampleFraction))
 
-       Statistics(sizeInBytes = 1 , sampleRows ,hints = aqp.child.stats.hints  )
 
+      if(stratificationSet.isEmpty){
+        val childRowSize = EstimationUtils.getSizePerRow(aqp.child.output)
+        val outputRowSize = EstimationUtils.getSizePerRow(aqp.output)
+        var sizeInBytes = EstimationUtils.ceil( BigDecimal((aqp.child.stats.sizeInBytes * outputRowSize) / childRowSize) * aqp.sampleFraction)
+        val sampleRows = aqp.child.stats.rowCount.map(c => EstimationUtils.ceil(BigDecimal(c) * aqp.sampleFraction))
+
+        Statistics( sizeInBytes = sizeInBytes , rowCount = sampleRows , hints = aqp.child.stats.hints )
+
+      }
+      else {
+        val childRowSize = EstimationUtils.getSizePerRow(aqp.child.output)
+        val outputRowSize = EstimationUtils.getSizePerRow(aqp.output)
+        var sizeInBytes = (aqp.child.stats.sizeInBytes * outputRowSize) / childRowSize
+        val sampleRows = aqp.child.stats.rowCount.map(c => EstimationUtils.ceil(BigDecimal(c) * 1.0))
+
+        Statistics (sizeInBytes = sizeInBytes , rowCount = sampleRows , hints = aqp.child.stats.hints)
+      }
     }
     case _: LogicalPlan => Statistics(sizeInBytes = p.children.map(_.stats.sizeInBytes).product)
   }
