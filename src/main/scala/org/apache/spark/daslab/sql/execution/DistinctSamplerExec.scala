@@ -46,10 +46,20 @@ case class  DistinctSamplerExec(errorRate: ErrorRate,
     */
   override protected def doExecute(): RDD[InternalRow] = {
     val numPartitions: Int = child.outputPartitioning.numPartitions
-    child.execute().mapPartitionsWithIndex{
+    println("+++++++++++++++++++++++++++++++++++++++ numPartitions"+ numPartitions)
+
+    val origin: RDD[InternalRow] = child.execute()
+    // val numPartitions = origin.getNumPartitions
+    println("+++++++++++++++++++++++++++++++++++++++ actual para"+ origin.getNumPartitions)
+
+    val realPartitonsNum = origin.getNumPartitions
+
+    origin.mapPartitionsWithIndex{
       (index, iter) =>
+
         val appender = UnsafeProjection.create(child.output :+ weight, child.output, subexpressionEliminationEnabled)
-        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, fraction, parallelNums , seed)
+        //todo fix parallelNums
+        val rows: Iterator[InternalRow] = SampleUtils.distinctSample(index, iter.map(appender), S, delta, fraction, realPartitonsNum , seed)
 
         //  todo 如果有必要的话，再debug distinctSampler的具体运行逻辑
         //  rows.filter{ row =>

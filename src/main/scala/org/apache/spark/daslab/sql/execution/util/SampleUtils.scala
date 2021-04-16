@@ -18,7 +18,7 @@ object SampleUtils {
     ms.sample(rows)
   }
 
-  // TODO 如何确定prev的分区数D？
+
   def distinctSample(index: Int, rows: Iterator[InternalRow], S: Seq[DistinctColumn], delta: Int, fraction: Double, numPartitions: Int, seed: Long):Iterator[InternalRow] = {
     val sampler: DistinctSampler = new DistinctSampler(S, delta, fraction, numPartitions)
     sampler.setSeed(seed + index)

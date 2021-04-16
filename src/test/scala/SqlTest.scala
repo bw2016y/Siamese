@@ -317,6 +317,15 @@ object  ScalaTest{
     println(checkRule.queryExecution.physicalPlan)
 
 
+    val arr = Array(1,2,3,4,5)
+    val rdd = spark.sparkContext.parallelize(arr)
+    println(spark.sparkContext.defaultParallelism)
+    println(rdd.getNumPartitions)
+
+    MyUtils.setPlan(0)
+    MyUtils.setFraction(0.5)
+    spark.sql("select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% ").show()
+
 
 
    /* MyUtils.setPlan(0)

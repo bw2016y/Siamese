@@ -27,11 +27,22 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
     fraction <= (1.0 + RandomSampler.roundingEpsilon),
     s"$fraction must be <= 1.0")
 
-  private val epsilon = delta/numPartitions
-  private val partitionDelta = delta/numPartitions + epsilon
 
-  //todo ? 缓冲池大小？
-  private val reservoirAmount = 2
+
+  private var epsilon = delta/numPartitions
+
+  // todo 向上取整
+
+  // private val partitionDelta = delta/numPartitions + epsilon
+  if( (delta % numPartitions) > 0 ){
+     epsilon = epsilon+1
+  }
+
+  private val partitionDelta = 2 * epsilon
+
+
+  //todo  缓冲池大小？  这里设置为10
+  private val reservoirAmount = 10
   private val rng: Random = new XORShiftRandom
   private val distinctValueCounts = scala.collection.mutable.HashMap.empty[List[Any], Int]
   private val distinctValueReservoirs = scala.collection.mutable.HashMap.empty[List[Any], Array[InternalRow]]
@@ -56,10 +67,27 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
         if (count < partitionDelta) {
           // 属于第一区间，直接采样，权重为1
           distinctValueCounts.put(distinctValue, count + 1)
+          // todo 权重的设置呢？
+          row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, 1.0)
           true
         } else if (count < partitionDelta + reservoirAmount / fraction) {
-          // 属于第二区间，存入采样池，权重最后再算
           distinctValueCounts.put(distinctValue, count + 1)
+          if(count < partitionDelta + reservoirAmount ){
+            // 直接放入池中
+            val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
+            reservoir(count-partitionDelta)= row.copy()
+            distinctValueReservoirs.put(distinctValue,reservoir)
+
+          }else{
+            // 需要随机替换池中的某个值
+            val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
+            var outidx = (rng.nextDouble * reservoirAmount).toInt
+            reservoir(outidx) = row.copy()
+            distinctValueReservoirs.put(distinctValue,reservoir)
+          }
+
+          // 属于第二区间，存入采样池，权重最后再算
+          /* distinctValueCounts.put(distinctValue, count + 1)
           if(!(count >= partitionDelta + reservoirAmount && sample() <= 0)) {
             val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
             var index = count - partitionDelta
@@ -68,7 +96,8 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
             }
             reservoir(index) = row.copy()
             distinctValueReservoirs.put(distinctValue, reservoir)
-          }
+          }*/
+          // todo 权重最后计算，因此这里不采样
           false
         } else {
           // 属于第三区间，按概率p采样，权重1/p
@@ -80,7 +109,8 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
             false
           }
         }
-    } ++ distinctValueReservoirs.map { // 给采样池中的行计算权重并加入总样本中
+    } ++ distinctValueReservoirs.map {
+      // 给采样池中的行计算权重并加入总样本中
       case (key, reservoir) => {
         var count: Int = distinctValueCounts.getOrElse(key, 0) - partitionDelta
         val weight: Double = if (count < reservoirAmount / fraction) reservoirAmount.toDouble / count else fraction

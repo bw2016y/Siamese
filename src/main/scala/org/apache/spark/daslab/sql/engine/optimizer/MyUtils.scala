@@ -8,7 +8,11 @@ import org.apache.spark.daslab.sql.types.StringType
 
 object MyUtils {
     var FRACTION=1.0
-    var DELTA = 1
+
+    // todo quickr >= 30 中心极限定理的需要 推荐在 5-100 左右
+    var DELTA = 60
+
+    // todo 这个值作废，没有用到 ， 已经使用rdd的partitions数目修正
     var PARALLELNUMS = 1
     var PLANPOS=0
     def setFraction(frac:Double)={
@@ -17,6 +21,7 @@ object MyUtils {
     def setDelta(delta:Int)={
       MyUtils.DELTA=delta
     }
+
     def setParallelNums(para:Int)={
     MyUtils.PARALLELNUMS=para
     }
