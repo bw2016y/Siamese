@@ -326,6 +326,10 @@ object  ScalaTest{
     MyUtils.setFraction(0.5)
     spark.sql("select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% ").show()
 
+    //spark.sqlContext.cacheTable("data")
+    spark.sql("CACHE TABLE data")
+    println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
+    spark.sql("select * from data").show()
 
 
    /* MyUtils.setPlan(0)

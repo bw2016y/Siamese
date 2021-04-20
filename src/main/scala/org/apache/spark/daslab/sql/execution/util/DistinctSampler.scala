@@ -68,7 +68,7 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
           // 属于第一区间，直接采样，权重为1
           distinctValueCounts.put(distinctValue, count + 1)
           // todo 权重的设置呢？
-          row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, 1.0)
+          row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, 1.00)
           true
         } else if (count < partitionDelta + reservoirAmount / fraction) {
           distinctValueCounts.put(distinctValue, count + 1)
@@ -80,10 +80,13 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
 
           }else{
             // 需要随机替换池中的某个值
-            val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
-            var outidx = (rng.nextDouble * reservoirAmount).toInt
-            reservoir(outidx) = row.copy()
-            distinctValueReservoirs.put(distinctValue,reservoir)
+            // 蓄水池采样算法
+            if( rng.nextDouble() < (1.00*reservoirAmount)/(count-partitionDelta+1) ){
+              val reservoir: Array[InternalRow] = distinctValueReservoirs.getOrElse(distinctValue, new Array[InternalRow](reservoirAmount))
+              val outidx = (rng.nextDouble * reservoirAmount).toInt
+              reservoir(outidx) = row.copy()
+              distinctValueReservoirs.put(distinctValue,reservoir)
+            }
           }
 
           // 属于第二区间，存入采样池，权重最后再算
@@ -113,14 +116,26 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
       // 给采样池中的行计算权重并加入总样本中
       case (key, reservoir) => {
         var count: Int = distinctValueCounts.getOrElse(key, 0) - partitionDelta
-        val weight: Double = if (count < reservoirAmount / fraction) reservoirAmount.toDouble / count else fraction
+
+        var fixedWeight : Double = 1.0000
+
+        if(count <= reservoirAmount){
+           fixedWeight = 1.0000
+        }else if(count <= reservoirAmount/fraction){
+           fixedWeight = reservoirAmount.toDouble / count
+        }else{
+           fixedWeight = fraction
+        }
+
+
+        //val weight: Double = if (count < reservoirAmount / fraction) reservoirAmount.toDouble / count else fraction
         if (count > reservoirAmount) {
           count = reservoirAmount
         }
         val newReservoir: Array[InternalRow] = reservoir.take(count)
           .map{
             row =>
-              row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, weight)
+              row.asInstanceOf[UnsafeRow].setDouble(row.numFields - 1, fixedWeight)
               row
           }
         (key, newReservoir)
