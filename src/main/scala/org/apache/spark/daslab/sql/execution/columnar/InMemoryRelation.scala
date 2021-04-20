@@ -3,21 +3,19 @@ package org.apache.spark.daslab.sql.execution.columnar
 
 
 import org.apache.commons.lang3.StringUtils
-
-
 import org.apache.spark.daslab.sql.engine.InternalRow
+import org.apache.spark.daslab.sql.engine.ScalaReflection.getConstructorParameterNames
 import org.apache.spark.daslab.sql.engine.analysis.MultiInstanceRelation
 import org.apache.spark.daslab.sql.engine.expressions._
 import org.apache.spark.daslab.sql.engine.plans.QueryPlan
 import org.apache.spark.daslab.sql.engine.plans.logical
 import org.apache.spark.daslab.sql.engine.plans.logical.{HintInfo, LogicalPlan, Statistics}
 import org.apache.spark.daslab.sql.execution.SparkPlan
-
-
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.{LongAccumulator, Utils}
 import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.rdd.RDD
+import org.json4s.JsonAST._
 
 
 /**
@@ -192,5 +190,16 @@ case class InMemoryRelation(
 
   override def simpleString: String =
     s"InMemoryRelation [${Utils.truncatedString(output, ", ")}], ${cacheBuilder.storageLevel}"
+
+  override protected def jsonFields:List[JField] = {
+      //val fieldNames = getConstructorParameterNames(getClass)
+      //val fieldValues = productIterator.toSeq ++ otherCopyArgs
+    //assert(fieldNames.length == fieldValues.length, s"${getClass.getSimpleName} fields: " +
+    //  fieldNames.mkString(", ") + s", values: " + fieldValues.map(_.toString).mkString(", "))
+
+        "tableMeta" -> JString(output(0).asInstanceOf[AttributeReference].qualifier(1)).asInstanceOf[JValue] ::
+    Nil
+  }
+
 }
 

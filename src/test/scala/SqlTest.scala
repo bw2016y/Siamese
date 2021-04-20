@@ -331,6 +331,10 @@ object  ScalaTest{
     println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
     spark.sql("select * from data").show()
 
+    println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
+    spark.sql("select * from data").show()
+
+
 
    /* MyUtils.setPlan(0)
     MyUtils.setFraction(0.5)
