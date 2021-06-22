@@ -1012,6 +1012,9 @@ case class ErrorRate(errorRate:Double){
     def simpleString:String={
       "ErrorRate"
     }
+    def getRate:Double = {
+       return errorRate
+    }
 }
 case class Confidence(confidence:Double){
     def simpleString:String={

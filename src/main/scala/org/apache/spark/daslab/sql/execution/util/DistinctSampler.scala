@@ -42,7 +42,7 @@ class DistinctSampler(S: Seq[DistinctColumn], delta: Int, fraction: Double, numP
 
 
   //todo  缓冲池大小？  这里设置为5
-  private val reservoirAmount = 5
+  private val reservoirAmount = 0
   private val rng: Random = new XORShiftRandom
   private val distinctValueCounts = scala.collection.mutable.HashMap.empty[List[Any], Int]
   private val distinctValueReservoirs = scala.collection.mutable.HashMap.empty[List[Any], Array[InternalRow]]

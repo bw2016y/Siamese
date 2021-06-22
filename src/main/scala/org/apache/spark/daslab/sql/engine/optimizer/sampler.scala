@@ -217,11 +217,11 @@ object DfsPushDown{
           // 但是有一定的概率会在 DistinctSampler 算子运行的时候导致更大的内存消耗 （需要tuning DistinctSampler的具体的参数）
           //
 
-         /* project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
-          val copiedPlan: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
-          construct(copiedPlan,copiedSubPlan)
-          project.unsetTagValue(TreeNodeTag[String]("insert"))*/
+          /* project.setTagValue(TreeNodeTag[String]("insert"),"push from this")
+           val copiedPlan: LogicalPlan = rootPlan.clone()
+           val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
+           construct(copiedPlan,copiedSubPlan)
+           project.unsetTagValue(TreeNodeTag[String]("insert"))*/
 
           dfs(grandChild,ds,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
         //todo 这里需要判断一下是不是SSet中已经包含了Filter涉及的列

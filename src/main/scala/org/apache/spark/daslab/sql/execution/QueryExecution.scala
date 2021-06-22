@@ -9,7 +9,7 @@ import org.apache.spark.daslab.sql.{AnalysisException, Row, SparkSession}
 import org.apache.spark.daslab.sql.engine.InternalRow
 import org.apache.spark.daslab.sql.engine.analysis.UnsupportedOperationChecker
 import org.apache.spark.daslab.sql.engine.optimizer.{DfsPushDown, MyUtils}
-import org.apache.spark.daslab.sql.engine.plans.logical.{LogicalPlan, ReturnAnswer}
+import org.apache.spark.daslab.sql.engine.plans.logical.{AqpSample, LogicalPlan, ReturnAnswer}
 import org.apache.spark.daslab.sql.engine.rules.Rule
 import org.apache.spark.daslab.sql.engine.util.DateTimeUtils
 import org.apache.spark.daslab.sql.execution.command.{DescribeTableCommand, ExecutedCommandExec, ShowTablesCommand}
@@ -102,7 +102,8 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
       DfsPushDown.gen(plan)
   }
   // 所有可能位置的Plan
-  lazy val allOptimizedPlan=applyAllPushDownRules(optimizedPlan)
+  lazy val allOptimizedPlan = applyAllPushDownRules(optimizedPlan)
+
 
 
   lazy val sparkPlan: SparkPlan = {
@@ -127,13 +128,36 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
 
  //   println(allOptimizedPlan.last)
-    val chosedPlan = allOptimizedPlan(MyUtils.PLANPOS)
+    // todo
+    //val chosedPlan = allOptimizedPlan(MyUtils.PLANPOS)
+    //val chosedPlan =MyUtils.removeAQP(allOptimizedPlan(MyUtils.PLANPOS))
+    val status = MyUtils.getAqpSample(allOptimizedPlan(0))
+    val chosedPlan = allOptimizedPlan(0)
+    if(status == null){
+      planner.plan(ReturnAnswer(chosedPlan)).next()
+    }else{
+      println("rate..............................."+status.asInstanceOf[AqpSample].errorRate.getRate)
+      if(MyUtils.PICKMODE == 0){
+        val aqpChosedPlan =  MyUtils.pickPlansByModel(allOptimizedPlan)
+        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+      }else if(MyUtils.PICKMODE == 1){
+        val aqpChosedPlan =  MyUtils.pickPlanByRule(allOptimizedPlan)
+        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+      }else{
+        val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
+        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+      }
+
+      // val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
+    }
+
+
     /*println("choosing-------------------------------------\n"+chosedPlan)
     println("how many physical plan---------------------"+planner.plan(ReturnAnswer(chosedPlan)).length)
     planner.plan(ReturnAnswer(chosedPlan)).foreach((plan)=>{
        println("physical    "+plan)
     })*/
-    planner.plan(ReturnAnswer(chosedPlan)).next()
+    //planner.plan(ReturnAnswer(chosedPlan)).next()
   }
 
 

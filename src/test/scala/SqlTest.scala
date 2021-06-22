@@ -1,14 +1,19 @@
 import java.io.{File, FileWriter, PrintWriter}
+import java.{lang, util}
 
 import org.apache.spark.daslab.sql.engine.InternalRow
+import org.apache.spark.daslab.sql.engine.optimizer.MyUtils.{getAqpSample, pickPlanByRule, removeAQP}
 import org.apache.spark.daslab.sql.engine.optimizer.{DfsPushDown, MyUtils}
-import org.apache.spark.daslab.sql.engine.plans.logical.LogicalPlan
+import org.apache.spark.daslab.sql.engine.plans.logical.{AqpSample, LogicalPlan}
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
 import org.apache.spark.daslab.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.apache.spark.daslab.sql.streaming.StreamingQuery
 import org.apache.spark.daslab.sql.functions._
 import org.apache.spark.daslab.sql.types.{LongType, StructType}
+import org.apache.spark.daslab.thrift.gen.{Errors, Plans, PredictService}
 import org.apache.spark.rdd.RDD
+import org.apache.thrift.protocol.{TCompactProtocol, TProtocol}
+import org.apache.thrift.transport.{TFramedTransport, TSocket, TTransport}
 
 import scala.collection.mutable
 class Person(id:Int){
@@ -49,7 +54,7 @@ object  ScalaTest{
     dataset1.createTempView("gradetable")
 
 
-
+    MyUtils.setPickMode(1)
 
   /*  val testinput ="select data.age from data"
     println(spark.sql(testinput).queryExecution.originLogicalPlan)
@@ -376,12 +381,36 @@ object  ScalaTest{
     })*/
 
 
-
+    pickPlansByModelTest()
 
 
 
     // spark.sql(toughSql).coalesce(1).write.mode(SaveMode.Append).option("header","true").csv("outputres")
     //spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
+  }
+  def pickPlansByModelTest() = {
+    val tTransport:TTransport = new TFramedTransport(new TSocket("127.0.0.1",9990))
+    val protocol : TProtocol = new TCompactProtocol(tTransport)
+    val client : PredictService.Client = new PredictService.Client(protocol)
+
+    tTransport.open()
+
+    val sendPlans : Plans = new Plans()
+    val message: util.List[String] = new util.ArrayList[String]()
+
+
+    message.add("[{\"class\":\"Aggregate\",\"num-children\":1,\"aggregateExpressions\":\"avg(L_EXTENDEDPRICE)\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"l_extendedprice\"},{\"class\":\"Join\",\"num-children\":2,\"joinType\":\"Inner$\",\"condition\":\"(tpch.supplier.`S_SUPPKEY` = tpch.lineitem.`L_SUPPKEY`)\"},{\"class\":\"AqpSample\",\"num-children\":1,\"stratificationSet\":\"\",\"universeSet\":\"\",\"ds\":1.0,\"sfm\":1.0,\"sampleFraction\":0.07148519364289466,\"delta\":60,\"parallel\":1},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"s_suppkey\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"supplier\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"l_suppkey,l_extendedprice\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"lineitem\"}]")
+    message.add("[{\"class\":\"Aggregate\",\"num-children\":1,\"aggregateExpressions\":\"avg(L_EXTENDEDPRICE)\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"l_extendedprice\"},{\"class\":\"Join\",\"num-children\":2,\"joinType\":\"Inner$\",\"condition\":\"(tpch.supplier.`S_SUPPKEY` = tpch.lineitem.`L_SUPPKEY`)\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"s_suppkey\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"supplier\"},{\"class\":\"AqpSample\",\"num-children\":1,\"stratificationSet\":\"\",\"universeSet\":\"\",\"ds\":1.0,\"sfm\":1.0,\"sampleFraction\":3.4937044157036973E-4,\"delta\":60,\"parallel\":1},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"l_suppkey,l_extendedprice\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"lineitem\"}]")
+    message.add("[{\"class\":\"Aggregate\",\"num-children\":1,\"aggregateExpressions\":\"count(C_ACCTBAL)\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"c_acctbal\"},{\"class\":\"Join\",\"num-children\":2,\"joinType\":\"Inner$\",\"condition\":\"(tpch.nation.`N_NATIONKEY` = tpch.customer.`C_NATIONKEY`)\"},{\"class\":\"AqpSample\",\"num-children\":1,\"stratificationSet\":\"\",\"universeSet\":\"\",\"ds\":1.0,\"sfm\":1.0,\"sampleFraction\":0.009130285339766887,\"delta\":60,\"parallel\":1},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"n_nationkey\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"nation\"},{\"class\":\"Project\",\"num-children\":1,\"projectList\":\"c_nationkey,c_acctbal\"},{\"class\":\"InMemoryRelation\",\"num-children\":0,\"tableMeta\":\"customer\"}]")
+
+    sendPlans.setPlans(message)
+
+    val result: Errors = client.predict(sendPlans)
+
+    val predict: util.List[lang.Double] = result.result
+
+    println(predict)
+
   }
   val sqls= "select sum(age * 2),avg(age*2) from data" ::
     "select sum(age * 2),avg(age*2)  from data ERROR WITHIN 5% AT CONFIDENCE 95%" ::
