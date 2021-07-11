@@ -2,7 +2,7 @@ import java.io.{File, FileWriter, PrintWriter}
 import java.{lang, util}
 
 import org.apache.spark.daslab.sql.engine.InternalRow
-import org.apache.spark.daslab.sql.engine.optimizer.MyUtils.{getAqpSample, pickPlanByRule, removeAQP}
+import org.apache.spark.daslab.sql.engine.optimizer.MyUtils.{ removeAQP}
 import org.apache.spark.daslab.sql.engine.optimizer.{DfsPushDown, MyUtils}
 import org.apache.spark.daslab.sql.engine.plans.logical.{AqpSample, LogicalPlan}
 import org.apache.spark.daslab.sql.execution.{QueryExecution, SparkPlan}
@@ -316,28 +316,28 @@ object  ScalaTest{
         println(name+"   "+plan)
     }
 
-    MyUtils.setPlan(0)
-    val checkRule: DataFrame = spark.sql("select count(1) from  data join gradetable on data.age=gradetable.age")
-    checkRule.show()
-    println(checkRule.queryExecution.physicalPlan)
+    //MyUtils.setPlan(0)
+    //val checkRule: DataFrame = spark.sql("select count(1) from  data join gradetable on data.age=gradetable.age")
+    //checkRule.show()
+    //println(checkRule.queryExecution.physicalPlan)
 
 
-    val arr = Array(1,2,3,4,5)
-    val rdd = spark.sparkContext.parallelize(arr)
-    println(spark.sparkContext.defaultParallelism)
-    println(rdd.getNumPartitions)
+    //val arr = Array(1,2,3,4,5)
+    //val rdd = spark.sparkContext.parallelize(arr)
+    //println(spark.sparkContext.defaultParallelism)
+    //println(rdd.getNumPartitions)
 
-    MyUtils.setPlan(0)
-    MyUtils.setFraction(0.5)
-    spark.sql("select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% ").show()
+    //MyUtils.setPlan(0)
+    //MyUtils.setFraction(0.5)
+    //spark.sql("select name, sum(age),count(age),avg(age) from data group by name  ERROR WITHIN 5% AT CONFIDENCE 95% ").show()
 
     //spark.sqlContext.cacheTable("data")
-    spark.sql("CACHE TABLE data")
-    println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
-    spark.sql("select * from data").show()
+    //spark.sql("CACHE TABLE data")
+    //println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
+    //spark.sql("select * from data").show()
 
-    println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
-    spark.sql("select * from data").show()
+    //println(spark.sql("select * from data").queryExecution.executedPhysicalPlan)
+    //spark.sql("select * from data").show()
 
 
 
@@ -379,17 +379,24 @@ object  ScalaTest{
       fileWriter.close()
 
     })*/
-
-
-    pickPlansByModelTest()
-
-
+    MyUtils.setPickMode(3)
+    val rowtest: Array[Row] = spark.sql("select sum(grade) from  data join gradetable on data.age=gradetable.age  ERROR WITHIN 7% AT CONFIDENCE 95% ").coalesce(1).rdd.collect()
+    rowtest.foreach(
+       x=>{
+         println(x.mkString(","))
+       }
+    )
+    // pickPlansByModelTest()
 
     // spark.sql(toughSql).coalesce(1).write.mode(SaveMode.Append).option("header","true").csv("outputres")
     //spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
+
+    println(MyUtils.getSel("((tpch.part.`P_PARTKEY` = 1146411) AND (tpch.part.`P_RETAILPRICE` > 1441.49D))"))
+    println(MyUtils.getSelAtom("((tpch.part.`P_PARTKEY` = 1146411) "))
+    println(MyUtils.getSelAtom(" (tpch.part.`P_RETAILPRICE` > 1441.49D))"))
   }
   def pickPlansByModelTest() = {
-    val tTransport:TTransport = new TFramedTransport(new TSocket("127.0.0.1",9990))
+    val tTransport:TTransport = new TFramedTransport(new TSocket("10.176.24.40",9990))
     val protocol : TProtocol = new TCompactProtocol(tTransport)
     val client : PredictService.Client = new PredictService.Client(protocol)
 

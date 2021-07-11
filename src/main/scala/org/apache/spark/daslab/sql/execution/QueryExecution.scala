@@ -131,21 +131,34 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
     // todo
     //val chosedPlan = allOptimizedPlan(MyUtils.PLANPOS)
     //val chosedPlan =MyUtils.removeAQP(allOptimizedPlan(MyUtils.PLANPOS))
-    val status = MyUtils.getAqpSample(allOptimizedPlan(0))
+    val status = MyUtils.newGetAqpSample(allOptimizedPlan(0))
     val chosedPlan = allOptimizedPlan(0)
     if(status == null){
+      println("this is my planfffffffffffffffffffffff..............."+chosedPlan)
       planner.plan(ReturnAnswer(chosedPlan)).next()
     }else{
+      println("status *************************************")
       println("rate..............................."+status.asInstanceOf[AqpSample].errorRate.getRate)
       if(MyUtils.PICKMODE == 0){
+        println("mode 000000000000000000000000000000000000000000000000000")
         val aqpChosedPlan =  MyUtils.pickPlansByModel(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
       }else if(MyUtils.PICKMODE == 1){
+        println("mode 111111111111111111111111111111111111111111111111111")
+
         val aqpChosedPlan =  MyUtils.pickPlanByRule(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
-      }else{
+      }else if(MyUtils.PICKMODE == 2){
+        println("mode 22222222222222222222222222222222222222222222222222222")
+
         val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+      }else {
+        println("mode 333333333333333333333333333333333333333333333333333333")
+
+        val aqpChosedPlan =  MyUtils.pickPlanWithOutPushDown(allOptimizedPlan)
+        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+
       }
 
       // val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
