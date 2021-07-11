@@ -391,7 +391,9 @@ object  ScalaTest{
     // spark.sql(toughSql).coalesce(1).write.mode(SaveMode.Append).option("header","true").csv("outputres")
     //spark.sql(toughSql).coalesce(1).rdd.map(r => r.mkString(",")).saveAsTextFile("outpures/res.csv")
 
-    println(MyUtils.getSel("((tpch.part.`P_PARTKEY` = 1146411) AND (tpch.part.`P_RETAILPRICE` > 1441.49D))"))
+
+    //println(MyUtils.getSel("((tpch.part.`P_PARTKEY` = 1146411) AND (tpch.part.`P_RETAILPRICE` > 1441.49D))"))
+    println(MyUtils.getSel("((tpch.part.`P_PARTKEY` = 1146411)"))
     println(MyUtils.getSelAtom("((tpch.part.`P_PARTKEY` = 1146411) "))
     println(MyUtils.getSelAtom(" (tpch.part.`P_RETAILPRICE` > 1441.49D))"))
   }
