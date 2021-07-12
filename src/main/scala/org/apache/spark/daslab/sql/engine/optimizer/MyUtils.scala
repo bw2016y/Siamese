@@ -124,6 +124,10 @@ object MyUtils {
        return cost
     }
 
+  def getNumDV(cols:Set[WrapAttribute]):Double = {
+    return 1.00
+  }
+
   /**
    * 这里的选择性可以定义为 ( output rows / input rows )
    * 列与列之间默认拥有独立性，即选择性可以直接相乘
@@ -195,7 +199,7 @@ object MyUtils {
         val gap : Double = (cmax - cmin)/100.0
 
         // todo need to +1
-        val right_intervals:Int = ((cmax - oprand_num)/gap).toInt
+        val right_intervals:Int = ((cmax - oprand_num)/gap).toInt + 1
         var cnt:Double = 0.0
         var all:Double = 0.0
 
@@ -236,7 +240,7 @@ object MyUtils {
         val gap : Double = (cmax - cmin)/100.0
 
         //todo need to +1
-        val left_intervals:Int = ((oprand_num-cmin)/gap).toInt
+        val left_intervals:Int = ((oprand_num-cmin)/gap).toInt + 1
 
         var cnt:Double = 0.0
         var all:Double = 0.0
@@ -357,7 +361,7 @@ object MyUtils {
     val col_min : Map[String,Double] = Map(
       "L_LINENUMBER" -> 1.0 ,
       "L_QUANTITY" -> 1.0  ,
-      "L_EXTENDEDPRICE" ->  900.91 , // not uniform  900.0
+      "L_EXTENDEDPRICE" ->  900.0 , // not uniform  900.0   900.91是真实的最小值，这里为了方便取了近似的 900.0
       "L_DISCOUNT" -> 0.0 ,
       "L_TAX" -> 0.0 ,
 
@@ -367,7 +371,7 @@ object MyUtils {
 
       "P_PARTKEY" -> 1.0 ,
       "P_SIZE" -> 1.0 ,
-      "P_RETAILPRICE" -> 900.91 ,   // not uniform 900.0
+      "P_RETAILPRICE" -> 900.0 ,   // not uniform 900.0   同样的 900.91是最小值，这里同样取了近似的900.0
 
       "S_SUPPKEY" ->  1.0 ,
       "S_ACCTBAL" -> -999.92 ,
@@ -380,13 +384,13 @@ object MyUtils {
       "C_ACCTBAL" ->  -999.99 ,
 
       "O_ORDERKEY" -> 1.0 ,
-      "O_TOTALPRICE" -> 838.05   // not uniform  838.0
+      "O_TOTALPRICE" -> 838.0   // not uniform  838.0    这里真实值是 838.05 ,  这里取了 838.0
     )
 
   val col_max : Map[String,Double] = Map(
     "L_LINENUMBER" -> 7.0 ,
     "L_QUANTITY" -> 50.0  ,
-    "L_EXTENDEDPRICE" ->  104949.5  , // not uniform   104950.0
+    "L_EXTENDEDPRICE" ->  104950.0  , // not uniform   104950.0    真实值为： 104949.5
     "L_DISCOUNT" -> 0.1  ,
     "L_TAX" -> 0.08  ,
 
@@ -396,7 +400,7 @@ object MyUtils {
 
     "P_PARTKEY" -> 2000000.0  ,
     "P_SIZE" -> 50.0  ,
-    "P_RETAILPRICE" ->  2098.99 ,   // not uniform 2099.0
+    "P_RETAILPRICE" ->  2099.0 ,   // not uniform 2099.0  真实值为 2098.99
 
     "S_SUPPKEY" ->  100000.0 ,
     "S_ACCTBAL" -> 9999.93 ,
@@ -409,7 +413,7 @@ object MyUtils {
     "C_ACCTBAL" ->  9999.99  ,
 
     "O_ORDERKEY" -> 60000000.0 ,
-    "O_TOTALPRICE" ->  558822.6  // not uniform 558823.0
+    "O_TOTALPRICE" ->  558823.0  // not uniform 558823.0  真实值 558822.6
   )
 
   // print(get_list(900.0 , 104950.0 , 100))

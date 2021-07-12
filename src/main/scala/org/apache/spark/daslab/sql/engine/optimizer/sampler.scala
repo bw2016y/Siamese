@@ -226,6 +226,11 @@ object DfsPushDown{
           dfs(grandChild,ds,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
         //todo 这里需要判断一下是不是SSet中已经包含了Filter涉及的列
         case filter @ Filter(condition:Expression,grandChild) =>
+          //todo check
+          val pre: String = condition.sql
+          val sel: Double = MyUtils.getSel(pre)
+
+
           filter.setTagValue(TreeNodeTag[String]("insert"),"push from this")
           // println("filter conditions"+condition.references)
           var newS: Set[WrapAttribute] = sSet.toSet[Attribute].map( a => new WrapAttribute(a))
@@ -237,13 +242,13 @@ object DfsPushDown{
           val copiedPlan: LogicalPlan = rootPlan.clone()
           val copiedSubPlan: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,newS.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel ).clone()
           construct(copiedPlan,copiedSubPlan)
-          // S集合不变换的情况
+          // S集合不变换的情况 , 这种情况ds需要发生变化
           val copiedPlan1: LogicalPlan = rootPlan.clone()
-          val copiedSubPlan1: LogicalPlan =  AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds*0.5,sfm,sampleFrac,delta,parallel ).clone()
+          val copiedSubPlan1: LogicalPlan =  AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,grandChild,sSet,uSet,ds*sel,sfm,sampleFrac,delta,parallel ).clone()
           construct(copiedPlan1,copiedSubPlan1)
 
           filter.unsetTagValue(TreeNodeTag[String]("insert"))
-          dfs(grandChild,ds*0.5,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
+          dfs(grandChild,ds*sel,sfm,sSet,uSet,sampleFrac,delta,parallel,rootPlan)
           dfs(grandChild,ds,sfm,newS.map(wa => wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
 
         case join @ Join(left,right,joinType,condition) =>
@@ -254,6 +259,8 @@ object DfsPushDown{
           println("left"+left.output)
           println("right"+right.output)
           // build maps
+          var newSfmLeft : Double = sfm
+          var newSfmRight : Double = sfm
 
            val leftPart: Set[WrapAttribute] = left.output.toSet[Attribute].map(a=> new WrapAttribute(a))
            val rightPart: Set[WrapAttribute] = right.output.toSet[Attribute].map(a=> new WrapAttribute(a))
@@ -307,6 +314,14 @@ object DfsPushDown{
                if((l2rMap.toMap.keySet -- sSetOnLeft.toSet).size>0){
 
                    sSetOnLeft = (sSetOnLeft ++ l2rMap.toMap.keySet)
+                    // todo 这里需要修改 sfm
+                    // val ssssss: Set[WrapAttribute] = l2rMap.toMap.keySet -- sSetOnLeft.toSet
+
+                    var dv1 :Double = MyUtils.getNumDV(l2rMap.toMap.keySet -- sSetOnLeft.toSet) // set L // left key
+                    var dv2 :Double = MyUtils.getNumDV(fullSetLeft.toSet -- sSetOnLeft.toSet)  //  todo need to project to right  // we dont need to
+                    var dv3 :Double = MyUtils.getNumDV(l2rMap.toMap.keySet -- sSetOnLeft.toSet ) // todo  need to project to right
+
+                    newSfmLeft  = sfm * ( math.min(dv1,dv2) / dv3 )
 
                }else{   // 不存在可以添加的Join Key了
                   sSetOnLeft = sSetOnLeft
@@ -316,9 +331,20 @@ object DfsPushDown{
                 sSetOnLeft = sSetOnLeft
            }
 
+          // todo fix ds
+          val Krem: Set[WrapAttribute] = (l2rMap.toMap.keySet -- sSetOnLeft.toSet)
+          var kdv1:Double = MyUtils.getNumDV(Krem) // L
+          var kdv2:Double = MyUtils.getNumDV(Krem) // R need to project to right
+
+
+
+          var newDsLeft = ds / kdv1 * math.min(kdv1, kdv2)
+
           val copiedrootPlanLeft : LogicalPlan = rootPlan.clone()
-          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
+          val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,newDsLeft,newSfmLeft,sampleFrac,delta,parallel).clone()
           construct(copiedrootPlanLeft,copiedLeft,isLeft=true)
+
+
           // push to right start
           val fullSetRight: mutable.Set[WrapAttribute]=mutable.Set[WrapAttribute]()
           sSet.foreach( a => {
