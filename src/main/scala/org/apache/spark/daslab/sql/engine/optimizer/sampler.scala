@@ -319,7 +319,20 @@ object DfsPushDown{
 
                     var dv1 :Double = MyUtils.getNumDV(l2rMap.toMap.keySet -- sSetOnLeft.toSet) // set L // left key
                     var dv2 :Double = MyUtils.getNumDV(fullSetLeft.toSet -- sSetOnLeft.toSet)  //  todo need to project to right  // we dont need to
-                    var dv3 :Double = MyUtils.getNumDV(l2rMap.toMap.keySet -- sSetOnLeft.toSet ) // todo  need to project to right
+
+                    var beforeProjectToRight : Set[WrapAttribute] = (l2rMap.toMap.keySet -- sSetOnLeft.toSet)
+                    var afterProjectToRight : mutable.Set[WrapAttribute] = mutable.Set[WrapAttribute]()
+                    beforeProjectToRight.foreach( col=>{
+                        if(l2rMap.get(col).nonEmpty){
+                           afterProjectToRight += l2rMap.get(col).get
+                        } else{
+                           afterProjectToRight += col
+                        }
+                    })
+
+
+
+                    var dv3 :Double = MyUtils.getNumDV(afterProjectToRight.toSet) // todo  need to project to right
 
                     newSfmLeft  = sfm * ( math.min(dv1,dv2) / dv3 )
 
@@ -332,13 +345,25 @@ object DfsPushDown{
            }
 
           // todo fix ds
-          val Krem: Set[WrapAttribute] = (l2rMap.toMap.keySet -- sSetOnLeft.toSet)
-          var kdv1:Double = MyUtils.getNumDV(Krem) // L
-          var kdv2:Double = MyUtils.getNumDV(Krem) // R need to project to right
+          val KremLeft: Set[WrapAttribute] = (l2rMap.toMap.keySet -- sSetOnLeft.toSet)
+          var kdv1Left :Double = MyUtils.getNumDV(KremLeft) // L
+
+          var afterProjectToRightRem : mutable.Set[WrapAttribute] = mutable.Set[WrapAttribute]()
+          KremLeft.foreach( col=>{
+            if(l2rMap.get(col).nonEmpty){
+              afterProjectToRightRem += l2rMap.get(col).get
+            } else{
+              afterProjectToRightRem += col
+            }
+          })
 
 
 
-          var newDsLeft = ds / kdv1 * math.min(kdv1, kdv2)
+          var kdv2Left :Double = MyUtils.getNumDV(afterProjectToRightRem.toSet) // R need to project to right
+
+
+          var newDsLeft = (ds / kdv1Left) * math.min(kdv1Left , kdv2Left)
+
 
           val copiedrootPlanLeft : LogicalPlan = rootPlan.clone()
           val copiedLeft: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,left,sSetOnLeft.map(wa => wa.att).toSet,uSet,newDsLeft,newSfmLeft,sampleFrac,delta,parallel).clone()
@@ -359,6 +384,28 @@ object DfsPushDown{
           if((fullSetRight.toSet -- sSetOnRight.toSet).size >0){
              if((r2lMap.toMap.keySet -- sSetOnRight.toSet).size >0){
                sSetOnRight = (sSetOnRight ++ r2lMap.toMap.keySet)
+
+
+               var dv1 :Double = MyUtils.getNumDV(r2lMap.toMap.keySet -- sSetOnRight.toSet) // set R // right key
+               var dv2 :Double = MyUtils.getNumDV(fullSetRight.toSet -- sSetOnRight.toSet)  //  todo need to project to left  // we dont need to
+
+
+
+               var beforeProjectToLeft : Set[WrapAttribute] = (r2lMap.toMap.keySet -- sSetOnRight.toSet)
+               var afterProjectToLeft : mutable.Set[WrapAttribute] = mutable.Set[WrapAttribute]()
+
+               beforeProjectToLeft.foreach( col=>{
+                 if(r2lMap.get(col).nonEmpty){
+                   afterProjectToLeft += r2lMap.get(col).get
+                 } else{
+                   afterProjectToLeft += col
+                 }
+               })
+
+
+               var dv3 :Double = MyUtils.getNumDV(afterProjectToLeft.toSet) // todo  need to project to left
+
+               newSfmRight  = sfm * ( math.min(dv1,dv2) / dv3 )
              }else{
                sSetOnRight = sSetOnRight
              }
@@ -366,8 +413,32 @@ object DfsPushDown{
               sSetOnRight = sSetOnRight
           }
 
+          // todo fix ds
+          val KremRight : Set[WrapAttribute] = (r2lMap.toMap.keySet -- sSetOnRight.toSet)
+
+          var kdv1Right :Double = MyUtils.getNumDV(KremRight) // R
+
+
+
+          var afterProjectToLeftRem : mutable.Set[WrapAttribute] = mutable.Set[WrapAttribute]()
+          KremRight.foreach( col=>{
+            if(r2lMap.get(col).nonEmpty){
+              afterProjectToLeftRem += r2lMap.get(col).get
+            } else{
+              afterProjectToLeftRem += col
+            }
+          })
+
+
+
+          var kdv2Right :Double = MyUtils.getNumDV(afterProjectToLeftRem.toSet) // L need to project to left
+
+
+
+          var newDsRight = (ds / kdv1Right) * math.min(kdv1Right , kdv2Right)
+
           val copiedrootPlanRight : LogicalPlan = rootPlan.clone()
-          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight.map(wa => wa.att).toSet,uSet,ds,sfm,sampleFrac,delta,parallel).clone()
+          val copiedRight: LogicalPlan = AqpSample(sampleStatus.errorRate,sampleStatus.confidence,sampleStatus.seed,right,sSetOnRight.map(wa => wa.att).toSet,uSet,newDsRight,newSfmRight,sampleFrac,delta,parallel).clone()
           construct(copiedrootPlanRight,copiedRight,isLeft = false)
           // push to right end
 
@@ -375,8 +446,9 @@ object DfsPushDown{
 
           println("sSetOnLeft"+sSetOnLeft)
           println("sSetOnRight"+sSetOnRight)
-          dfs(left,ds,sfm,sSetOnLeft.map(wa => wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
-          dfs(right,ds,sfm,sSetOnRight.map(wa=>wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
+
+          dfs(left,newDsLeft,newSfmLeft,sSetOnLeft.map(wa => wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
+          dfs(right,newDsRight,newSfmRight,sSetOnRight.map(wa=>wa.att).toSet,uSet,sampleFrac,delta,parallel,rootPlan)
 
         case _ =>
       }
