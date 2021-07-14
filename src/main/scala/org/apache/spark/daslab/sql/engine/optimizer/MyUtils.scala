@@ -299,7 +299,13 @@ object MyUtils {
       "L_DISCOUNT" -> "lineitem" ,
       "L_TAX" -> "lineitem" ,
 
+      "L_ORDERKEY" -> "lineitem"  ,           // foreign key
+      "L_SUPPKEY" -> "lineitem" ,            // foreign key
+      "L_PARTKEY" -> "lineitem" ,            // foreign key
+
+
       "N_NATIONKEY" -> "nation" ,
+      "N_REGIONKEY" -> "nation" ,          // foreign key
 
       "R_REGIONKEY" -> "region" ,
 
@@ -309,30 +315,35 @@ object MyUtils {
 
       "S_SUPPKEY" ->  "supplier" ,
       "S_ACCTBAL" -> "supplier" ,
+      "S_NATIONKEY" -> "supplier" ,        // foreign key
 
 
       "PS_AVAILQTY" -> "partsupp" ,
       "PS_SUPPLYCOST" -> "partsupp" ,
+      "PS_SUPPKEY" -> "partsupp",          // foreign key
+      "PS_PARTKEY" -> "partsupp",          // foreign key
 
       "C_CUSTKEY" ->   "customer" ,
       "C_ACCTBAL" ->  "customer" ,
+      "C_NATIONKEY" -> "customer" ,        // foreign key
 
       "O_ORDERKEY" -> "orders" ,
-      "O_TOTALPRICE" -> "orders"   // not uniform
+      "O_TOTALPRICE" -> "orders",   // not uniform
+      "O_CUSTKEY" -> "orders"             // foreign key
     )
 
     val Col_distinctNum : Map[String,Double] = Map(
       "L_LINENUMBER" -> 7.0 ,
-      "L_QUANTITY" -> 100.0 ,
+      "L_QUANTITY" -> 50.0 ,
       "L_EXTENDEDPRICE" -> 1351462.0 , // not uniform
-      "L_DISCOUNT" -> 12.0 ,
-      "L_TAX" -> 12.0 ,
-      "L_ORDERKEY" -> xxx ,           // foreign key
-      "L_SUPPKEY" -> xxx ,            // foreign key
-      "L_PARTKEY" -> xxx ,            // foreign key
+      "L_DISCOUNT" -> 11.0 ,
+      "L_TAX" -> 9.0 ,
+      "L_ORDERKEY" -> 15000000.0  ,           // foreign key
+      "L_SUPPKEY" -> 100000.0 ,            // foreign key
+      "L_PARTKEY" -> 2000000.0 ,            // foreign key
 
       "N_NATIONKEY" -> 25.0 ,
-      "N_REGIONKEY" -> xxx  ,          // foreign key
+      "N_REGIONKEY" -> 5.0  ,          // foreign key
 
 
       "R_REGIONKEY" -> 5.0 ,
@@ -343,21 +354,21 @@ object MyUtils {
 
       "S_SUPPKEY" ->  100000.0 ,
       "S_ACCTBAL" -> 95588.0 ,
-      "S_NATIONKEY" -> xxx ,        // foreign key
+      "S_NATIONKEY" -> 25.0 ,        // foreign key
 
 
       "PS_AVAILQTY" -> 9999.0 ,
       "PS_SUPPLYCOST" -> 99901.0 ,
-      "PS_SUPPKEY" -> xxx,          // foreign key
-      "PS_PARTKEY" -> xxx,          // foreign key
+      "PS_SUPPKEY" -> 100000.0,          // foreign key
+      "PS_PARTKEY" -> 2000000.0,          // foreign key
 
       "C_CUSTKEY" ->   1500000.0 ,
       "C_ACCTBAL" ->  818834.0 ,
-      "C_NATIONKEY" -> xxx ,        // foreign key
+      "C_NATIONKEY" -> 25.0 ,        // foreign key
 
       "O_ORDERKEY" -> 15000000.0 ,
       "O_TOTALPRICE" -> 11944103.0 ,   // not uniform
-      "O_CUSTKEY" -> xxx             // foreign key
+      "O_CUSTKEY" -> 999982.0             // foreign key
     )
 
     val col_ifUniform : Map[String,Boolean] = Map(
