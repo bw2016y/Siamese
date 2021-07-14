@@ -124,8 +124,29 @@ object MyUtils {
        return cost
     }
 
+  /**
+    *   "stratificationSet":"C_CUSTKEY,C_ACCTBAL"
+    * @param cols
+    * @return
+    */
   def getNumDV(cols:Set[WrapAttribute]):Double = {
-    return 1.00
+    // cols_str
+    val cols_str: Set[String] = cols.map(wrapAtt => {
+    wrapAtt.asInstanceOf[AttributeReference].toString
+    })
+    var dv : Double = 1.00
+
+    cols_str.foreach(
+      col_str => {
+         if(Col_distinctNum.get(col_str).nonEmpty){
+              dv = dv*Col_distinctNum.get(col_str).get
+
+         }else{
+              dv = dv * 1.0
+         }
+      }
+    )
+    return dv
   }
 
   /**
@@ -306,8 +327,13 @@ object MyUtils {
       "L_EXTENDEDPRICE" -> 1351462.0 , // not uniform
       "L_DISCOUNT" -> 12.0 ,
       "L_TAX" -> 12.0 ,
+      "L_ORDERKEY" -> xxx ,           // foreign key
+      "L_SUPPKEY" -> xxx ,            // foreign key
+      "L_PARTKEY" -> xxx ,            // foreign key
 
       "N_NATIONKEY" -> 25.0 ,
+      "N_REGIONKEY" -> xxx  ,          // foreign key
+
 
       "R_REGIONKEY" -> 5.0 ,
 
@@ -317,16 +343,21 @@ object MyUtils {
 
       "S_SUPPKEY" ->  100000.0 ,
       "S_ACCTBAL" -> 95588.0 ,
+      "S_NATIONKEY" -> xxx ,        // foreign key
 
 
       "PS_AVAILQTY" -> 9999.0 ,
       "PS_SUPPLYCOST" -> 99901.0 ,
+      "PS_SUPPKEY" -> xxx,          // foreign key
+      "PS_PARTKEY" -> xxx,          // foreign key
 
       "C_CUSTKEY" ->   1500000.0 ,
       "C_ACCTBAL" ->  818834.0 ,
+      "C_NATIONKEY" -> xxx ,        // foreign key
 
       "O_ORDERKEY" -> 15000000.0 ,
-      "O_TOTALPRICE" -> 11944103.0   // not uniform
+      "O_TOTALPRICE" -> 11944103.0 ,   // not uniform
+      "O_CUSTKEY" -> xxx             // foreign key
     )
 
     val col_ifUniform : Map[String,Boolean] = Map(
