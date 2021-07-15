@@ -134,6 +134,7 @@ object MyUtils {
     val cols_str: Set[String] = cols.map(wrapAtt => {
     wrapAtt.asInstanceOf[AttributeReference].toString
     })
+
     var dv : Double = 1.00
 
     cols_str.foreach(
@@ -146,6 +147,18 @@ object MyUtils {
          }
       }
     )
+
+    var firstCol:String = cols_str.head
+    var MaxDV : Double = 0.0
+
+    if(Col_table.get(firstCol).nonEmpty){
+        var tableName: String = Col_table.get(firstCol).get
+        MaxDV = cardMap.get(tableName).get
+    }
+
+    if(MaxDV != 0.0){
+        dv = math.min(dv,MaxDV)
+    }
     return dv
   }
 
@@ -169,31 +182,44 @@ object MyUtils {
   def getSelAtom(predicate:String):Double={
      val p: String = predicate.replaceAll("\\(","").replaceAll("\\)","").replaceAll("`","")
      var sel = 1.0
+
+      // todo check if have other predicate like OR , ... , ...
+
+     if(p.contains("OR")){
+       return sel
+     }
+
+
      if(p.contains("=")){
         val pos: Int = p.indexOf("=")
         val col_all  = p.substring(0,pos).replaceAll(" ","")
         val op = p.substring(pos,pos+1).replaceAll(" ","")
         val oprand = p.substring(pos+1).replaceAll(" ","").replaceAll("D","")
 
+        // todo check oprand should contains digits only
+
 
         val cols: Array[String] = col_all.split("\\.")
         val col: String = cols(cols.length-1)
 
         // todo get sel
-        if(col_ifUniform(col)==true){
+       if(col_ifUniform.get(col).nonEmpty){
+         if(col_ifUniform(col)==true){
 
-          val card : Double = cardMap(Col_table(col))
-          val distinctNum : Double = Col_distinctNum(col)
+           val card : Double = cardMap(Col_table(col))
+           val distinctNum : Double = Col_distinctNum(col)
 
-          sel = 1.0/distinctNum
+           sel = 1.0/distinctNum
 
-        }else{
+         }else{
 
-          val card : Double = cardMap(Col_table(col))
-          val distinctNum: Double = Col_distinctNum(col)
+           val card : Double = cardMap(Col_table(col))
+           val distinctNum: Double = Col_distinctNum(col)
 
-          sel = 1.0 / distinctNum
-        }
+           sel = 1.0 / distinctNum
+         }
+
+       }
      }
 
 
@@ -208,31 +234,34 @@ object MyUtils {
       val col: String = cols(cols.length-1)
 
       // todo get sel
-      if(col_ifUniform(col)==true){
-        val cmin: Double = col_min(col)
-        val cmax: Double = col_max(col)
-        val oprand_num :Double = oprand.toDouble
-        sel = (cmax - oprand_num)/(cmax-cmin)
-      }else{
-        val cmin: Double = col_min(col)
-        val cmax: Double = col_max(col)
-        val oprand_num :Double = oprand.toDouble
-        val gap : Double = (cmax - cmin)/100.0
+      if(col_ifUniform.get(col).nonEmpty){
+        if(col_ifUniform(col)==true){
+          val cmin: Double = col_min(col)
+          val cmax: Double = col_max(col)
+          val oprand_num :Double = oprand.toDouble
+          sel = (cmax - oprand_num)/(cmax-cmin)
+        }else{
+          val cmin: Double = col_min(col)
+          val cmax: Double = col_max(col)
+          val oprand_num :Double = oprand.toDouble
+          val gap : Double = (cmax - cmin)/100.0
 
-        // todo need to +1
-        val right_intervals:Int = ((cmax - oprand_num)/gap).toInt + 1
-        var cnt:Double = 0.0
-        var all:Double = 0.0
+          // todo need to +1
+          val right_intervals:Int = ((cmax - oprand_num)/gap).toInt + 1
+          var cnt:Double = 0.0
+          var all:Double = 0.0
 
-        for(i <- 99-right_intervals+1 to 99){
-          cnt += nonuniform_col_his(col)(i).toDouble
+          for(i <- 99-right_intervals+1 to 99){
+            cnt += nonuniform_col_his(col)(i).toDouble
+          }
+          for(i <- 0 to 99){
+            all += nonuniform_col_his(col)(i).toDouble
+          }
+
+          sel = cnt / all
         }
-        for(i <- 0 to 99){
-          all += nonuniform_col_his(col)(i).toDouble
-        }
-
-        sel = cnt / all
       }
+
     }
 
     if(p.contains("<")){
@@ -246,37 +275,37 @@ object MyUtils {
       val col: String = cols(cols.length-1)
 
       // todo get sel
+      if( col_ifUniform.get(col).nonEmpty ){
+        if(col_ifUniform(col)==true){
+          val cmin: Double = col_min(col)
+          val cmax: Double = col_max(col)
+          val oprand_num :Double = oprand.toDouble
 
-      if(col_ifUniform(col)==true){
-        val cmin: Double = col_min(col)
-        val cmax: Double = col_max(col)
-        val oprand_num :Double = oprand.toDouble
+          sel = (oprand_num-cmin)/(cmax-cmin)
 
-        sel = (oprand_num-cmin)/(cmax-cmin)
+        }else{
+          val cmin: Double = col_min(col)
+          val cmax: Double = col_max(col)
+          val oprand_num :Double = oprand.toDouble
+          val gap : Double = (cmax - cmin)/100.0
 
-      }else{
-        val cmin: Double = col_min(col)
-        val cmax: Double = col_max(col)
-        val oprand_num :Double = oprand.toDouble
-        val gap : Double = (cmax - cmin)/100.0
+          //todo need to +1
+          val left_intervals:Int = ((oprand_num-cmin)/gap).toInt + 1
 
-        //todo need to +1
-        val left_intervals:Int = ((oprand_num-cmin)/gap).toInt + 1
+          var cnt:Double = 0.0
+          var all:Double = 0.0
 
-        var cnt:Double = 0.0
-        var all:Double = 0.0
+          for(i <- 0 to 0+left_intervals-1 ){
+            cnt += nonuniform_col_his(col)(i).toDouble
+          }
 
-        for(i <- 0 to 0+left_intervals-1 ){
-          cnt += nonuniform_col_his(col)(i).toDouble
+          for(i <- 0 to 99){
+            all += nonuniform_col_his(col)(i).toDouble
+          }
+
+          sel = cnt / all
         }
-
-        for(i <- 0 to 99){
-          all += nonuniform_col_his(col)(i).toDouble
-        }
-
-        sel = cnt / all
       }
-
     }
     return sel
   }
