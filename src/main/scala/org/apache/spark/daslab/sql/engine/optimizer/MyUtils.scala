@@ -148,7 +148,8 @@ object MyUtils {
       }
     )
 
-    var firstCol:String = cols_str.head
+    //todo 因为可能是一个join后的relation , 因此这样判断没有意义
+    /*var firstCol:String = cols_str.head
     var MaxDV : Double = 0.0
 
     if(Col_table.get(firstCol).nonEmpty){
@@ -158,7 +159,8 @@ object MyUtils {
 
     if(MaxDV != 0.0){
         dv = math.min(dv,MaxDV)
-    }
+    }*/
+
     return dv
   }
 
@@ -176,7 +178,19 @@ object MyUtils {
      }
      return sel
   }
+  def checkOprand(num:String):Boolean = {
 
+    var numWithoutPoint : String  = num.replaceAll("\\.","");
+    val digitArr: Array[Char] = numWithoutPoint.toCharArray
+
+    for( c : Char <- digitArr){
+        if(!Character.isDigit(c)){
+            return false
+        }
+    }
+
+    return true
+  }
   // 这里的谓词是原子的
   // "condition":"((tpch.part.`P_PARTKEY` = 1146411) AND (tpch.part.`P_RETAILPRICE` > 1441.49D))"
   def getSelAtom(predicate:String):Double={
@@ -198,6 +212,9 @@ object MyUtils {
 
         // todo check oprand should contains digits only
 
+        if(checkOprand(oprand)==false){
+            return sel
+        }
 
         val cols: Array[String] = col_all.split("\\.")
         val col: String = cols(cols.length-1)
@@ -228,6 +245,11 @@ object MyUtils {
       val col_all  = p.substring(0,pos).replaceAll(" ","")
       val op = p.substring(pos,pos+1).replaceAll(" ","")
       val oprand = p.substring(pos+1).replaceAll(" ","").replaceAll("D","")
+
+
+      if(checkOprand(oprand)==false){
+        return sel
+      }
 
 
       val cols: Array[String] = col_all.split("\\.")
@@ -269,6 +291,11 @@ object MyUtils {
       val col_all  = p.substring(0,pos).replaceAll(" ","")
       val op = p.substring(pos,pos+1).replaceAll(" ","")
       val oprand = p.substring(pos+1).replaceAll(" ","").replaceAll("D","")
+
+
+      if(checkOprand(oprand)==false){
+        return sel
+      }
 
 
       val cols: Array[String] = col_all.split("\\.")
