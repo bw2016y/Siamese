@@ -2,7 +2,7 @@ package org.apache.spark.daslab.sql.engine.optimizer
 
 import java.{lang, util}
 
-import org.apache.spark.daslab.sql.engine.expressions.{And, AttributeReference, Expression}
+import org.apache.spark.daslab.sql.engine.expressions.{And, Attribute, AttributeReference, Expression}
 import org.apache.spark.daslab.sql.engine.plans.logical.{Aggregate, AqpSample, ErrorRate, Filter, GlobalLimit, Join, LocalLimit, LogicalPlan, Project}
 import org.apache.spark.daslab.sql.execution.columnar.InMemoryRelation
 import org.apache.spark.daslab.sql.execution.util.DistinctColumn
@@ -63,7 +63,14 @@ object MyUtils {
       return res
     }
 
-
+    def removeSset(plan : LogicalPlan):LogicalPlan = {
+      plan transform{
+        case aqp@ AqpSample(errorRate,confidence,seed,child,stratificationSet,universeSet,ds,sfm,sampleFraction,delta,parallel) =>
+          val emptySset : Set[Attribute] = Set()
+          val newAqp : LogicalPlan = AqpSample(errorRate,confidence,seed,child,emptySset,universeSet,ds,sfm,sampleFraction,delta,parallel)
+          newAqp
+      }
+    }
 
     def removeAQP(plan:LogicalPlan):LogicalPlan={
         plan transform{
@@ -92,6 +99,35 @@ object MyUtils {
         case _ =>
           return -9999
       }
+    }
+
+  /**
+    *  这个函数估算数据量
+    * @param plan
+    * @return
+    */
+  def getCard(plan : LogicalPlan): Double ={
+       val root = newGetAqpSample(plan)
+
+      var card : Double = 1.0
+      root transform{
+        case inMemoryRelation @ InMemoryRelation(output,cacheBuilder) =>
+          if(output(0).asInstanceOf[AttributeReference].qualifier.length >= 2){
+
+            val metaName: String = output(0).asInstanceOf[AttributeReference].qualifier(1)
+            println("metaName ....................   "+metaName)
+
+            if(cardMap.get(metaName).nonEmpty){
+              card = card * cardMap.get(metaName).get
+            }else{
+              card = card * 1.0
+            }
+
+          }
+
+          inMemoryRelation
+      }
+      return card
     }
 
     def getCost(plan:LogicalPlan):Double = {
@@ -132,7 +168,7 @@ object MyUtils {
   def getNumDV(cols:Set[WrapAttribute]):Double = {
     // cols_str
     val cols_str: Set[String] = cols.map(wrapAtt => {
-    wrapAtt.asInstanceOf[AttributeReference].toString
+    wrapAtt.att.asInstanceOf[AttributeReference].toString
     })
 
     var dv : Double = 1.00
@@ -579,6 +615,42 @@ object MyUtils {
 
     }
 
+    def quickrCheckUni(plan: LogicalPlan):Boolean ={
+          var aqpSample : AqpSample = newGetAqpSample(plan).asInstanceOf[AqpSample]
+          var underCard: Double = getCard(plan)
+
+          var ds :Double = aqpSample.ds
+          var sfm:Double = aqpSample.sfm
+          var p : Double = aqpSample.sampleFraction
+
+
+          // 这里的30作为超参数取自于quickr
+          if( underCard * p * ds * sfm >= 30){
+                return true
+          }else{
+            return false
+          }
+    }
+
+    def quickrCheckDis(plan: LogicalPlan):Boolean = {
+        var aqpSample : AqpSample = newGetAqpSample(plan).asInstanceOf[AqpSample]
+        var underCard : Double = getCard(plan)
+
+        var ds : Double = aqpSample.ds
+        var sfm: Double = aqpSample.sfm
+        var p : Double = aqpSample.sampleFraction
+
+        var dv : Double = getNumDV(aqpSample.stratificationSet.map(a => new WrapAttribute(a)))
+
+        // 如果可以则转化为uniform采样器
+        if( underCard * p * ds * sfm / dv >= 30 ){
+              return true
+        }else{
+          return false
+        }
+    }
+
+
     // 基于规则选择待执行的查询计划
     // RULE : 选择采样器下推最远的逻辑计划，若存在多个则随机选择一个
     // todo 这里需要设计一个cost函数，相同深度的时候，采样器下方的数据量越大效果越好
@@ -607,6 +679,60 @@ object MyUtils {
         }
        return resPlan
     }
+
+
+    def pickPlanWithQuickr(plans : Seq[LogicalPlan]):LogicalPlan ={
+      // todo
+      var uniformPlans : Seq[LogicalPlan] = Seq.empty
+      var distinctPlans : Seq[LogicalPlan] = Seq.empty
+
+      for(waitPlan <- plans){
+        val aqpSample = newGetAqpSample(waitPlan)
+        if(aqpSample.asInstanceOf[AqpSample].stratificationSet.nonEmpty){
+          distinctPlans  = ( distinctPlans :+ waitPlan )
+        }else{
+          uniformPlans   = ( uniformPlans :+ waitPlan )
+        }
+      }
+
+      var checkedUniformPlans: Seq[LogicalPlan] = Seq.empty
+      var checkedDistinctPlans : Seq[LogicalPlan] = Seq.empty
+
+
+      for(plan <- uniformPlans){
+        if(quickrCheckUni(plan) == true){
+          checkedUniformPlans = (checkedUniformPlans :+ plan)
+        }
+      }
+
+      for(plan <- distinctPlans){
+        if(quickrCheckDis(plan) == true){
+            // todo  remove the sset
+
+            val removedPlan : LogicalPlan = removeSset(plan)
+
+            checkedUniformPlans = (checkedUniformPlans :+ removedPlan)
+        }else{
+            checkedDistinctPlans = (checkedDistinctPlans :+ plan)
+        }
+      }
+
+      // todo  pick a plan
+
+      val backup: LogicalPlan = removeAQP(plans(0))
+
+      if(checkedUniformPlans.nonEmpty){
+          return   pickPlanByRule(checkedUniformPlans)
+      }else if(checkedDistinctPlans.nonEmpty){
+          return   pickPlanByRule(checkedDistinctPlans)
+      }else{
+          return backup
+      }
+
+    }
+
+
+
 
     def pickPlanWithOutPushDown(plans : Seq[LogicalPlan]):LogicalPlan = {
        plans(0)

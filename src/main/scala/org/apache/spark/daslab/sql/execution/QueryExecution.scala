@@ -153,14 +153,18 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
 
         val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
-      }else {
+      }else if(MyUtils.PICKMODE == 3){
         println("mode 333333333333333333333333333333333333333333333333333333")
 
         val aqpChosedPlan =  MyUtils.pickPlanWithOutPushDown(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
 
-      }
+      }else{
+          println("mode 44444444444444444444444444444444444444444444444444444")
 
+          val aqpChosedPlan =  MyUtils.pickPlanWithQuickr(allOptimizedPlan)
+          planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+      }
       // val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
     }
 
