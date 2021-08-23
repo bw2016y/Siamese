@@ -829,7 +829,14 @@ object MyUtils {
     }
 
     def removeDistintOptimize(plan : LogicalPlan):LogicalPlan ={
+
+
+
          val aqpSample = newGetAqpSample(plan)
+         if(aqpSample==null){
+            return plan
+         }
+
          val sset :Set[WrapAttribute] = aqpSample.asInstanceOf[AqpSample].stratificationSet.toSet[Attribute].map(a => new WrapAttribute(a))
 
          val dvs: Double = getNumDV(sset)
