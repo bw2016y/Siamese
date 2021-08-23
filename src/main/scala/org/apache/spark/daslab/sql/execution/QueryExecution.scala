@@ -140,30 +140,42 @@ class QueryExecution(val sparkSession: SparkSession, val logical: LogicalPlan) {
       println("status *************************************")
       println("rate..............................."+status.asInstanceOf[AqpSample].errorRate.getRate)
       if(MyUtils.PICKMODE == 0){
+
         println("mode 000000000000000000000000000000000000000000000000000")
         val aqpChosedPlan =  MyUtils.pickPlansByModel(allOptimizedPlan)
-        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+        val res: LogicalPlan = MyUtils.removeDistintOptimize(aqpChosedPlan)
+        planner.plan(ReturnAnswer(res)).next()
+
+
       }else if(MyUtils.PICKMODE == 1){
+
         println("mode 111111111111111111111111111111111111111111111111111")
 
         val aqpChosedPlan =  MyUtils.pickPlanByRule(allOptimizedPlan)
-        planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+        val res: LogicalPlan = MyUtils.removeDistintOptimize(aqpChosedPlan)
+
+        planner.plan(ReturnAnswer(res)).next()
+
+
       }else if(MyUtils.PICKMODE == 2){
         println("mode 22222222222222222222222222222222222222222222222222222")
 
         val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
-      }else if(MyUtils.PICKMODE == 3){
-        println("mode 333333333333333333333333333333333333333333333333333333")
 
+      }else if(MyUtils.PICKMODE == 3){
+
+        println("mode 333333333333333333333333333333333333333333333333333333")
         val aqpChosedPlan =  MyUtils.pickPlanWithOutPushDown(allOptimizedPlan)
         planner.plan(ReturnAnswer(aqpChosedPlan)).next()
 
-      }else{
-          println("mode 44444444444444444444444444444444444444444444444444444")
 
+      }else{
+
+          println("mode 44444444444444444444444444444444444444444444444444444")
           val aqpChosedPlan =  MyUtils.pickPlanWithQuickr(allOptimizedPlan)
-          planner.plan(ReturnAnswer(aqpChosedPlan)).next()
+          val res : LogicalPlan = MyUtils.removeDistintOptimize(aqpChosedPlan)
+          planner.plan(ReturnAnswer(res)).next()
       }
       // val aqpChosedPlan =  MyUtils.pickPlanByDistinctRule(allOptimizedPlan)
     }

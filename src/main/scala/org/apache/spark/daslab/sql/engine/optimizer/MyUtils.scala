@@ -738,7 +738,7 @@ object MyUtils {
        plans(0)
     }
 
-
+    // 优先挑选 distinct plan
     def pickPlanByDistinctRule(plans : Seq[LogicalPlan]): LogicalPlan ={
        var uniformPlans : Seq[LogicalPlan] = Seq.empty
        var distinctPlans : Seq[LogicalPlan] = Seq.empty
@@ -828,7 +828,19 @@ object MyUtils {
           }
     }
 
+    def removeDistintOptimize(plan : LogicalPlan):LogicalPlan ={
+         val aqpSample = newGetAqpSample(plan)
+         val sset :Set[WrapAttribute] = aqpSample.asInstanceOf[AqpSample].stratificationSet.toSet[Attribute].map(a => new WrapAttribute(a))
 
+         val dvs: Double = getNumDV(sset)
+         val card: Double = getCard(plan)
+
+         if(dvs * 1.1 >= card ){
+            return removeAQP(plan)
+         }else{
+            return plan
+         }
+    }
 
     def splitConjunctivePredicates(condition:Expression): Seq[Expression] = {
       condition match{
